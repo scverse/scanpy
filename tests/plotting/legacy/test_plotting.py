@@ -11,11 +11,13 @@ import numpy as np
 import pandas as pd
 import pytest
 import seaborn as sns
-from anndata import AnnData
+from anndata import AnnData, read_h5ad
 from matplotlib.testing.compare import compare_images
+from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import pkg_version
+from scanpy._compat import CSBase, pkg_version
+from scanpy.plotting.legacy._anndata import _prepare_dataframe
 from testing.scanpy._helpers.data import (
     krumsiek11,
     pbmc3k,
@@ -29,6 +31,7 @@ from testing.scanpy._pytest.params import param_with
 if TYPE_CHECKING:
     from collections.abc import Callable
     from contextlib import ExitStack
+    from pathlib import Path
     from typing import Any, Literal
 
     from matplotlib.axes import Axes
@@ -392,6 +395,240 @@ def test_dotplot_style_no_reset():
     assert plot.cmap == "winter"
     plot.style(color_on="square")
     assert plot.cmap == "winter", "style() should not reset unspecified parameters"
+
+
+@pytest.mark.parametrize("expression_cutoff", [0, 1])
+@pytest.mark.parametrize("mean_only_expressed", [False, True])
+def test_dotplot_aggregates_sparse_data_without_dense_frame(
+    expression_cutoff: float, *, mean_only_expressed: bool
+) -> None:
+    values = np.array([[0, 1, 3], [2, 0, 4], [0, 5, 0], [6, 0, 2]], dtype=np.float32)
+    groups = pd.Categorical(["a", "a", "b", "b"])
+    adata = AnnData(
+        sparse.csr_matrix(values),  # noqa: TID251
+        obs=pd.DataFrame({"group": groups}, index=["0", "1", "2", "3"]),
+        var=pd.DataFrame(index=["x", "y", "z"]),
+    )
+
+    plot = sc.pl.dotplot(
+        adata,
+        adata.var_names,
+        "group",
+        expression_cutoff=expression_cutoff,
+        mean_only_expressed=mean_only_expressed,
+        return_fig=True,
+        show=False,
+    )
+
+    index = pd.CategoricalIndex(groups, name="group")
+    tidy = pd.DataFrame(values, index=index, columns=adata.var_names)
+    expressed = tidy > expression_cutoff
+    expected_size = expressed.groupby(level=0, observed=True).mean()
+    expected_color = (
+        tidy.mask(~expressed).groupby(level=0, observed=True).mean().fillna(0)
+        if mean_only_expressed
+        else tidy.groupby(level=0, observed=True).mean()
+    )
+    expected_size.index.name = None
+    expected_color.index.name = None
+
+    assert isinstance(plot._plot_data, CSBase)
+    assert plot._obs_tidy is None
+    pd.testing.assert_frame_equal(
+        plot.dot_size_df, expected_size, check_dtype=False, check_names=False
+    )
+    pd.testing.assert_frame_equal(
+        plot.dot_color_df, expected_color, check_dtype=False, check_names=False
+    )
+
+
+def test_matrixplot_aggregates_sparse_data_without_dense_frame() -> None:
+    values = np.array([[0, 1], [2, 0], [0, 5], [6, 0]], dtype=np.float32)
+    groups = pd.Categorical(["a", "a", "b", "b"])
+    adata = AnnData(
+        sparse.csr_matrix(values),  # noqa: TID251
+        obs=pd.DataFrame({"group": groups}, index=["0", "1", "2", "3"]),
+        var=pd.DataFrame(index=["x", "y"]),
+    )
+
+    plot = sc.pl.matrixplot(
+        adata, adata.var_names, "group", return_fig=True, show=False
+    )
+    expected = (
+        pd
+        .DataFrame(
+            values,
+            index=pd.CategoricalIndex(groups, name="group"),
+            columns=adata.var_names,
+        )
+        .groupby(level=0, observed=True)
+        .mean()
+    )
+    expected.index.name = None
+
+    assert isinstance(plot._plot_data, CSBase)
+    assert plot._obs_tidy is None
+    pd.testing.assert_frame_equal(
+        plot.values_df, expected, check_dtype=False, check_names=False
+    )
+
+
+def test_baseplot_sparse_data_sources_match_dataframe_semantics() -> None:
+    values = np.array([[0, 1, 3], [2, 0, 4], [0, 5, 0], [6, 0, 2]], dtype=np.float32)
+    adata = AnnData(
+        sparse.csr_matrix(values),  # noqa: TID251
+        obs=pd.DataFrame(
+            {
+                "group": pd.Categorical(["b", "a", "b", "a"]),
+                "group2": pd.Categorical(["x", "x", "y", "y"]),
+                "numeric": [0.1, 0.4, 0.8, 1.2],
+            },
+            index=pd.Index(["c0", "c1", "c2", "c3"], name="cell"),
+        ),
+        var=pd.DataFrame({"symbol": ["X", "Y", "Z"]}, index=["g0", "g1", "g2"]),
+    )
+    adata.layers["double"] = adata.X * 2
+    adata.raw = adata.copy()
+
+    cases = [
+        (["g2", "g0", "g2"], "group", {}),
+        (["g0", "g1"], "group", {"layer": "double", "use_raw": False}),
+        (["g0", "g1"], "group", {"use_raw": True}),
+        (["Z", "X"], "group", {"gene_symbols": "symbol"}),
+        (["g0", "g1"], "group", {"log": True}),
+        (["g0", "g1"], "numeric", {}),
+        (["g0", "g1"], ["group", "group2"], {}),
+        (["g0", "g1"], "cell", {}),
+    ]
+    for var_names, groupby, kwargs in cases:
+        categories, tidy = _prepare_dataframe(adata, var_names, groupby, **kwargs)
+        expected = tidy.groupby(level=0, observed=True).mean().reindex(categories)
+        plot = sc.pl.matrixplot(
+            adata, var_names, groupby, return_fig=True, show=False, **kwargs
+        )
+
+        assert plot._obs_tidy is None
+        assert list(plot.values_df.index) == list(expected.index)
+        assert plot.values_df.columns.tolist() == expected.columns.tolist()
+        np.testing.assert_allclose(
+            plot.values_df.to_numpy(), expected.to_numpy(), equal_nan=True
+        )
+
+
+def test_baseplot_aggregates_backed_sparse_data(tmp_path: Path) -> None:
+    adata = AnnData(
+        sparse.csr_matrix(np.array([[0, 1], [2, 0]], dtype=np.float32)),  # noqa: TID251
+        obs=pd.DataFrame(
+            {"group": pd.Categorical(["a", "b"])}, index=["cell-0", "cell-1"]
+        ),
+        var=pd.DataFrame(index=["x", "y"]),
+    )
+    path = tmp_path / "sparse.h5ad"
+    adata.write_h5ad(path)
+
+    backed = read_h5ad(path, backed="r")
+    try:
+        plot = sc.pl.matrixplot(
+            backed, ["y", "x"], "group", return_fig=True, show=False
+        )
+        assert plot._obs_tidy is None
+        np.testing.assert_array_equal(plot.values_df, [[1, 0], [0, 2]])
+    finally:
+        backed.file.close()
+
+
+@pytest.mark.parametrize("mean_only_expressed", [False, True])
+def test_dotplot_aggregates_backed_sparse_data(
+    tmp_path: Path, *, mean_only_expressed: bool
+) -> None:
+    values = np.array([[0, 1, 3], [2, 0, 4], [0, 5, 0], [6, 0, 2]], dtype=np.float32)
+    groups = pd.Categorical(["a", "a", "b", "b"])
+    adata = AnnData(
+        sparse.csr_matrix(values),  # noqa: TID251
+        obs=pd.DataFrame({"group": groups}, index=["0", "1", "2", "3"]),
+        var=pd.DataFrame(index=["x", "y", "z"]),
+    )
+    path = tmp_path / "sparse.h5ad"
+    adata.write_h5ad(path)
+
+    backed = read_h5ad(path, backed="r")
+    try:
+        plot = sc.pl.dotplot(
+            backed,
+            ["z", "x"],
+            "group",
+            mean_only_expressed=mean_only_expressed,
+            return_fig=True,
+            show=False,
+        )
+        assert plot._obs_tidy is None
+    finally:
+        backed.file.close()
+
+    tidy = pd.DataFrame(
+        values[:, [2, 0]],
+        index=pd.CategoricalIndex(groups, name="group"),
+        columns=["z", "x"],
+    )
+    expressed = tidy > 0
+    expected_size = expressed.groupby(level=0, observed=True).mean()
+    expected_color = (
+        tidy.mask(~expressed).groupby(level=0, observed=True).mean().fillna(0)
+        if mean_only_expressed
+        else tidy.groupby(level=0, observed=True).mean()
+    )
+    np.testing.assert_allclose(plot.dot_size_df.to_numpy(), expected_size.to_numpy())
+    np.testing.assert_allclose(plot.dot_color_df.to_numpy(), expected_color.to_numpy())
+
+
+def test_dotplot_negative_expression_cutoff_sparse() -> None:
+    values = np.array([[0, 1], [2, 0], [0, 5], [6, 0]], dtype=np.float32)
+    groups = pd.Categorical(["a", "a", "b", "b"])
+    adata = AnnData(
+        sparse.csr_matrix(values),  # noqa: TID251
+        obs=pd.DataFrame({"group": groups}, index=["0", "1", "2", "3"]),
+        var=pd.DataFrame(index=["x", "y"]),
+    )
+    plot = sc.pl.dotplot(
+        adata,
+        adata.var_names,
+        "group",
+        expression_cutoff=-1,
+        mean_only_expressed=True,
+        return_fig=True,
+        show=False,
+    )
+    # every value (including zeros) exceeds -1
+    np.testing.assert_allclose(plot.dot_size_df.to_numpy(), 1.0)
+    np.testing.assert_allclose(plot.dot_color_df.to_numpy(), [[1, 0.5], [3, 2.5]])
+
+
+def test_baseplot_validates_groupby_and_var_names() -> None:
+    adata = AnnData(
+        np.ones((2, 2)),
+        obs=pd.DataFrame({"group": ["a", "b"]}, index=["cell-0", "cell-1"]),
+        var=pd.DataFrame(index=["x", "y"]),
+    )
+
+    with pytest.raises(ValueError, match="groupby has to be a valid observation"):
+        sc.pl.matrixplot(adata, ["x"], "missing", return_fig=True)
+    with pytest.raises(KeyError, match="Could not find key"):
+        sc.pl.matrixplot(adata, ["missing"], "group", return_fig=True)
+
+    adata.obs.index.name = "group"
+    with pytest.raises(ValueError, match="both and index and a column level"):
+        sc.pl.matrixplot(adata, ["x"], "group", return_fig=True)
+
+    adata.obs.index.name = None
+    adata.var["symbol"] = ["duplicate", "duplicate"]
+    with pytest.raises(KeyError, match="Found duplicate entries"):
+        sc.pl.matrixplot(
+            adata,
+            ["duplicate"],
+            "group",
+            gene_symbols="symbol",
+            return_fig=True,
+        )
 
 
 def test_dotplot_add_totals(plot_cmp):

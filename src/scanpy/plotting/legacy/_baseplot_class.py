@@ -3,20 +3,24 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from itertools import product
 from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
+import pandas as pd
 from matplotlib import colormaps, gridspec
 from matplotlib import pyplot as plt
+from pandas.api.types import is_numeric_dtype
 
 from ... import logging as logg
-from ..._compat import set_module, warn
+from ..._compat import CSBase, set_module, warn
 from ..._settings import Default
+from ..._utils import check_use_raw, sanitize_anndata
+from ...get._aggregated import _aggregate
 from ._anndata import (
     VarGroups,
     _plot_dendrogram,
     _plot_var_groups_brackets,
-    _prepare_dataframe,
     _reorder_categories_after_dendrogram,
 )
 from ._utils import check_colornorm, make_grid_spec
@@ -25,11 +29,11 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Literal, Self
 
-    import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
 
+    from ...get._aggregated import AggType
     from ._utils import ColorLike, _AxesSubplot
 
     type _VarNames = str | Sequence[str]
@@ -60,6 +64,131 @@ return_fig
     Returns :class:`DotPlot` object. Useful for fine-tuning
     the plot. Takes precedence over `show=False`.
 """
+
+
+def _prepare_plot_data(  # noqa: PLR0912, PLR0915
+    adata: AnnData,
+    var_names: Sequence[str],
+    groupby: str | Sequence[str] | None,
+    *,
+    use_raw: bool | None,
+    log: bool,
+    num_categories: int,
+    layer: str | None,
+    gene_symbols: str | None,
+):
+    """Select plotting data while preserving sparse and backed representations."""
+    sanitize_anndata(adata)
+    use_raw = check_use_raw(adata, use_raw, layer=layer)
+
+    if groupby is None:
+        groupby_keys = []
+    elif isinstance(groupby, str):
+        groupby_keys = [groupby]
+    else:
+        groupby_keys = list(groupby)
+
+    groupby_index = None
+    for group in groupby_keys:
+        if group not in [*adata.obs, adata.obs.index.name]:
+            index_msg = (
+                f' or index name "{adata.obs.index.name}"'
+                if adata.obs.index.name is not None
+                else ""
+            )
+            msg = (
+                "groupby has to be a valid observation. "
+                f"Given {group}, is not in observations: "
+                f"{adata.obs.columns.tolist()} {index_msg}"
+            )
+            raise ValueError(msg)
+        if group in adata.obs.columns and group == adata.obs.index.name:
+            msg = (
+                f"Given group {group} is both and index and a column level, "
+                "which is ambiguous."
+            )
+            raise ValueError(msg)
+        if group == adata.obs.index.name:
+            groupby_index = group
+
+    grouping = adata.obs[[key for key in groupby_keys if key != groupby_index]].copy()
+    if groupby_index is not None:
+        grouping[groupby_index] = adata.obs.index
+        grouping = grouping[groupby_keys]
+
+    if not groupby_keys:
+        categorical = pd.Series(np.repeat("", adata.n_obs)).astype("category")
+    elif len(groupby_keys) == 1 and is_numeric_dtype(grouping[groupby_keys[0]]):
+        categorical = pd.cut(grouping[groupby_keys[0]], num_categories)
+    elif len(groupby_keys) == 1:
+        categorical = grouping[groupby_keys[0]].astype("category")
+        categorical.name = groupby_keys[0]
+    else:
+        categorical = grouping[groupby_keys].apply("_".join, axis=1).astype("category")
+        categorical.name = "_".join(groupby_keys)
+        order = {
+            "_".join(keys): idx
+            for idx, keys in enumerate(
+                product(*(grouping[key].cat.categories for key in groupby_keys))
+            )
+        }
+        categorical = categorical.cat.reorder_categories(
+            sorted(categorical.cat.categories, key=lambda value: order[value])
+        )
+
+    var = adata.raw.var if use_raw else adata.var
+    lookup = pd.Index(var[gene_symbols]) if gene_symbols is not None else var.index
+    unique_var_names = list(dict.fromkeys(var_names))
+    indices = []
+    for name in unique_var_names:
+        if name in adata.obs.columns and name in lookup:
+            location = (
+                f"adata.var[{gene_symbols!r}]" if gene_symbols else "adata.var_names"
+            )
+            msg = f"The key {name!r} is found in both adata.obs and {location}."
+            raise KeyError(msg)
+        location = lookup.get_loc(name) if name in lookup else None
+        if location is None:
+            source = (
+                f"adata.var[{gene_symbols!r}]" if gene_symbols else "adata.var_names"
+            )
+            msg = (
+                f"Could not find key {name!r} in columns of `adata.obs` or in {source}."
+            )
+            raise KeyError(msg)
+        if not isinstance(location, int | np.integer):
+            source = (
+                f"adata.var[{gene_symbols!r}]" if gene_symbols else "adata.var_names"
+            )
+            msg = f"Found duplicate entries for {name!r} in {source}."
+            raise KeyError(msg)
+        indices.append(int(location))
+
+    if layer is not None:
+        matrix = adata.layers[layer]
+    elif use_raw:
+        matrix = adata.raw.X
+    else:
+        matrix = adata.X
+
+    if adata.isbacked:
+        order = np.argsort(indices)
+        reverse = np.argsort(order)
+        matrix = matrix[:, np.asarray(indices)[order]][:, reverse]
+    else:
+        matrix = matrix[:, indices]
+    if log:
+        matrix = np.log1p(matrix)
+
+    groupby_name = categorical.name
+    categorical = pd.Categorical(categorical)
+    return (
+        categorical.categories,
+        categorical,
+        groupby_name,
+        matrix,
+        unique_var_names,
+    )
 
 
 @set_module("scanpy.pl")
@@ -126,7 +255,13 @@ class BasePlot:
         self.var_group_rotation = var_group_rotation
         self.width, self.height = figsize if figsize is not None else (None, None)
 
-        self.categories, self.obs_tidy = _prepare_dataframe(
+        (
+            self.categories,
+            self._groupby_obs,
+            self._groupby_name,
+            self._plot_data,
+            self._plot_var_names,
+        ) = _prepare_plot_data(
             adata,
             self.var_names,
             groupby,
@@ -136,6 +271,7 @@ class BasePlot:
             layer=layer,
             gene_symbols=gene_symbols,
         )
+        self._obs_tidy = None
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
             msg = (
                 f"Over {self.MAX_NUM_CATEGORIES} categories found. "
@@ -143,17 +279,17 @@ class BasePlot:
             )
             warn(msg, UserWarning)
 
-        if categories_order is not None and (
-            set(self.obs_tidy.index.categories) != set(categories_order)
+        if categories_order is not None and set(self.categories) != set(
+            categories_order
         ):
             logg.error(
                 "Please check that the categories given by "
                 "the `order` parameter match the categories that "
                 "want to be reordered.\n\n"
                 "Mismatch: "
-                f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
+                f"{set(self.categories).difference(categories_order)}\n\n"
                 f"Given order categories: {categories_order}\n\n"
-                f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
+                f"{groupby} categories: {list(self.categories)}\n"
             )
             return
 
@@ -190,6 +326,45 @@ class BasePlot:
         self.fig = None
         self.ax_dict = None
         self.ax = ax
+
+    @property
+    def obs_tidy(self) -> pd.DataFrame:
+        """Cell-level plotting data, materialized lazily for plots that need it."""
+        if self._obs_tidy is None:
+            data = (
+                self._plot_data.toarray()
+                if isinstance(self._plot_data, CSBase)
+                else np.asarray(self._plot_data)
+            )
+            frame = pd.DataFrame(data, columns=self._plot_var_names)
+            frame = frame.loc[:, self.var_names]
+            frame.index = pd.CategoricalIndex(
+                self._groupby_obs, name=self._groupby_name
+            )
+            self._obs_tidy = frame
+        return self._obs_tidy
+
+    @obs_tidy.setter
+    def obs_tidy(self, value: pd.DataFrame) -> None:
+        self._obs_tidy = value
+
+    def _aggregate(self, func: AggType, *, data=None) -> pd.DataFrame:
+        """Aggregate selected plotting data without constructing a cell-level frame."""
+        data = self._plot_data if data is None else data
+        with np.errstate(divide="ignore", invalid="ignore"):
+            values = _aggregate(data, by=self._groupby_obs, func=func)[func]
+        if hasattr(values, "compute"):
+            values = values.compute()
+        if func == "mean" and np.issubdtype(data.dtype, np.floating):
+            values = values.astype(data.dtype, copy=False)
+        frame = pd.DataFrame(
+            values,
+            index=pd.CategoricalIndex(
+                self.categories, categories=self.categories, name=self._groupby_name
+            ),
+            columns=self._plot_var_names,
+        )
+        return frame.loc[:, self.var_names]
 
     def swap_axes(self, *, swap_axes: bool | None = True) -> Self:
         """Plot a transposed image.
@@ -374,7 +549,9 @@ class BasePlot:
 
         _sort = sort is not None
         _ascending = sort == "ascending"
-        counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
+        counts_df = pd.Series(self._groupby_obs).value_counts(
+            sort=_sort, ascending=_ascending
+        )
 
         if _sort:
             self.categories_order = counts_df.index
