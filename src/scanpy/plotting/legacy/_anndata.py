@@ -1990,7 +1990,10 @@ def _prepare_dataframe(  # noqa: PLR0912
     adata
         Annotated data matrix.
     var_names
-        `var_names` should be a valid subset of  `adata.var_names`.
+        `var_names` should be a valid subset of `adata.var_names`
+        or, when `gene_symbols` is set, of the `adata.var[gene_symbols]`
+        column. When `use_raw` is in effect, `adata.raw.var` is used
+        instead of `adata.var`.
     groupby
         The key of the observation grouping to consider. It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
