@@ -61,14 +61,26 @@ Compute densities on embeddings.
 
 ## Marker genes
 
+Rank genes that distinguish groups of cells (e.g. clusters), for example to annotate them.
+These fast tests treat every cell as an independent observation,
+so their p-values are only useful to order genes {cite:p}`Squair2021`.
+
+```{eval-rst}
+.. module:: scanpy.tl.markers
+.. currentmodule:: scanpy
+```
+
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
    :toctree: generated/
 
+   tl.markers.wilcoxon
+   tl.markers.ttest
+   tl.markers.logreg
+   tl.marker_gene_overlap
    tl.rank_genes_groups
    tl.filter_rank_genes_groups
-   tl.marker_gene_overlap
 ```
 
 ## Gene scores, Cell cycle

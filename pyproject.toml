@@ -200,8 +200,6 @@ lint.ignore = [
 ]
 # No need for docstrings for all benchmarks
 lint.per-file-ignores."benchmarks/**/*.py" = [ "D102", "D103" ]
-# Do not assign a lambda expression, use a def
-lint.per-file-ignores."src/scanpy/tools/_rank_genes_groups.py" = [ "E731" ]
 # Old and unmaintained
 lint.per-file-ignores."src/scanpy/tools/_sim.py" = [ "N" ]
 # D*: No need for docstrings for all test modules and test functions

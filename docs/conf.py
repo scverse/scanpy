@@ -218,6 +218,9 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
     "tl.ingest": (["np", "sp"], []),
     "tl.leiden": (["np", "sp"], []),  # only uses graph in obsp
     "tl.louvain": (["np", "sp"], []),  # only uses graph in obsp
+    "tl.markers.logreg": (["np", "sp"], []),
+    "tl.markers.ttest": (["np", "sp"], []),
+    "tl.markers.wilcoxon": (["np", "sp"], []),
     "tl.paga": (["np", "sp"], []),
     "tl.rank_genes_groups": (["np", "sp"], []),
     "tl.score_genes": (["np", "sp"], []),

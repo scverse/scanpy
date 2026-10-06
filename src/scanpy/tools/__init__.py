@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from . import markers
 from ._dendrogram import dendrogram
 from ._diffmap import diffmap
 from ._dpt import dpt
@@ -51,6 +52,7 @@ __all__ = [
     "leiden",
     "louvain",
     "marker_gene_overlap",
+    "markers",
     "paga",
     "rank_genes_groups",
     "score_genes",
