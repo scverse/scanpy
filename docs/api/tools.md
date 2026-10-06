@@ -83,6 +83,26 @@ so their p-values are only useful to order genes {cite:p}`Squair2021`.
    tl.filter_rank_genes_groups
 ```
 
+(differential-expression)=
+
+## Differential expression
+
+Test for expression changes between conditions (e.g. treated vs. control),
+using samples (e.g. donors) rather than cells as replicates.
+
+```{eval-rst}
+.. module:: scanpy.tl.de
+.. currentmodule:: scanpy
+```
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   tl.de.deseq2
+```
+
 ## Gene scores, Cell cycle
 
 ```{eval-rst}

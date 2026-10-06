@@ -45,7 +45,7 @@ __all__ = [
 annotate_doc_types(sys.modules[__name__], "scanpy")
 
 sys.modules.update({f"{__name__}.{m}": globals()[m] for m in ["tl", "pp", "pl"]})
-sys.modules.update({f"{__name__}.tl.{m}": getattr(tl, m) for m in ["markers"]})
+sys.modules.update({f"{__name__}.tl.{m}": getattr(tl, m) for m in ["markers", "de"]})
 
 
 def __getattr__(name: str) -> Any:
