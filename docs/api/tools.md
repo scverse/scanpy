@@ -61,9 +61,15 @@ Compute densities on embeddings.
 
 ## Marker genes
 
+| Question | Use |
+| --- | --- |
+| Which genes distinguish a cluster or cell type from the others? | {mod}`scanpy.tl.markers` |
+| Which genes change between conditions (e.g. treated vs. control) within a cell type? | {func}`scanpy.tl.de.deseq2`, see {doc}`/tutorials/basics/differential-expression` |
+
 Rank genes that distinguish groups of cells (e.g. clusters), for example to annotate them.
 These fast tests treat every cell as an independent observation,
 so their p-values are only useful to order genes {cite:p}`Squair2021`.
+To plot the results, pass them to e.g. {func}`scanpy.pl.rank_genes_groups_dotplot` as `results=`.
 
 ```{eval-rst}
 .. module:: scanpy.tl.markers
@@ -82,8 +88,6 @@ so their p-values are only useful to order genes {cite:p}`Squair2021`.
    tl.rank_genes_groups
    tl.filter_rank_genes_groups
 ```
-
-(differential-expression)=
 
 ## Differential expression
 
