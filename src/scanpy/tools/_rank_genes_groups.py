@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from scverse_misc import Deprecation, deprecated_arg
+from scverse_misc import Deprecation, deprecated, deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
@@ -86,10 +86,18 @@ def _legacy_compute(
     return stats, frame
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use :mod:`scanpy.tl.markers` to rank marker genes of groups "
+        "(e.g. :func:`scanpy.tl.markers.wilcoxon`), "
+        "or :func:`scanpy.tl.de.deseq2` to test for differential expression between conditions.",
+    )
+)
 @_doc_params(
     mask=doc_mask("Select subset of genes to use in statistical tests.", dim="var")
 )
-@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
+@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
@@ -123,10 +131,9 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
         Comparing between cells leads to highly inflated p-values,
         since cells are not independent observations :cite:p:`Squair2021`.
-        Especially in single-cell data, consider instead to use more appropriate methods such as combining pseudobulking with :doc:`pydeseq2:index`.
-
-        :func:`decoupler.pp.pseudobulk` or :func:`scanpy.get.aggregate` can be used to aggregate samples for pseudobulking.
-        Ours is a bit more verbose, but supports :doc:`dask:index` arrays for improved performance.
+        To rank marker genes of clusters, use :mod:`scanpy.tl.markers`.
+        To test for differential expression between conditions, use :func:`scanpy.tl.de.deseq2`,
+        which pseudobulks samples with :func:`scanpy.get.aggregate` and tests them with :doc:`pydeseq2:index`.
 
     Parameters
     ----------
@@ -221,7 +228,10 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
+    >>> sc.tl.rank_genes_groups(
+    ...     adata, "bulk_labels", method="wilcoxon"
+    ... )  # doctest: +ELLIPSIS
+    FutureWarning: The function rank_genes_groups is deprecated...
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
 
@@ -384,6 +394,13 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
     return n_nonzero / x.shape[0]
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Filter the DataFrame returned by a :mod:`scanpy.tl.markers` function instead, "
+        "e.g. `df.query('frac_group > 0.25 and frac_reference < 0.5 and log_fc > 1')`.",
+    )
+)
 def filter_rank_genes_groups(
     adata: AnnData,
     *,
@@ -433,8 +450,12 @@ def filter_rank_genes_groups(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
-    >>> sc.tl.filter_rank_genes_groups(adata, min_fold_change=3)
+    >>> sc.tl.rank_genes_groups(
+    ...     adata, "bulk_labels", method="wilcoxon"
+    ... )  # doctest: +ELLIPSIS
+    FutureWarning: The function rank_genes_groups is deprecated...
+    >>> sc.tl.filter_rank_genes_groups(adata, min_fold_change=3)  # doctest: +ELLIPSIS
+    FutureWarning: The function filter_rank_genes_groups is deprecated...
     >>> # visualize results
     >>> sc.pl.rank_genes_groups(adata, key="rank_genes_groups_filtered")
     >>> # visualize results using dotplot

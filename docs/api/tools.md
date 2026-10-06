@@ -85,8 +85,6 @@ To plot the results, pass them to e.g. {func}`scanpy.pl.rank_genes_groups_dotplo
    tl.markers.ttest
    tl.markers.logreg
    tl.marker_gene_overlap
-   tl.rank_genes_groups
-   tl.filter_rank_genes_groups
 ```
 
 ## Differential expression

@@ -140,7 +140,8 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
     >>> sc.pp.pca(adata, svd_solver="arpack")
     >>> sc.pp.neighbors(adata)
     >>> sc.tl.leiden(adata, flavor="igraph")
-    >>> sc.tl.rank_genes_groups(adata, groupby="leiden")
+    >>> sc.tl.rank_genes_groups(adata, groupby="leiden")  # doctest: +ELLIPSIS
+    FutureWarning: The function rank_genes_groups is deprecated...
     >>> marker_genes = {
     ...     "CD4 T cells": {"IL7R"},
     ...     "CD14+ Monocytes": {"CD14", "LYZ"},

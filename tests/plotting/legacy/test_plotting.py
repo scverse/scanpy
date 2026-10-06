@@ -29,9 +29,15 @@ from testing.scanpy._pytest.params import param_with
 if TYPE_CHECKING:
     from collections.abc import Callable
     from contextlib import ExitStack
+    from pathlib import Path
     from typing import Any, Literal
 
     from matplotlib.axes import Axes
+
+pytestmark = pytest.mark.filterwarnings(
+    r"ignore:The function (rank_genes_groups|filter_rank_genes_groups|rank_genes_groups_df) is deprecated:FutureWarning"
+)
+
 
 # With pandas 3.0, seaborn assigns `hue` palette colors to the wrong violins.
 SEABORN_PANDAS30_XFAIL = pkg_version("pandas").release[:2] == (3, 0)
@@ -893,21 +899,28 @@ def test_rank_genes_groups(plot_cmp, name: str, fn: Callable[[AnnData], None]) -
 
 @pytest.mark.parametrize(
     ("name", "fn"),
-    [param_with(p, lambda fn, p=p: (p.id, fn)) for p in _RANK_GENES_GROUPS_PARAMS],
+    [pytest.param(p.id, *p.values, id=p.id) for p in _RANK_GENES_GROUPS_PARAMS],  # noqa: PD011
 )
 def test_rank_genes_groups_from_results(
-    plot_cmp, name: str, fn: Callable[..., None]
+    tmp_path: Path, check_same_image, name: str, fn: Callable[..., None]
 ) -> None:
     pbmc = pbmc68k_reduced()
+    pbmc.var["symbol"] = pbmc.var.index + "__"
+    sc.tl.rank_genes_groups(pbmc, "louvain", n_genes=pbmc.raw.shape[1])
     results = sc.tl.markers.ttest(pbmc.raw.to_adata(), "louvain")
 
-    pbmc.var["symbol"] = pbmc.var.index + "__"
+    paths = {}
+    for source, kwargs in [
+        ("uns", {}),
+        ("results", dict(results=results, groupby="louvain")),
+    ]:
+        with plt.rc_context({"axes.grid": True, "figure.figsize": (4, 4)}):
+            fn(pbmc, **kwargs)
+        paths[source] = tmp_path / f"{name}_{source}.png"
+        plt.savefig(paths[source])
+        plt.close("all")
 
-    with plt.rc_context({"axes.grid": True, "figure.figsize": (4, 4)}):
-        fn(pbmc, results=results, groupby="louvain")
-    key = "ranked_genes" if name == "basic" else f"ranked_genes_{name}"
-    plot_cmp(key)
-    plt.close()
+    check_same_image(paths["uns"], paths["results"], tol=1, root=tmp_path)
 
 
 def test_rank_genes_group_axes(plot_cmp):

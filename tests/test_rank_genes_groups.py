@@ -32,6 +32,11 @@ if TYPE_CHECKING:
     from numpy.lib.npyio import NpzFile
     from numpy.typing import NDArray
 
+pytestmark = pytest.mark.filterwarnings(
+    r"ignore:The function (rank_genes_groups|filter_rank_genes_groups|rank_genes_groups_df) is deprecated:FutureWarning"
+)
+
+
 # We test results for a simple generic example
 # Tests are conducted for sparse and non-sparse AnnData objects.
 # Due to minor changes in multiplication implementation for sparse and non-sparse objects,
@@ -550,3 +555,24 @@ def test_mean_in_log_space(
         )
     logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
     np.testing.assert_equal(logfcs, expected_logfc)
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        sc.tl.rank_genes_groups,
+        sc.tl.filter_rank_genes_groups,
+        sc.get.rank_genes_groups_df,
+    ],
+    ids=lambda f: f.__name__,
+)
+def test_deprecated(func) -> None:
+    assert getattr(func, "__deprecated__", None)
+
+
+def test_deprecation_names_replacements() -> None:
+    adata = pbmc68k_reduced()
+    with pytest.warns(
+        FutureWarning, match=r"scanpy\.tl\.markers.*scanpy\.tl\.de\.deseq2"
+    ):
+        rank_genes_groups(adata, "bulk_labels")

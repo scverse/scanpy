@@ -6,6 +6,10 @@ import pytest
 
 import scanpy as sc
 
+pytestmark = pytest.mark.filterwarnings(
+    r"ignore:The function (rank_genes_groups|filter_rank_genes_groups|rank_genes_groups_df) is deprecated:FutureWarning"
+)
+
 
 @pytest.mark.filterwarnings("ignore:invalid value encountered in log2:RuntimeWarning")
 @pytest.mark.parametrize("method", ["t-test", "logreg"])

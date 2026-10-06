@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from numpy.typing import NDArray
+from scverse_misc import Deprecation, deprecated
 
 from .._compat import CSBase
 from .._settings import Default, Preset
@@ -42,6 +43,12 @@ type Mask = NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str
 
 
 # TODO: implement diffxpy method, make singledispatch
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "The :mod:`scanpy.tl.markers` functions return a :class:`~pandas.DataFrame` directly.",
+    )
+)
 def rank_genes_groups_df(
     adata: AnnData,
     group: str | Iterable[str] | None,
@@ -78,8 +85,12 @@ def rank_genes_groups_df(
     -------
     >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True)
-    >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")
+    >>> sc.tl.rank_genes_groups(
+    ...     pbmc, groupby="louvain", use_raw=True
+    ... )  # doctest: +ELLIPSIS
+    FutureWarning: The function rank_genes_groups is deprecated...
+    >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")  # doctest: +ELLIPSIS
+    FutureWarning: The function rank_genes_groups_df is deprecated...
 
     """
     return _rank_genes_groups_df(
