@@ -891,6 +891,25 @@ def test_rank_genes_groups(plot_cmp, name: str, fn: Callable[[AnnData], None]) -
     plt.close()
 
 
+@pytest.mark.parametrize(
+    ("name", "fn"),
+    [param_with(p, lambda fn, p=p: (p.id, fn)) for p in _RANK_GENES_GROUPS_PARAMS],
+)
+def test_rank_genes_groups_from_results(
+    plot_cmp, name: str, fn: Callable[..., None]
+) -> None:
+    pbmc = pbmc68k_reduced()
+    results = sc.tl.markers.ttest(pbmc.raw.to_adata(), "louvain")
+
+    pbmc.var["symbol"] = pbmc.var.index + "__"
+
+    with plt.rc_context({"axes.grid": True, "figure.figsize": (4, 4)}):
+        fn(pbmc, results=results, groupby="louvain")
+    key = "ranked_genes" if name == "basic" else f"ranked_genes_{name}"
+    plot_cmp(key)
+    plt.close()
+
+
 def test_rank_genes_group_axes(plot_cmp):
     fn = next(p.values[0] for p in _RANK_GENES_GROUPS_PARAMS if p.id == "basic")  # noqa: PD011
 

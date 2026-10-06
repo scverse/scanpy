@@ -82,6 +82,27 @@ def rank_genes_groups_df(
     >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")
 
     """
+    return _rank_genes_groups_df(
+        adata,
+        group,
+        key=key,
+        pval_cutoff=pval_cutoff,
+        log2fc_min=log2fc_min,
+        log2fc_max=log2fc_max,
+        gene_symbols=gene_symbols,
+    )
+
+
+def _rank_genes_groups_df(
+    adata: AnnData,
+    group: str | Iterable[str] | None,
+    *,
+    key: str = "rank_genes_groups",
+    pval_cutoff: float | None = None,
+    log2fc_min: float | None = None,
+    log2fc_max: float | None = None,
+    gene_symbols: str | None = None,
+) -> pd.DataFrame:
     if isinstance(group, str):
         group = [group]
     if group is None:
