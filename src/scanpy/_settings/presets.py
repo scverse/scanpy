@@ -113,7 +113,7 @@ preset_postprocessors: list[Callable[[], None]] = []
 
 def named_tuple_non_defaults(
     nt: NamedTuple,
-) -> Generator[tuple[str, object], None, None]:
+) -> Generator[tuple[str, object]]:
     cls = type(nt)
     for param in cls._fields:
         value = getattr(nt, param)
@@ -278,7 +278,7 @@ class Preset(enum.StrEnum):
     @contextmanager
     @doctest_needs("igraph")
     @doctest_needs("scikit-misc")
-    def override(self, preset: Preset) -> Generator[Preset, None, None]:
+    def override(self, preset: Preset) -> Generator[Preset]:
         """Temporarily override :attr:`scanpy.settings.preset`.
 
         >>> import scanpy as sc

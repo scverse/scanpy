@@ -81,14 +81,3 @@ Compute densities on embeddings.
    tl.score_genes
    tl.score_genes_cell_cycle
 ```
-
-## Simulations
-
-```{eval-rst}
-.. autosummary::
-   :nosignatures:
-   :toctree: generated/
-
-   tl.sim
-
-```

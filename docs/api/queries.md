@@ -16,7 +16,6 @@ This module provides useful queries for annotation and enrichment.
    :toctree: generated/
 
    queries.biomart_annotations
-   queries.gene_coordinates
    queries.mitochondrial_genes
    queries.enrich
 

@@ -40,7 +40,7 @@ def float_dtype(request):
 
 
 @pytest.fixture
-def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, None]:
+def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None]:
     showwarning_orig = warnings.showwarning
 
     def showwarning(message, category, filename, lineno, file=None, line=None) -> None:  # noqa: PLR0917

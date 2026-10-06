@@ -25,7 +25,7 @@ IMPORTED = frozenset(sys.modules.keys())
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _manage_log_handlers() -> Generator[None, None, None]:
+def _manage_log_handlers() -> Generator[None]:
     """Remove handlers from all loggers on session teardown.
 
     Fixes <https://github.com/scverse/scanpy/issues/1736>.
@@ -51,7 +51,7 @@ def _manage_log_handlers() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def _caplog_adapter(caplog: pytest.LogCaptureFixture) -> Generator[None, None, None]:
+def _caplog_adapter(caplog: pytest.LogCaptureFixture) -> Generator[None]:
     """Allow use of scanpy’s logger with caplog."""
     import scanpy as sc
 

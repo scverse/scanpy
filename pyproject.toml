@@ -30,7 +30,7 @@ authors = [
     { name = "Tobias Callies" },
     { name = "Tom White" },
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
@@ -43,7 +43,6 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3.15",
@@ -54,7 +53,7 @@ dynamic = [ "version" ]
 dependencies = [
     "anndata>=0.12.14",
     "fast-array-utils[accel,sparse]>=1.4",
-    "h5py>=3.11",
+    "h5py>=3.12.1",
     "joblib",
     "matplotlib>=3.10",
     "natsort",
@@ -72,7 +71,6 @@ dependencies = [
     "session-info2",
     "statsmodels>=0.14.5",
     "tqdm",
-    "typing-extensions; python_version<'3.13'",
     "umap-learn>=0.5.12",
     "zarr>=3.2",
 ]
