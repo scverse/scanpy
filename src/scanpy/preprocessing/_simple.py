@@ -948,6 +948,8 @@ def _downsample_total_counts[T: (np.ndarray, CSBase)](
         x = spc.x  # we only mutate x, so spc.x receives the changes
         v = x.data if isinstance(x, CSBase) else x.reshape(-1)
         _downsample_array(v, total_counts, rng=rng, replace=replace, inplace=True)
+        if isinstance(x, np.ndarray) and not np.shares_memory(v, x):
+            x[...] = v.reshape(x.shape)
     return spc.x  # use x that was converted back
 
 
