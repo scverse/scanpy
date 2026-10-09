@@ -274,11 +274,13 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         raise ValueError(msg)
     sorted_index = (
         df[sort_cols]
+        .reset_index(drop=True)
         .sort_values(sort_cols, ascending=sort_ascending, na_position="last")
         .index
     )
-    df["highly_variable"] = False
-    df.loc[sorted_index[: int(n_top_genes)], "highly_variable"] = True
+    highly_variable = np.zeros(len(df), dtype=bool)
+    highly_variable[sorted_index[: int(n_top_genes)]] = True
+    df["highly_variable"] = highly_variable
 
     if inplace:
         adata.uns["hvg"] = {"flavor": flavor}
