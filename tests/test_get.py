@@ -17,6 +17,11 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+pytestmark = pytest.mark.filterwarnings(
+    r"ignore:The function (rank_genes_groups|filter_rank_genes_groups|rank_genes_groups_df) is deprecated:FutureWarning"
+)
+
+
 # Override so warning gets caught
 def transpose_adata(adata: AnnData, *, expect_duplicates: bool = False) -> AnnData:
     if not expect_duplicates:

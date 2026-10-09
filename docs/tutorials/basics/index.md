@@ -5,5 +5,6 @@
 
 clustering
 clustering-2017
+differential-expression
 integrating-data-using-ingest
 ```

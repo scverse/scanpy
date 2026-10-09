@@ -17,7 +17,8 @@ from scanpy._utils import select_groups
 from scanpy._utils.random import _LegacyRng
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
-from scanpy.tools._rank_genes_groups import _illico_results_to_iter, _RankGenes
+from scanpy.tools.markers import _kernels
+from scanpy.tools.markers._scorers import _illico_results_to_iter
 from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
@@ -30,6 +31,11 @@ if TYPE_CHECKING:
 
     from numpy.lib.npyio import NpzFile
     from numpy.typing import NDArray
+
+pytestmark = pytest.mark.filterwarnings(
+    r"ignore:The function (rank_genes_groups|filter_rank_genes_groups|rank_genes_groups_df) is deprecated:FutureWarning"
+)
+
 
 # We test results for a simple generic example
 # Tests are conducted for sparse and non-sparse AnnData objects.
@@ -281,23 +287,18 @@ def test_wilcoxon_tie_correction(*, reference: bool) -> None:
     pvals = mannwhitneyu(x, y, use_continuity=False, alternative="two-sided").pvalue
     pvals[np.isnan(pvals)] = 1.0
 
-    test_obj = _RankGenes(pbmc, groups, groupby, reference=ref)
-    test_obj.compute_statistics(
-        "wilcoxon",
-        tie_correct=True,
-        corr_method="benjamini-hochberg",
-        n_genes_user=None,
-        rankby_abs=False,
-        mean_in_log_space=True,
+    df = sc.tl.markers.wilcoxon(
+        pbmc.raw.to_adata(), groupby, groups=groups, reference=ref, tie_correct=True
     )
+    res = df[df["group"] == groups[0]].set_index("gene")
 
-    np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals, atol=1e-5)
+    np.testing.assert_allclose(res.loc[pbmc.raw.var_names, "p_value"], pvals, atol=1e-5)
 
 
 def test_wilcoxon_huge_data(monkeypatch: pytest.MonkeyPatch) -> None:
     max_size = 300
     adata = pbmc68k_reduced()
-    monkeypatch.setattr(sc.tl._rank_genes_groups, "_CONST_MAX_SIZE", max_size)
+    monkeypatch.setattr(_kernels, "_CONST_MAX_SIZE", max_size)
     rank_genes_groups(adata, groupby="bulk_labels", method="wilcoxon")
 
 
@@ -554,3 +555,24 @@ def test_mean_in_log_space(
         )
     logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
     np.testing.assert_equal(logfcs, expected_logfc)
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        sc.tl.rank_genes_groups,
+        sc.tl.filter_rank_genes_groups,
+        sc.get.rank_genes_groups_df,
+    ],
+    ids=lambda f: f.__name__,
+)
+def test_deprecated(func) -> None:
+    assert getattr(func, "__deprecated__", None)
+
+
+def test_deprecation_names_replacements() -> None:
+    adata = pbmc68k_reduced()
+    with pytest.warns(
+        FutureWarning, match=r"scanpy\.tl\.markers.*scanpy\.tl\.de\.deseq2"
+    ):
+        rank_genes_groups(adata, "bulk_labels")
