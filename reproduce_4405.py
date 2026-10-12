@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
-import scanpy as sc
 from anndata import AnnData
+
+import scanpy as sc
 
 rng = np.random.default_rng(0)
 X = rng.negative_binomial(3, 0.3, (300, 120)).astype(np.float32)
