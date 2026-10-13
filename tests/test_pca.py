@@ -386,13 +386,14 @@ def test_pca_chunked() -> None:
     )
 
 
+@needs.anndata_acc
 def test_pca_n_pcs():
     """Tests that the n_pcs parameter also works for representations not called "X_pca"."""
     pbmc = pbmc3k_normalized()
     sc.pp.pca(pbmc, dtype=np.float64)
     pbmc.obsm["X_pca_test"] = pbmc.obsm["X_pca"]
-    original = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca", copy=True)
-    renamed = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca_test", copy=True)
+    original = sc.pp.neighbors(pbmc, n_pcs=5, use="obsm.X_pca", copy=True)
+    renamed = sc.pp.neighbors(pbmc, n_pcs=5, use="obsm.X_pca_test", copy=True)
 
     assert np.allclose(original.obsm["X_pca"], renamed.obsm["X_pca_test"])
     assert np.allclose(
@@ -424,10 +425,8 @@ def test_mask_length_error():
         sc.pp.pca(adata, mask=mask_var, copy=True)
 
 
-@pytest.mark.parametrize(
-    "mask_type",
-    [pytest.param("var.highly_variable", marks=needs.anndata_acc), "array"],
-)
+@needs.anndata_acc
+@pytest.mark.parametrize("mask_type", ["var.highly_variable", "array"])
 def test_obsm_mask_error(mask_type: Literal["var.highly_variable", "array"]) -> None:
     """Check that trying to use mask with obsm raises an error."""
     adata = AnnData(A_list)
@@ -435,9 +434,9 @@ def test_obsm_mask_error(mask_type: Literal["var.highly_variable", "array"]) -> 
         _helpers.random_mask(adata.shape[1]) if mask_type == "array" else mask_type
     )
     with pytest.raises(
-        ValueError, match=r"Argument `mask` is incompatible with `obsm`."
+        ValueError, match=r"Argument `mask` is incompatible with `\.obsm` arrays\."
     ):
-        sc.pp.pca(adata, mask=mask_var, obsm="X_pca", copy=True)
+        sc.pp.pca(adata, mask=mask_var, use="obsm.X_pca", copy=True)
 
 
 @needs.anndata_acc
@@ -512,7 +511,11 @@ def test_mask_defaults(array_type, float_dtype):
 
 
 @pytest.mark.parametrize("rep", ["layer", "obsm"])
-def test_pca_rep(rep: Literal["layer", "obsm"]) -> None:
+@pytest.mark.parametrize(
+    "spelling",
+    [pytest.param("use", marks=needs.anndata_acc), "legacy"],
+)
+def test_pca_rep(rep: Literal["layer", "obsm"], spelling: Literal["use", "legacy"]):
     """Tests that layers works the same way as `X`."""
     adata = pbmc3k_normalized()[:200].copy()
 
@@ -529,10 +532,16 @@ def test_pca_rep(rep: Literal["layer", "obsm"]) -> None:
     del rep_adata.X
 
     sc.pp.pca(adata, mask=None)
-    sc.pp.pca(rep_adata, **{rep: "counts"}, mask=None)
-
-    assert rep_adata.uns["pca"]["params"][rep] == "counts"
+    if spelling == "use":
+        attr = "layers" if rep == "layer" else rep
+        sc.pp.pca(rep_adata, use=f"{attr}.counts", mask=None)
+        assert rep_adata.uns["pca"]["params"]["use"] == [f'["{attr}", "counts"]']
+    else:
+        with pytest.warns(FutureWarning, match=rf"argument {rep} is deprecated"):
+            sc.pp.pca(rep_adata, **{rep: "counts"}, mask=None)
+        assert rep_adata.uns["pca"]["params"][rep] == "counts"
     assert rep not in adata.uns["pca"]["params"]
+    assert "use" not in adata.uns["pca"]["params"]
 
     np.testing.assert_equal(
         adata.uns["pca"]["variance"], rep_adata.uns["pca"]["variance"]
@@ -541,6 +550,7 @@ def test_pca_rep(rep: Literal["layer", "obsm"]) -> None:
         adata.uns["pca"]["variance_ratio"], rep_adata.uns["pca"]["variance_ratio"]
     )
     np.testing.assert_equal(adata.obsm["X_pca"], rep_adata.obsm["X_pca"])
+    # an `.obsm` array’s columns aren’t variables, so its loadings go to `.uns`
     pcs = (
         rep_adata.varm["PCs"] if rep == "layer" else rep_adata.uns["pca"]["components"]
     )

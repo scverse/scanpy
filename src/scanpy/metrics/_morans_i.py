@@ -8,10 +8,13 @@ from typing import TYPE_CHECKING, cast
 import numba
 import numpy as np
 from fast_array_utils.numba import njit
+from scverse_misc import Deprecation, deprecated_arg
 
 from .._compat import CSRBase
+from .._docs import DEPR_RAW, doc_use
 from .._utils import _doc_params
 from ..get import _get_arr
+from ..get.get import _resolve_obs
 from ..neighbors._doc import doc_neighbors_key
 from ._common import _get_graph, _SparseMetric
 
@@ -19,11 +22,19 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
+    from ..get.get import ArrAcc
     from ._common import _Vals
 
 
 @singledispatch
-@_doc_params(neighbors_key=doc_neighbors_key)
+@_doc_params(
+    neighbors_key=doc_neighbors_key,
+    use=doc_use("Which values to compute on.", legacy=("layer", "obsm", "obsp")),
+)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsp", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
 def morans_i(
     adata_or_graph: AnnData | CSRBase,
     /,
@@ -31,6 +42,7 @@ def morans_i(
     *,
     use_graph: str | None = None,
     neighbors_key: str | None = None,
+    use: ArrAcc | str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     obsp: str | None = None,
@@ -59,20 +71,13 @@ def morans_i(
     vals
         Values to calculate Moran's I for. If this is two dimensional, should
         be of shape `(n_features, n_cells)`. Otherwise should be of shape
-        `(n_cells,)`. This matrix can be selected from elements of the anndata
-        object by using key word arguments: `layer`, `obsm`, `obsp`, or
-        `use_raw`.
+        `(n_cells,)`. If not given, it is selected from `adata` using `use`.
     use_graph
         Key to use for graph in anndata object.
         If not provided, default neighbors connectivities will be used instead.
         (See ``neighbors_key`` below.)
     {neighbors_key}
-    layer
-        Key for `adata.layers` to choose `vals`.
-    obsm
-        Key for `adata.obsm` to choose `vals`.
-    obsp
-        Key for `adata.obsp` to choose `vals`.
+    {use}
     use_raw
         Whether to use `adata.raw.X` for `vals`.
 
@@ -88,9 +93,10 @@ def morans_i(
     .. code:: python
 
         import scanpy as sc, numpy as np
+        from anndata.acc import A
 
         pbmc = sc.datasets.pbmc68k_processed()
-        pc_c = sc.metrics.morans_i(pbmc, obsm="X_pca")
+        pc_c = sc.metrics.morans_i(pbmc, use=A.obsm["X_pca"])
 
     It's equivalent to call the function directly on the underlying arrays:
 
@@ -103,7 +109,9 @@ def morans_i(
     adata = cast("AnnData", adata_or_graph)
     g = _get_graph(adata, use_graph=use_graph, neighbors_key=neighbors_key)
     if vals is None:
-        vals = _get_arr(adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp).T
+        vals = _get_arr(
+            adata, _resolve_obs(use), use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp
+        ).T
     return morans_i(g, vals)
 
 

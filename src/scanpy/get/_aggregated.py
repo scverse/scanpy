@@ -10,6 +10,7 @@ import pandas as pd
 from anndata import AnnData
 from fast_array_utils.numba import njit
 from scipy import sparse
+from scverse_misc import Deprecation, deprecated_arg
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 from .._compat import CSBase, CSRBase, DaskArray, warn
@@ -241,6 +242,9 @@ def _normalize_by[I: Idx2D | int](
 
 @_doc_params(ref=doc_ref_compat)
 @doctest_needs("anndata_acc")
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("varm", Deprecation("1.13.0", "Use `use` instead."))
 def aggregate(
     adata: AnnData,
     by: (
@@ -250,7 +254,7 @@ def aggregate(
     ),
     func: AggType | Iterable[AggType],
     *,
-    acc: LayerAcc | MultiAcc | GraphAcc | str | None = None,
+    use: LayerAcc | MultiAcc | GraphAcc | str | None = None,
     mask: NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str | None = None,
     dof: int = 1,
     # old API
@@ -281,7 +285,7 @@ def aggregate(
         Boolean mask (or reference to a mask vector) to apply along the axis\ [#ref]_.
     dof
         Degrees of freedom for variance. Defaults to 1.
-    acc
+    use
         If not None, accessor for aggregation data.
         Replaces `layer`, `obsm`, and `varm`.
         Can also be a :class:`~anndata.acc.GraphAcc` (e.g. `A.obsp[...]`, `A.varp[...]`)
@@ -293,7 +297,6 @@ def aggregate(
     obsm
     varm
         If not None, key for aggregation data.
-        Use `acc` instead.
 
     Returns
     -------
@@ -348,20 +351,16 @@ def aggregate(
         )
         raise NotImplementedError(msg)
 
-    if settings.preset is Preset.ScanpyV2Preview and any(
-        v is not None for v in (axis, layer, obsm, varm)
-    ):
-        msg = "`acc` will replace `layer`, `obsm`, and `varm` arguments in scanpy 2."
-        if axis is not None:
-            msg += " `axis` is no longer necessary as it is inferred from `by`."
+    if axis is not None and settings.preset is Preset.ScanpyV2Preview:
+        msg = "`axis` is no longer necessary as it is inferred from `by`."
         warn(msg, FutureWarning)
 
     by, dim = _normalize_by(by, axis, obsm=obsm, varm=varm)
     del axis
 
-    if isinstance(by[0], AdRef) and acc is None:
-        acc = A.X
-    data = _get_arr(adata, acc, dim=dim, layer=layer, obsm=obsm, varm=varm)
+    if isinstance(by[0], AdRef) and use is None:
+        use = A.X
+    data = _get_arr(adata, use, dim=dim, layer=layer, obsm=obsm, varm=varm)
 
     values = _get_vec_compat(adata, by, dim=dim)
     dim_df = pd.DataFrame({
@@ -386,13 +385,13 @@ def aggregate(
     layers = _aggregate(data, by=categorical, func=func, mask=mask, dof=dof)
 
     # Define new var dataframe
-    if obsm or varm or isinstance(acc, MultiAcc):
+    if obsm or varm or isinstance(use, MultiAcc):
         var = pd.DataFrame(  # Check if there could be labels, create them otherwise
             index=data.columns
             if isinstance(data, pd.DataFrame)
             else pd.RangeIndex(data.shape[1]).astype(str)
         )
-    elif isinstance(acc, GraphAcc):
+    elif isinstance(use, GraphAcc):
         # Square graph: the un-grouped axis still indexes the original `dim`
         var = getattr(adata, dim)
     else:  # layer

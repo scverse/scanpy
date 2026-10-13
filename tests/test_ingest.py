@@ -67,7 +67,8 @@ def test_representation(adatas):
     assert ing._obsm["rep"].shape == (adata_new.n_obs, 30)
     assert not ing._pca_centered
 
-    sc.pp.neighbors(adata_ref, use_rep="X")
+    with pytest.warns(FutureWarning, match=r"argument use_rep is deprecated"):
+        sc.pp.neighbors(adata_ref, use_rep="X")
 
     ing = sc.tl.Ingest(adata_ref)
     ing.fit(adata_new)
@@ -81,7 +82,7 @@ def test_representation_acc(adatas) -> None:
     """An accessor `use_rep` round-trips through `.uns` and is used for the new data."""
     adata_ref, adata_new = (a.copy() for a in adatas)
     adata_new.obsm["X_pca"] = adata_ref.obsm["X_pca"][: adata_new.n_obs]
-    sc.pp.neighbors(adata_ref, use_rep=A.obsm["X_pca"])
+    sc.pp.neighbors(adata_ref, use=A.obsm["X_pca"])
 
     ing = sc.tl.Ingest(adata_ref)
     ing.fit(adata_new)
@@ -202,6 +203,7 @@ def test_ingest_function(adatas: tuple[sc.AnnData, sc.AnnData]) -> None:
 
 # https://github.com/lmcinnes/umap/issues/1174
 @pytest.mark.filterwarnings("ignore:.*renamed to.*ensure_all_finite:FutureWarning")
+@pytest.mark.filterwarnings("ignore:.*argument use_rep is deprecated:FutureWarning")
 def test_ingest_map_embedding_umap() -> None:
     adata_ref = sc.AnnData(X)
     adata_new = sc.AnnData(T)

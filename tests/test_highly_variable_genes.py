@@ -58,6 +58,7 @@ def test_supports_batch(adata):
     assert "highly_variable_intersection" in adata.var.columns
 
 
+@needs.anndata_acc
 def test_supports_layers(adata_sess):
     def execute(layer: str | None) -> AnnData:
         gen = np.random.default_rng(0)
@@ -70,7 +71,10 @@ def test_supports_layers(adata_sess):
             gen.binomial(4, 0.5, size=adata.n_obs), dtype="category"
         )
         sc.pp.highly_variable_genes(
-            adata, batch_key="batch", n_top_genes=3, layer=layer
+            adata,
+            batch_key="batch",
+            n_top_genes=3,
+            **({} if layer is None else dict(use=f"layers.{layer}")),
         )
         assert "highly_variable_nbatches" in adata.var.columns
         assert adata.var["highly_variable"].sum() == 3
