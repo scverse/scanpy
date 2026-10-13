@@ -529,8 +529,8 @@ def read_10x_mtx(
     Parameters
     ----------
     path
-        Path to directory for `.mtx` and `.tsv` files,
-        e.g. './filtered_gene_bc_matrices/hg19/'.
+        Path to directory for `.mtx` and `.tsv` files (or `.mtx.gz` and `.tsv.gz`),
+        e.g. './filtered_feature_bc_matrix/'.
     var_names
         The variables index.
     make_unique
@@ -545,12 +545,14 @@ def read_10x_mtx(
         Only keep 'Gene Expression' data and ignore other feature types,
         e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
     prefix
-        Any prefix before `matrix.mtx`, `genes.tsv` and `barcodes.tsv`. For instance,
-        if the files are named `patientA_matrix.mtx`, `patientA_genes.tsv` and
-        `patientA_barcodes.tsv` the prefix is `patientA_`.
+        Any prefix before `matrix.mtx.gz`, `features.tsv.gz` and `barcodes.tsv.gz`
+        (or `matrix.mtx`, `genes.tsv` and `barcodes.tsv` for legacy files).
+        For instance, if the files are named `patientA_matrix.mtx.gz`,
+        `patientA_features.tsv.gz` and `patientA_barcodes.tsv.gz`, the prefix
+        is `patientA_`.
         (Default: no prefix)
     compressed
-        Whether to expect Cell Ranger v3+ files (.mtx, features.tsv, barcodes.tsv)
+        Whether to expect Cell Ranger v3+ files (`matrix.mtx`, `features.tsv`, `barcodes.tsv`)
         to be gzipped. If True, '.gz' suffix is appended to filenames.
         Set to False for STARsolo output.
         Has no effect on legacy (v2-) files.
