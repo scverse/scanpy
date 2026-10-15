@@ -2070,20 +2070,31 @@ def _prepare_dataframe(  # noqa: PLR0912
         categorical.name = groupby[0]
     else:
         # join the groupby values  using "_" to make a new 'category'
-        categorical = obs_tidy[groupby].apply("_".join, axis=1).astype("category")
+        joined = obs_tidy[groupby].apply(lambda r: "_".join(map(str, r)), axis=1)
+        # rows missing any groupby value get no category, as in the
+        # single-column path where NaN never becomes a category
+        joined = joined.where(obs_tidy[groupby].notna().all(axis=1))
+        categorical = joined.astype("category")
         categorical.name = "_".join(groupby)
 
         # preserve category order
         from itertools import product
 
         order = {
-            "_".join(k): idx
+            "_".join(map(str, k)): idx
             for idx, k in enumerate(
-                product(*(obs_tidy[g].cat.categories for g in groupby))
+                product(
+                    *(
+                        obs_tidy[g].cat.categories
+                        if isinstance(obs_tidy[g].dtype, CategoricalDtype)
+                        else np.unique(obs_tidy[g])
+                        for g in groupby
+                    )
+                )
             )
         }
         categorical = categorical.cat.reorder_categories(
-            sorted(categorical.cat.categories, key=lambda x: order[x])
+            sorted(categorical.cat.categories, key=lambda x: order.get(x, len(order)))
         )
     obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
