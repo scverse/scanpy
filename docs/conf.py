@@ -203,6 +203,7 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
     "pp.highly_variable_genes": (["np", "sp", "da"], ["da[sp[csc]]"]),
     "pp.log1p": (["np", "sp", "da"], []),
     "pp.neighbors": (["np", "sp"], []),
+    "pp.normalize_shifted_clr": (["np", "sp", "da"], []),
     "pp.normalize_total": (["np", "sp[csr]", "da"], []),
     "pp.pca": (["np", "sp", "da"], ["da[sp[csc]]"]),
     "pp.regress_out": (["np"], []),
