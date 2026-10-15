@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -15,7 +16,8 @@ from .... import logging as logg
 from ...._settings import Default, settings
 from ...._utils import _doc_params, _get_basis_key, sanitize_anndata, with_cat_dtype
 from ...._utils.random import _LegacyRng
-from ....get import obs_df, rank_genes_groups_df
+from ....get import obs_df
+from ....get.get import _rank_genes_groups_df
 from .._anndata import ranking
 from .._docs import (
     doc_cm_palette,
@@ -332,6 +334,101 @@ def dpt_groups_pseudotime(
         return fig
 
 
+_RESULTS_COLUMNS = {
+    "gene": "names",
+    "score": "scores",
+    "log_fc": "logfoldchanges",
+    "p_value": "pvals",
+    "adj_p_value": "pvals_adj",
+    "frac_group": "pct_nz_group",
+    "frac_reference": "pct_nz_reference",
+}
+
+
+@dataclass(frozen=True, eq=False)
+class _RankedGenes:
+    """Ranked genes from `adata.uns[key]` or a :mod:`scanpy.tl.markers` results table."""
+
+    adata: AnnData
+    key: str
+    table: pd.DataFrame | None
+    groupby: str | None
+    reference: str
+    use_raw: bool
+    group_names: Sequence[str]
+
+    @classmethod
+    def load(
+        cls,
+        adata: AnnData,
+        *,
+        key: str | None,
+        results: pd.DataFrame | None,
+        groupby: str | None = None,
+    ) -> _RankedGenes:
+        key = "rank_genes_groups" if key is None else key
+        if results is None:
+            params = adata.uns[key]["params"]
+            return cls(
+                adata,
+                key,
+                None,
+                groupby=str(params["groupby"]) if groupby is None else groupby,
+                reference=str(params["reference"]),
+                use_raw=bool(params["use_raw"]),
+                group_names=adata.uns[key]["names"].dtype.names,
+            )
+        table = results.rename(columns=_RESULTS_COLUMNS)
+        return cls(
+            adata,
+            key,
+            table,
+            groupby=groupby,
+            reference=str(table["reference"].iloc[0]),
+            use_raw=False,
+            group_names=[str(g) for g in table["group"].unique()],
+        )
+
+    def require_groupby(self) -> str:
+        if self.groupby is None:
+            msg = "Pass `groupby` when plotting a `results` table."
+            raise ValueError(msg)
+        return self.groupby
+
+    def group_df(
+        self,
+        group: str,
+        *,
+        gene_symbols: str | None = None,
+        log2fc_min: float | None = None,
+    ) -> pd.DataFrame:
+        if self.table is None:
+            return _rank_genes_groups_df(
+                self.adata,
+                group,
+                key=self.key,
+                gene_symbols=gene_symbols,
+                log2fc_min=log2fc_min,
+            )
+        df = self.table.loc[self.table["group"] == group].drop(
+            columns=["group", "reference"]
+        )
+        if log2fc_min is not None:
+            df = df[df["logfoldchanges"] > log2fc_min]
+        if gene_symbols is not None:
+            df = df.join(self.adata.var[gene_symbols], on="names")
+        return df.reset_index(drop=True)
+
+    def top(self, group: str, n_genes: int) -> tuple[Sequence[str], np.ndarray]:
+        if self.table is None:
+            return (
+                self.adata.uns[self.key]["names"][group][:n_genes],
+                self.adata.uns[self.key]["scores"][group][:n_genes],
+            )
+        df = self.group_df(group).head(n_genes)
+        return df["names"].to_numpy(), df["scores"].to_numpy()
+
+
 @_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
@@ -340,6 +437,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     n_genes: int = 20,
     gene_symbols: str | None = None,
     key: str | None = "rank_genes_groups",
+    results: pd.DataFrame | None = None,
     fontsize: int = 8,
     ncols: int = 4,
     sharey: bool = True,
@@ -361,6 +459,11 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         use `.var_names`.
     n_genes
         Number of genes to show.
+    key
+        Key used to store the ranking results in `adata.uns`.
+    results
+        Results table returned by a :mod:`scanpy.tl.markers` function,
+        to plot instead of `adata.uns[key]`.
     fontsize
         Fontsize for gene names.
     ncols
@@ -405,8 +508,8 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         )
         raise NotImplementedError(msg)
 
-    reference = str(adata.uns[key]["params"]["reference"])
-    group_names = adata.uns[key]["names"].dtype.names if groups is None else groups
+    ranked = _RankedGenes.load(adata, key=key, results=results)
+    group_names = ranked.group_names if groups is None else groups
     if isinstance(group_names, str):
         group_names = [group_names]
     # one panel for each group
@@ -439,8 +542,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     ymin = np.inf
     ymax = -np.inf
     for count, group_name in enumerate(group_names):
-        gene_names = adata.uns[key]["names"][group_name][:n_genes]
-        scores = adata.uns[key]["scores"][group_name][:n_genes]
+        gene_names, scores = ranked.top(group_name, n_genes)
 
         # Setting up axis, calculating y bounds
         if sharey:
@@ -460,7 +562,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
         # Mapping to gene_symbols
         if gene_symbols is not None:
-            if adata.raw is not None and adata.uns[key]["params"]["use_raw"]:
+            if adata.raw is not None and ranked.use_raw:
                 gene_names = adata.raw.var[gene_symbols][gene_names]
             else:
                 gene_names = adata.var[gene_symbols][gene_names]
@@ -477,7 +579,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
                 fontsize=fontsize,
             )
 
-        axs[-1].set_title(f"{group_name} vs. {reference}")
+        axs[-1].set_title(f"{group_name} vs. {ranked.reference}")
         if count >= n_panels_x * (n_panels_y - 1):
             axs[-1].set_xlabel("ranking")
 
@@ -489,7 +591,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         ymax += 0.3 * (ymax - ymin)
         axs[0].set_ylim(ymin, ymax)
 
-    writekey = f"rank_genes_groups_{adata.uns[key]['params']['groupby']}"
+    writekey = f"rank_genes_groups_{ranked.groupby}"
     savefig_or_show(writekey, show=show, save=save)
     show = settings.autoshow if show is None else show
     if show:
@@ -527,6 +629,7 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
     var_names: Sequence[str] | Mapping[str, Sequence[str]] | None = None,
     min_logfoldchange: float | None = None,
     key: str | None = None,
+    results: pd.DataFrame | None = None,
     show: bool | None = None,
     return_fig: bool = False,
     gene_symbols: str | None = None,
@@ -541,12 +644,9 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
         )
         raise ValueError(msg)
 
-    if key is None:
-        key = "rank_genes_groups"
-
-    if groupby is None:
-        groupby = str(adata.uns[key]["params"]["groupby"])
-    group_names = adata.uns[key]["names"].dtype.names if groups is None else groups
+    ranked = _RankedGenes.load(adata, key=key, results=results, groupby=groupby)
+    groupby = ranked.require_groupby()
+    group_names = ranked.group_names if groups is None else groups
     if isinstance(group_names, str):
         group_names = [group_names]
 
@@ -569,12 +669,8 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
         var_names = {}
         var_names_list = []
         for group in group_names:
-            df = rank_genes_groups_df(
-                adata,
-                group,
-                key=key,
-                gene_symbols=gene_symbols,
-                log2fc_min=min_logfoldchange,
+            df = ranked.group_df(
+                group, gene_symbols=gene_symbols, log2fc_min=min_logfoldchange
             )
 
             if gene_symbols is not None:
@@ -603,8 +699,8 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
                 adata,
                 values_to_plot,
                 var_names_list,
-                key=key,
                 gene_symbols=gene_symbols,
+                ranked=ranked,
             )
             title = values_to_plot
             if values_to_plot == "logfoldchanges":
@@ -684,7 +780,7 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
 
 
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
-def rank_genes_groups_heatmap(
+def rank_genes_groups_heatmap(  # noqa: PLR0913
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
     *,
@@ -694,6 +790,7 @@ def rank_genes_groups_heatmap(
     var_names: Sequence[str] | Mapping[str, Sequence[str]] | None = None,
     min_logfoldchange: float | None = None,
     key: str | None = None,
+    results: pd.DataFrame | None = None,
     show: bool | None = None,
     save: bool | None = None,  # deprecated
     **kwds,
@@ -746,6 +843,7 @@ def rank_genes_groups_heatmap(
         groupby=groupby,
         var_names=var_names,
         key=key,
+        results=results,
         min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
@@ -754,7 +852,7 @@ def rank_genes_groups_heatmap(
 
 
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
-def rank_genes_groups_tracksplot(
+def rank_genes_groups_tracksplot(  # noqa: PLR0913
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
     *,
@@ -764,6 +862,7 @@ def rank_genes_groups_tracksplot(
     gene_symbols: str | None = None,
     min_logfoldchange: float | None = None,
     key: str | None = None,
+    results: pd.DataFrame | None = None,
     show: bool | None = None,
     save: bool | None = None,  # deprecated
     **kwds,
@@ -797,6 +896,7 @@ def rank_genes_groups_tracksplot(
         gene_symbols=gene_symbols,
         groupby=groupby,
         key=key,
+        results=results,
         min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
@@ -828,6 +928,7 @@ def rank_genes_groups_dotplot(  # noqa: PLR0913
     gene_symbols: str | None = None,
     min_logfoldchange: float | None = None,
     key: str | None = None,
+    results: pd.DataFrame | None = None,
     show: bool | None = None,
     return_fig: bool = False,
     save: bool | None = None,  # deprecated
@@ -941,6 +1042,7 @@ def rank_genes_groups_dotplot(  # noqa: PLR0913
         var_names=var_names,
         gene_symbols=gene_symbols,
         key=key,
+        results=results,
         min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
@@ -960,6 +1062,7 @@ def rank_genes_groups_stacked_violin(  # noqa: PLR0913
     var_names: Sequence[str] | Mapping[str, Sequence[str]] | None = None,
     min_logfoldchange: float | None = None,
     key: str | None = None,
+    results: pd.DataFrame | None = None,
     show: bool | None = None,
     return_fig: bool = False,
     save: bool | None = None,  # deprecated
@@ -1005,6 +1108,7 @@ def rank_genes_groups_stacked_violin(  # noqa: PLR0913
         groupby=groupby,
         var_names=var_names,
         key=key,
+        results=results,
         min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
@@ -1037,6 +1141,7 @@ def rank_genes_groups_matrixplot(  # noqa: PLR0913
     gene_symbols: str | None = None,
     min_logfoldchange: float | None = None,
     key: str | None = None,
+    results: pd.DataFrame | None = None,
     show: bool | None = None,
     return_fig: bool = False,
     save: bool | None = None,  # deprecated
@@ -1134,6 +1239,7 @@ def rank_genes_groups_matrixplot(  # noqa: PLR0913
         var_names=var_names,
         gene_symbols=gene_symbols,
         key=key,
+        results=results,
         min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
@@ -1152,6 +1258,8 @@ def rank_genes_groups_violin(  # noqa: PLR0913
     gene_symbols: str | None = None,
     use_raw: bool | None = None,
     key: str | None = None,
+    results: pd.DataFrame | None = None,
+    groupby: str | None = None,
     split: bool = True,
     density_norm: DensityNorm = "width",
     strip: bool = True,
@@ -1182,6 +1290,13 @@ def rank_genes_groups_violin(  # noqa: PLR0913
     use_raw
         Use `raw` attribute of `adata` if present. Defaults to the value that
         was used in :func:`~scanpy.tl.rank_genes_groups`.
+    key
+        Key used to store the ranking results in `adata.uns`.
+    results
+        Results table returned by a :mod:`scanpy.tl.markers` function,
+        to plot instead of `adata.uns[key]`. Requires `groupby`.
+    groupby
+        The key of the observation grouping that `results` were computed for.
     split
         Whether to split the violins or not.
     density_norm
@@ -1206,13 +1321,12 @@ def rank_genes_groups_violin(  # noqa: PLR0913
         sc.pl.rank_genes_groups_violin(adata, groups=["CD34+"], n_genes=5)
 
     """
-    if key is None:
-        key = "rank_genes_groups"
-    groups_key = str(adata.uns[key]["params"]["groupby"])
+    ranked = _RankedGenes.load(adata, key=key, results=results, groupby=groupby)
+    groups_key = ranked.require_groupby()
     if use_raw is None:
-        use_raw = bool(adata.uns[key]["params"]["use_raw"])
-    reference = str(adata.uns[key]["params"]["reference"])
-    groups_names = adata.uns[key]["names"].dtype.names if groups is None else groups
+        use_raw = ranked.use_raw
+    reference = ranked.reference
+    groups_names = ranked.group_names if groups is None else groups
     if isinstance(groups_names, str):
         groups_names = [groups_names]
     density_norm = _deprecated_scale(density_norm, scale, default="width")
@@ -1220,7 +1334,7 @@ def rank_genes_groups_violin(  # noqa: PLR0913
     axs = []
     for group_name in groups_names:
         if gene_names is None:
-            _gene_names = adata.uns[key]["names"][group_name][:n_genes]
+            _gene_names, _ = ranked.top(group_name, n_genes)
         else:
             _gene_names = gene_names
         if isinstance(_gene_names, np.ndarray):
@@ -1270,9 +1384,7 @@ def rank_genes_groups_violin(  # noqa: PLR0913
         _ax.legend_.remove()
         _ax.set_ylabel("expression")
         _ax.set_xticks(range(len(new_gene_names)), new_gene_names, rotation="vertical")
-        writekey = (
-            f"rank_genes_groups_{adata.uns[key]['params']['groupby']}_{group_name}"
-        )
+        writekey = f"rank_genes_groups_{groups_key}_{group_name}"
         savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
     show = settings.autoshow if show is None else show
@@ -1650,6 +1762,7 @@ def _get_values_to_plot(
     groups: Sequence[str] | None = None,
     key: str | None = "rank_genes_groups",
     gene_symbols: str | None = None,
+    ranked: _RankedGenes | None = None,
 ):
     """Prepare a dataframe to be plotted as dotplot or matrixplot.
 
@@ -1693,22 +1806,24 @@ def _get_values_to_plot(
 
     values_df = None
     check_done = False
+    if ranked is None:
+        ranked = _RankedGenes.load(adata, key=key, results=None)
     if groups is None:
-        groups = adata.uns[key]["names"].dtype.names
+        groups = ranked.group_names
     if values_to_plot is not None:
         df_list = []
         for group in groups:
-            df = rank_genes_groups_df(adata, group, key=key, gene_symbols=gene_symbols)
+            df = ranked.group_df(group, gene_symbols=gene_symbols)
             if gene_symbols is not None:
                 df["names"] = df[gene_symbols]
             # check that all genes are present in the df as sc.tl.rank_genes_groups
             # can be called with only top genes
             if not check_done and df.shape[0] < adata.shape[1]:
                 message = (
-                    "Please run `sc.tl.rank_genes_groups` with "
-                    "'n_genes=adata.shape[1]' to save all gene "
-                    f"scores. Currently, only {df.shape[0]} "
-                    "are found"
+                    "Plotting these values needs results for all genes. "
+                    "Run `sc.tl.rank_genes_groups` with `n_genes=adata.shape[1]` "
+                    "or a `sc.tl.markers` function with `n_top=None`. "
+                    f"Currently, only {df.shape[0]} are found"
                 )
                 logg.error(message)
                 raise ValueError(message)

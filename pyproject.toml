@@ -97,6 +97,7 @@ scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
 illico = [ "illico>=0.6" ]
+pydeseq2 = [ "pydeseq2>=0.5" ]
 scanpy2 = [ "anndata>=0.13.3", "hv-anndata>=0.0.3a5", "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
@@ -200,8 +201,6 @@ lint.ignore = [
 ]
 # No need for docstrings for all benchmarks
 lint.per-file-ignores."benchmarks/**/*.py" = [ "D102", "D103" ]
-# Do not assign a lambda expression, use a def
-lint.per-file-ignores."src/scanpy/tools/_rank_genes_groups.py" = [ "E731" ]
 # Old and unmaintained
 lint.per-file-ignores."src/scanpy/tools/_sim.py" = [ "N" ]
 # D*: No need for docstrings for all test modules and test functions
