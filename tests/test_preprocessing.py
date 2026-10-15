@@ -618,6 +618,18 @@ def test_downsample_total_counts(
     assert x.dtype == adata.X.dtype
 
 
+def test_downsample_total_counts_fortran_order() -> None:
+    rng = np.random.default_rng(0)
+    x = rng.poisson(5, (50, 30)).astype(np.float32)
+    adata_c = AnnData(X=np.ascontiguousarray(x))
+    adata_f = AnnData(X=np.asfortranarray(x))
+    sc.pp.downsample_counts(adata_c, total_counts=1000, rng=0)
+    sc.pp.downsample_counts(adata_f, total_counts=1000, rng=0)
+    assert adata_f.X.sum() == 1000
+    np.testing.assert_array_equal(adata_c.X, adata_f.X)
+    assert adata_f.X.flags.f_contiguous
+
+
 def test_recipe_weinreb():
     # Just tests for failure for now
     adata = pbmc68k_reduced().raw.to_adata()
