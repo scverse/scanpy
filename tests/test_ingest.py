@@ -76,6 +76,29 @@ def test_representation(adatas):
     assert ing._obsm["rep"] is adata_new.X
 
 
+def test_representation_more_than_n_pcs_default(adatas):
+    """`n_pcs > settings.N_PCS` must not be truncated to `settings.N_PCS`.
+
+    `pp.neighbors` with its own `n_pcs=None` default uses every stored PCA
+    component, so `Ingest` must match that instead of hardcoding
+    `settings.N_PCS`, or it builds `rep` from a different, truncated
+    representation than the one the neighbor graph was actually built from.
+    """
+    adata_ref = adatas[0].copy()
+    adata_new = adatas[1].copy()
+
+    n_comps = settings.N_PCS + 20
+    sc.pp.pca(adata_ref, n_comps=n_comps)
+    sc.pp.neighbors(adata_ref)
+
+    ing = sc.tl.Ingest(adata_ref)
+    ing.fit(adata_new)
+
+    assert ing._use_rep == "X_pca"
+    assert ing._n_pcs == n_comps
+    assert ing._obsm["rep"].shape == (adata_new.n_obs, n_comps)
+
+
 @needs.anndata_acc
 def test_representation_acc(adatas) -> None:
     """An accessor `use_rep` round-trips through `.uns` and is used for the new data."""
