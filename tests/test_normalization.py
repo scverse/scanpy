@@ -576,24 +576,24 @@ def test_normalize_shifted_clr_densifies_sparse_input():
     ],
 )
 @pytest.mark.parametrize(
-    "sparse_blocks", [False, True], ids=["dense_dask", "sparse_dask"]
+    "block_type",
+    [np.asarray, sparse.csr_matrix, sparse.csc_matrix],  # noqa: TID251
+    ids=["dense_dask", "csr_dask", "csc_dask"],
 )
-def test_normalize_shifted_clr_dask(sparse_blocks, x, alpha, expected):
+def test_normalize_shifted_clr_dask(block_type, x, alpha, expected):
     import dask.array as da
 
     chunks = (1, x.shape[1])  # one cell per chunk
-    x = (
-        da.from_array(sparse.csr_matrix(x), chunks=chunks, asarray=False)  # noqa: TID251
-        if sparse_blocks
-        else da.from_array(x, chunks=chunks)
-    )
+    x = da.from_array(block_type(x), chunks=chunks, asarray=False)
     adata = AnnData(x.astype("float32"))
 
     sc.pp.normalize_shifted_clr(adata, alpha=alpha)
 
     np.testing.assert_allclose(to_ndarray(adata.X), expected, rtol=1e-5, atol=1e-6)
     assert isinstance(adata.X, DaskArray)
-    assert isinstance(adata.X._meta, np.ndarray)
+    # `np.matrix` subclasses `np.ndarray`, so check exact types, including a real block
+    assert type(adata.X._meta) is np.ndarray
+    assert type(adata.X.blocks[0].compute()) is np.ndarray
 
 
 def test_normalize_shifted_clr_view():

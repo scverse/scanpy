@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
-from fast_array_utils import stats
+from fast_array_utils import conv, stats
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 
@@ -373,8 +373,7 @@ def _normalize_shifted_clr_helper(
     row_center = stats.sum(log_values, axis=1) / log_values.shape[1]
     if not isinstance(row_center, DaskArray):
         row_center = np.asarray(row_center).ravel()
-    if isinstance(log_values, CSBase):
-        log_values = log_values.toarray()
+    log_values = conv.to_dense(log_values)
     return log_values - row_center[:, None], cell_depths
 
 
@@ -398,6 +397,8 @@ def normalize_shifted_clr(
     which is equivalent to centering
     :math:`\log(x_i + 1 / (4 α))` because the constant :math:`\log(4 α)`
     cancels during CLR centering.
+
+    .. array-support:: pp.normalize_shifted_clr
 
     .. note::
         CLR centering generally maps zeros to non-zero values, so the resulting
