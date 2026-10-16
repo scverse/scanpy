@@ -9,12 +9,11 @@ from scipy import sparse
 from .._compat import CSRBase
 from ._common import (
     _get_indices_distances_from_dense_matrix,
-    _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
 
 
-def gauss[D: (NDArray[np.float32 | np.float64], CSRBase)](  # noqa: PLR0912
+def gauss[D: (NDArray[np.float32 | np.float64], CSRBase)](
     distances: D, n_neighbors: int, *, knn: bool
 ) -> D:
     """Derive gaussian connectivities between data points from their distances.
@@ -32,9 +31,7 @@ def gauss[D: (NDArray[np.float32 | np.float64], CSRBase)](  # noqa: PLR0912
     # init distances
     if isinstance(distances, CSRBase):
         d_sq = distances.power(2)
-        indices, distances_sq = _get_indices_distances_from_sparse_matrix(
-            d_sq, n_neighbors
-        )
+        rows, indices, distances_sq = _sparse_knn(d_sq, n_neighbors - 1)
     else:
         assert isinstance(distances, np.ndarray)
         d_sq = np.power(distances, 2)
@@ -42,17 +39,15 @@ def gauss[D: (NDArray[np.float32 | np.float64], CSRBase)](  # noqa: PLR0912
             d_sq, n_neighbors
         )
 
-    # exclude the first point, the 0th neighbor
-    indices = indices[:, 1:]
-    distances_sq = distances_sq[:, 1:]
-
     # choose sigma, the heuristic here doesn't seem to make much of a difference,
     # but is used to reproduce the figures of Haghverdi et al. (2016)
     if isinstance(distances, CSRBase):
-        # as the distances are not sorted
         # we have decay within the n_neighbors first neighbors
-        sigmas_sq = np.median(distances_sq, axis=1)
+        sigmas_sq = _sorted_row_median(rows, distances_sq, d_sq.shape[0])
     else:
+        # exclude the first point, the 0th neighbor
+        indices = indices[:, 1:]
+        distances_sq = distances_sq[:, 1:]
         # the last item is already in its sorted position through argpartition
         # we have decay beyond the n_neighbors neighbors
         sigmas_sq = distances_sq[:, -1] / 4
@@ -81,23 +76,47 @@ def gauss[D: (NDArray[np.float32 | np.float64], CSRBase)](  # noqa: PLR0912
             w[~mask] = 0
     else:
         assert isinstance(d_sq, CSRBase)
-        # need to copy the distance matrix here; what follows is inplace
-        w = d_sq.copy()
-        for i in range(len(d_sq.indptr[:-1])):
-            row = d_sq.indices[d_sq.indptr[i] : d_sq.indptr[i + 1]]
-            num = 2 * sigmas[i] * sigmas[row]
-            den = sigmas_sq[i] + sigmas_sq[row]
-            w.data[d_sq.indptr[i] : d_sq.indptr[i + 1]] = np.sqrt(num / den) * np.exp(
-                -d_sq.data[d_sq.indptr[i] : d_sq.indptr[i + 1]] / den
-            )
-        w = w.tolil()
-        for i, row in enumerate(indices):
-            for j in row:
-                if i not in set(indices[j]):
-                    w[j, i] = w[i, j]
-        w = w.tocsr()
+        num = 2 * sigmas[rows] * sigmas[indices]
+        den = sigmas_sq[rows] + sigmas_sq[indices]
+        data = np.sqrt(num / den) * np.exp(-distances_sq / den)
+        w = type(d_sq)((data, (rows, indices)), shape=d_sq.shape)
+        # mirror edges where i is a neighbor of j but j is not a neighbor of i
+        w_t = w.T.tocsr()
+        w = (w + w_t - w_t.multiply(w != 0)).tocsr()
 
     return w
+
+
+def _sparse_knn(
+    d: CSRBase, /, k: int
+) -> tuple[NDArray[np.intp], NDArray[np.integer], NDArray[np.floating]]:
+    """Get the `k` closest non-self neighbors per row of a sparse distance matrix.
+
+    Returns row indices, column indices and distances of the kept entries,
+    sorted by row and then by distance.
+    The stored order of the entries is not assumed to be sorted by distance,
+    and the cell itself is dropped wherever it is stored.
+    """
+    rows = np.repeat(np.arange(d.shape[0]), np.diff(d.indptr))
+    cols, vals = d.indices, d.data
+    not_self = cols != rows
+    rows, cols, vals = rows[not_self], cols[not_self], vals[not_self]
+    order = np.lexsort((vals, rows))
+    rows, cols, vals = rows[order], cols[order], vals[order]
+    starts = np.searchsorted(rows, np.arange(d.shape[0]))
+    keep = np.arange(len(rows)) - starts[rows] < k
+    return rows[keep], cols[keep], vals[keep]
+
+
+def _sorted_row_median(
+    rows: NDArray[np.intp], values: NDArray[np.floating], n_rows: int
+) -> NDArray[np.floating]:
+    """Median per row of `values`, which are sorted by row and then by value."""
+    starts = np.searchsorted(rows, np.arange(n_rows))
+    counts = np.bincount(rows, minlength=n_rows)
+    lo = starts + (counts - 1) // 2
+    hi = starts + counts // 2
+    return (values[lo] + values[hi]) / 2
 
 
 def umap(
