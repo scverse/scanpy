@@ -71,9 +71,16 @@ def _pearson_residuals(
         sums_cells = np.sum(x, axis=1, keepdims=True)
         sum_total = np.sum(sums_genes)
 
-    mu = np.array(sums_cells @ sums_genes / sum_total)
+    # An all-zero matrix has zero expected counts as well.
+    mu = np.array(sums_cells @ sums_genes / (sum_total if sum_total != 0 else 1))
     diff = np.array(x - mu)
-    residuals = diff / np.sqrt(mu + mu**2 / theta)
+    # Use zero residuals by convention for zero-count cells/genes (0 / 0).
+    residuals = np.divide(
+        diff,
+        np.sqrt(mu + mu**2 / theta),
+        out=np.zeros_like(diff),
+        where=mu != 0,
+    )
 
     # clip
     residuals = np.clip(residuals, a_min=-clip, a_max=clip)
@@ -106,7 +113,8 @@ def normalize_pearson_residuals(
     `theta` shared across genes. By default, residuals are clipped to `sqrt(n_obs)`
     and overdispersion `theta=100` is used.
 
-    Expects raw count input.
+    Expects raw count input. Cells or genes with zero total counts receive zero
+    residuals, including when the entire input consists of zeros.
 
     Params
     ------

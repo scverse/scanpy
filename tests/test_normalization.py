@@ -192,6 +192,65 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
         assert np.min(output_x) >= -clip
 
 
+@pytest.mark.parametrize(
+    "sparsity_func",
+    [np.array, sparse.csr_matrix, sparse.csc_matrix],  # noqa: TID251
+    ids=lambda x: x.__name__,
+)
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+@pytest.mark.parametrize("theta", [100, np.inf])
+@pytest.mark.parametrize("clip", [None, np.inf])
+@pytest.mark.parametrize("empty", ["gene", "cell", "both", "all"])
+def test_pearson_residuals_zero_counts(sparsity_func, dtype, theta, clip, empty):
+    # A constant nonzero gene must still have residuals when cell totals differ.
+    counts = np.array([[1, 6], [1, 4], [1, 0]], dtype=dtype)
+    mu = np.outer(counts.sum(axis=1), counts.sum(axis=0)) / counts.sum()
+    expected = (counts - mu) / np.sqrt(mu + mu**2 / theta)
+    if empty in {"gene", "both"}:
+        counts = np.pad(counts, ((0, 0), (0, 1)))
+        expected = np.pad(expected, ((0, 0), (0, 1)))
+    if empty in {"cell", "both"}:
+        counts = np.pad(counts, ((0, 1), (0, 0)))
+        expected = np.pad(expected, ((0, 1), (0, 0)))
+    if empty == "all":
+        counts[:] = 0
+        expected[:] = 0
+    bound = np.sqrt(len(counts)) if clip is None else clip
+    expected = np.clip(expected, -bound, bound)
+    adata = AnnData(sparsity_func(counts))
+
+    with np.errstate(divide="raise", invalid="raise"):
+        result = sc.experimental.pp.normalize_pearson_residuals(
+            adata, theta=theta, clip=clip, inplace=False
+        )["X"]
+
+    assert np.isfinite(result).all()
+    np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-7)
+    np.testing.assert_array_equal(to_ndarray(adata.X), counts)
+
+
+@pytest.mark.parametrize("mode", ["inplace", "copy", "layer"])
+def test_pearson_residuals_zero_counts_storage(mode):
+    counts = np.array([[1, 0, 6], [1, 0, 4], [0, 0, 0]], dtype=float)
+    adata = AnnData(counts.copy())
+    if mode == "layer":
+        adata.layers["counts"] = counts.copy()
+    with np.errstate(divide="raise", invalid="raise"):
+        result = sc.experimental.pp.normalize_pearson_residuals(
+            adata, copy=mode == "copy", layer="counts" if mode == "layer" else None
+        )
+    output = (
+        result.X
+        if mode == "copy"
+        else (adata.layers["counts"] if mode == "layer" else adata.X)
+    )
+    assert np.isfinite(output).all()
+    np.testing.assert_array_equal(output[:, 1], 0)
+    np.testing.assert_array_equal(output[2], 0)
+    if mode != "inplace":
+        np.testing.assert_array_equal(adata.X, counts)
+
+
 def _check_pearson_pca_fields(ad, n_cells, n_comps):
     assert {"pearson_residuals_normalization", "pca"} <= ad.uns.keys(), (
         "Missing `.uns` keys. Expected `['pearson_residuals_normalization', 'pca']`, "
