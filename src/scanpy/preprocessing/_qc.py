@@ -31,6 +31,19 @@ if TYPE_CHECKING:
     from numpy._typing._array_like import NDArray
 
 
+def _check_raw_var_names(adata: AnnData, *, use_raw: bool) -> None:
+    if (
+        use_raw is True
+        and adata.raw is not None
+        and not adata.raw.var_names.equals(adata.var_names)
+    ):
+        msg = (
+            "`use_raw=True` requires `adata.raw.var_names` to be identical to "
+            "`adata.var_names`."
+        )
+        raise ValueError(msg)
+
+
 @_doc_params(
     doc_adata_basic=doc_adata_basic,
     doc_expr_reps=doc_expr_reps,
@@ -81,6 +94,7 @@ def describe_obs(  # noqa: PLR0913
     {doc_obs_qc_returns}
 
     """
+    _check_raw_var_names(adata, use_raw=use_raw)
     if parallel is not None:
         msg = "Argument `parallel` is deprecated, and currently has no effect."
         warn(msg, FutureWarning)
@@ -169,6 +183,7 @@ def describe_var(
     {doc_var_qc_returns}
 
     """
+    _check_raw_var_names(adata, use_raw=use_raw)
     # Handle whether X is passed
     if x is None:
         x = _get_arr(adata, use_raw=use_raw, layer=layer)
@@ -272,6 +287,7 @@ def calculate_qc_metrics(
         sns.histplot(pbmc.obs["pct_counts_mito"])
 
     """
+    _check_raw_var_names(adata, use_raw=use_raw)
     if parallel is not None:
         msg = "Argument `parallel` is deprecated, and currently has no effect."
         warn(msg, FutureWarning)

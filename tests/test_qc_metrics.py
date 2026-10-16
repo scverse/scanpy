@@ -293,6 +293,49 @@ def test_layer_raw(adata: AnnData):
     assert np.allclose(obs_orig, obs_raw)
     assert np.allclose(var_orig, var_layer)
     assert np.allclose(var_orig, var_raw)
+    assert np.allclose(obs_orig, describe_obs(adata, use_raw=True))
+    assert np.allclose(var_orig, describe_var(adata, use_raw=True))
+
+
+@pytest.fixture
+def adata_with_raw() -> AnnData:
+    adata = AnnData(
+        np.array([[1, 2, 0], [0, 3, 1]], dtype=float),
+        var=pd.DataFrame(index=["g0", "g1", "g2"]),
+    )
+    adata.raw = adata
+    return adata
+
+
+@pytest.mark.parametrize(
+    "var_names",
+    [["g0", "g1"], ["g2", "g0", "g1"]],
+    ids=["subset", "reordered"],
+)
+@pytest.mark.parametrize(
+    ("func", "kwargs"),
+    [
+        pytest.param(
+            sc.pp.calculate_qc_metrics,
+            {"percent_top": None},
+            id="calculate_qc_metrics",
+        ),
+        pytest.param(describe_obs, {"percent_top": None}, id="describe_obs"),
+        pytest.param(describe_var, {}, id="describe_var"),
+    ],
+)
+@pytest.mark.parametrize("inplace", [False, True])
+def test_use_raw_requires_matching_var_names(
+    adata_with_raw: AnnData, var_names: list[str], func, kwargs, *, inplace: bool
+) -> None:
+    adata = adata_with_raw[:, var_names].copy()
+    orig = adata.copy()
+
+    msg = "requires `adata.raw.var_names` to be identical to `adata.var_names`"
+    with pytest.raises(ValueError, match=msg):
+        func(adata, use_raw=True, inplace=inplace, **kwargs)
+
+    assert_equal(adata, orig)
 
 
 def test_inner_methods(adata: AnnData):
