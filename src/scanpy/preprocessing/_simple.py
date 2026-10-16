@@ -941,7 +941,7 @@ def _downsample_total_counts[T: (np.ndarray, CSBase)](
     replace: bool,
 ) -> T:
     total_counts = int(total_counts)
-    total = x.sum()
+    total = x.sum(dtype=np.float64 if np.issubdtype(x.dtype, np.floating) else None)
     if total < total_counts:
         return x
     with sparse_as_csr(x) as spc:
@@ -966,7 +966,10 @@ def _downsample_array(
     * total counts in cell must be less than target
     """
     rng = _if_legacy_apply_global(rng)
-    cumcounts = col.cumsum()
+    # accumulate in 64 bit: float32 running sums lose integer precision above 2**24
+    cumcounts = col.cumsum(
+        dtype=np.float64 if np.issubdtype(col.dtype, np.floating) else np.int64
+    )
     total = np.int_(cumcounts[-1])
     sample = rng.choice(total, target, replace=replace)
     sample.sort()
