@@ -71,7 +71,7 @@ def test_archetype_real_tumor_pipeline():
     - Automatically creates expected_archetypes.npy if missing, or validates
       against it if present (Charles' requirement).
     """
-    adata = sc.read_h5ad(DATA_PATH)
+    adata = sc.io.read_h5ad(DATA_PATH)
     print("Loaded:", adata.shape)
     w, s, genes_present = load_model(adata)
     print(f"Model genes matched: {len(genes_present)}/780")
@@ -111,7 +111,7 @@ def test_hexagon_projection_real_data():
     coordinates for visualization. Tests that coordinates are finite
     and have the correct shape.
     """
-    adata = sc.read_h5ad(DATA_PATH)
+    adata = sc.io.read_h5ad(DATA_PATH)
     w, s, _ = load_model(adata)
 
     np.random.seed(42)  # noqa: NPY002
@@ -139,7 +139,7 @@ def test_archetype_biological_relationships():
     - All archetype scores lie within [0, 1] (simplex constraint).
     - Both sample type groups are non-empty.
     """
-    adata = sc.read_h5ad(DATA_PATH)
+    adata = sc.io.read_h5ad(DATA_PATH)
     w, s, _ = load_model(adata)
 
     np.random.seed(42)  # noqa: NPY002
