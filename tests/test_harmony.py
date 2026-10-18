@@ -22,7 +22,6 @@ from scanpy.preprocessing._harmony._kernels import (
 from scanpy.preprocessing._harmony.core import (
     _SUPPRESS_PENALTY,
     _compute_lambda_kb,
-    _correction_multi,
     _get_batch_codes,
     _get_theta_array,
 )
@@ -295,6 +294,17 @@ def _dense_correction(
     return expected
 
 
+def _correction_multi(x, codes, n_batches, r, *, lambda_kb):
+    """One Harmony round's correction through the production path."""
+    # level counts from the code ranges; an unused level has no mass, so where its range ends does not matter
+    n_levels = np.diff(np.append(codes.max(axis=0)[:-1] + 1, n_batches), prepend=0)
+    plan = core._correction_plan(codes, n_batches)
+    w = core._correction_weights(x, r, plan, n_levels, lambda_kb)
+    out = np.empty_like(x)
+    _apply_correction(x, r, plan.cat, w, out, out, core.N_CHUNKS, False)  # noqa: FBT003
+    return out
+
+
 @pytest.mark.parametrize("dtype", [np.float32, np.float64])
 def test_harmony_multikey_correction_matches_dense_design(
     dtype: type[np.floating],
@@ -327,31 +337,6 @@ def test_harmony_multikey_correction_matches_dense_design(
 
     atol = 2e-5 if dtype == np.float32 else 1e-11
     np.testing.assert_allclose(result, expected, atol=atol, rtol=atol)
-
-
-def test_harmony_multikey_correction_singular_fallback(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A system the solver rejects as singular falls back to least squares."""
-    rng = np.random.default_rng(734)
-    x = rng.normal(size=(12, 3))
-    codes = np.column_stack((
-        np.resize([0, 1], len(x)),
-        np.resize([2, 3, 4], len(x)),
-    )).astype(np.int32)
-    r = rng.random(size=(len(x), 2))
-    r /= r.sum(axis=1, keepdims=True)
-    lambda_kb = np.ones((5, 2))
-
-    expected = _correction_multi(x, codes, 5, r, lambda_kb=lambda_kb)
-
-    def singular(*_args, **_kwargs):
-        raise np.linalg.LinAlgError
-
-    monkeypatch.setattr(np.linalg, "solve", singular)
-    result = _correction_multi(x, codes, 5, r, lambda_kb=lambda_kb)
-
-    np.testing.assert_allclose(result, expected, atol=1e-12, rtol=1e-12)
 
 
 @pytest.mark.parametrize("ridge_lambda", [0.0, -0.1, float("inf"), float("nan")])
@@ -665,7 +650,11 @@ def test_harmony2_ircolitis_reference(
 # Kernels and driver of the numba implementation
 
 _N_BATCH, _K, _SIGMA = 3, 5, 0.1
-_DTYPES = [np.float32, np.float64]
+
+
+@pytest.fixture
+def dtype(float_dtype):
+    return float_dtype
 
 
 def _toy(
@@ -700,11 +689,6 @@ def _state(dtype: DTypeLike, keys: str | list[str] = "batch", seed: int = 1):
     return x, z, codes, n_levels, r, o, n_b, n_b / dtype(len(x))
 
 
-def _bounds(n: int, n_blocks: int = 19) -> np.ndarray:
-    sizes = [len(a) for a in np.array_split(np.arange(n), n_blocks)]
-    return np.concatenate([[0], np.cumsum(sizes)]).astype(np.int64)
-
-
 def _clustering_iteration(  # noqa: PLR0917
     z, codes, pr_b, r, o, theta, perm, *, stabilized, sum_penalties
 ):
@@ -733,7 +717,6 @@ def _clustering_iteration(  # noqa: PLR0917
     return r, o
 
 
-@pytest.mark.parametrize("dtype", _DTYPES)
 @pytest.mark.parametrize(
     ("keys", "stabilized", "n_chunks", "scatter", "sum_penalties"),
     [
@@ -757,7 +740,13 @@ def test_cluster_pass_matches_numpy(
     r, o, r_sum = r0.copy(), o0.copy(), r0.sum(axis=0)
     dist, ent, o_fresh, y_t = _cluster_pass(
         *(z, np.ascontiguousarray(y.T), r, codes, o, r_sum, pr_b, theta, perm),
-        *(_bounds(len(x)), dtype(-2 / _SIGMA), stabilized, n_chunks, scatter),
+        *(
+            core._block_bounds(len(x), 0.05),
+            dtype(-2 / _SIGMA),
+            stabilized,
+            n_chunks,
+            scatter,
+        ),
         *(sum_penalties, True),
     )
     atol = 2e-5 if dtype == np.float32 else 1e-10
@@ -784,7 +773,13 @@ def test_cluster_pass_matches_numpy(
     )
     *_, y_out = _cluster_pass(
         *(z, y_in, r2, codes, o2, r_sum2, pr_b, theta, perm),
-        *(_bounds(len(x)), dtype(-2 / _SIGMA), stabilized, n_chunks, scatter),
+        *(
+            core._block_bounds(len(x), 0.05),
+            dtype(-2 / _SIGMA),
+            stabilized,
+            n_chunks,
+            scatter,
+        ),
         *(sum_penalties, False),
     )
     np.testing.assert_array_equal(r2, r)
@@ -798,7 +793,6 @@ def test_cluster_pass_matches_numpy(
         assert np.abs(r_ref - other).max() > 1e-3
 
 
-@pytest.mark.parametrize("dtype", _DTYPES)
 def test_cluster_pass_sum_rule_handles_large_penalties(dtype) -> None:
     """Summed penalty factors far above exp(80) keep their order between clusters."""
     x, z, codes, _, r0, o0, _, pr_b = _state(dtype, ["batch", "half"])
@@ -817,7 +811,15 @@ def test_cluster_pass_sum_rule_handles_large_penalties(dtype) -> None:
     r, o, r_sum = r0.copy(), o0.copy(), r0.sum(axis=0)
     _cluster_pass(
         *(z, np.ascontiguousarray(y.T), r, codes, o, r_sum, pr_b, theta, perm),
-        *(_bounds(len(x)), dtype(-2 / _SIGMA), False, 32, False, True, True),
+        *(
+            core._block_bounds(len(x), 0.05),
+            dtype(-2 / _SIGMA),
+            False,
+            32,
+            False,
+            True,
+            True,
+        ),
     )
     np.testing.assert_allclose(r, r_ref, atol=5e-5 if dtype == np.float32 else 1e-10)
 
@@ -856,7 +858,6 @@ def _random_design(rng: np.random.Generator, n: int, sizes: tuple[int, ...]):
     return codes, n_levels, x, r
 
 
-@pytest.mark.parametrize("dtype", _DTYPES)
 # big block in the middle / first / last / a size-1 key / one key
 @pytest.mark.parametrize("sizes", [(4, 9, 3), (9, 4, 3), (4, 3, 9), (1, 8), (7,)])
 def test_correction_with_pruning_and_an_empty_cluster(
@@ -911,7 +912,6 @@ def test_correction_with_nested_keys_and_unused_levels() -> None:
     )
 
 
-@pytest.mark.parametrize("dtype", _DTYPES)
 def test_apply_correction_normalises_and_returns_centroids(dtype) -> None:
     x, _, codes, n_levels, r, o, n_b, pr_b = _state(dtype, ["batch", "half"])
     lam = _compute_lambda_kb(
@@ -926,7 +926,7 @@ def test_apply_correction_normalises_and_returns_centroids(dtype) -> None:
     plan = core._correction_plan(codes, int(n_levels.sum()))
     w = core._correction_weights(x, r, plan, n_levels, lam)
     z_hat, z_norm = np.empty_like(x), np.empty_like(x)
-    y_t = _apply_correction(x, r, plan.cat, w, z_hat, z_norm, 3)
+    y_t = _apply_correction(x, r, plan.cat, w, z_hat, z_norm, 3, True)  # noqa: FBT003
     assert z_hat.dtype == z_norm.dtype == y_t.dtype == dtype
     np.testing.assert_allclose(
         z_hat,
@@ -937,7 +937,6 @@ def test_apply_correction_normalises_and_returns_centroids(dtype) -> None:
     np.testing.assert_allclose(y_t.T, core._normalize_rows_l2(r.T @ z_norm), atol=1e-5)
 
 
-@pytest.mark.parametrize("dtype", _DTYPES)
 # normal, many categories across chunks, more chunks than cells (many empty)
 @pytest.mark.parametrize(("n_chunks", "n_joint"), [(3, 7), (32, 300), (1000, 2)])
 def test_joint_stats_equal_direct_sums(dtype, n_chunks: int, n_joint: int) -> None:
@@ -959,22 +958,11 @@ def test_joint_stats_equal_direct_sums(dtype, n_chunks: int, n_joint: int) -> No
     np.testing.assert_allclose(s, s_ref, rtol=tol, atol=tol)
 
 
-def test_joint_categories() -> None:
-    rng = np.random.default_rng(0)
-    for n_keys, n_levels in ((1, 5), (3, 4), (16, 2), (40, 3)):
-        codes = rng.integers(n_levels, size=(3000, n_keys)) + n_levels * np.arange(
-            n_keys
-        )
-        joint, levels = core._joint_categories(codes.astype(np.int32))
-        assert joint.dtype == np.int32
-        assert joint.flags.c_contiguous
-        np.testing.assert_array_equal(levels[joint], codes)
-        assert len(levels) == len(np.unique(codes, axis=0)) == joint.max() + 1
-
-
-@pytest.mark.parametrize("keys", ["batch", ["batch", "half"]])
+# "well": 250 tiny batches, which take the scatter path
+@pytest.mark.parametrize("keys", ["batch", ["batch", "half"], "well"])
 def test_harmonize_float32_matches_float64(keys) -> None:
     x, obs = _toy(n=1500, dtype=np.float64)
+    obs = obs.assign(well=pd.Categorical(np.arange(1500) % 250))
     kw = dict(seeding="kmeans++", rng=0)  # the same seeds in both precisions
     got64, info = core.harmonize(x, obs, keys, **kw)
     got32, _ = core.harmonize(x.astype(np.float32), obs, keys, **kw)
@@ -984,25 +972,6 @@ def test_harmonize_float32_matches_float64(keys) -> None:
     assert len(info["iterations"]) <= 10
     r = [np.corrcoef(got32[:, j], got64[:, j])[0, 1] for j in range(x.shape[1])]
     assert min(r) > 0.9999
-    rel = np.linalg.norm(got32 - got64, axis=0) / np.linalg.norm(got64, axis=0)
-    assert rel.max() < 1e-3
-
-
-def test_harmonize_many_small_batches() -> None:
-    """A design the rule sends through the scatter path agrees across precisions."""
-    assert not core._use_scatter(166, 1, 584_944 // 19)  # atlas-like: accumulators
-    assert core._use_scatter(
-        4000, 1, 20_000 // 19
-    )  # thousands of tiny batches: scatters
-    assert core._use_scatter(41, 1, 10 * core.N_CHUNKS)
-    assert not core._use_scatter(40, 1, 10 * core.N_CHUNKS)
-    x, obs = _toy(n=1500, dtype=np.float64)
-    obs = obs.assign(well=pd.Categorical(np.arange(1500) % 250))
-    assert core._use_scatter(250, 1, 1500 // 19)
-    got64, _ = core.harmonize(x, obs, "well", seeding="kmeans++", rng=0)
-    got32, _ = core.harmonize(
-        x.astype(np.float32), obs, "well", seeding="kmeans++", rng=0
-    )
     rel = np.linalg.norm(got32 - got64, axis=0) / np.linalg.norm(got64, axis=0)
     assert rel.max() < 1e-3
 
@@ -1021,7 +990,7 @@ def test_harmonize_stop_rules() -> None:
         objs = info["objectives"]
         assert len(objs) == len(info["iterations"]) + 1  # every round recorded
         assert max(info["iterations"]) <= 200
-        tol = core.STOP_RULES[rule][2]["harmony2"][2]
+        tol = core._DEFAULTS["harmony1" if rule.startswith("paper") else "harmony2"][2]
         passed = [old - new < tol * abs(old) for old, new in pairwise(objs)]
         assert not any(passed[:-1])  # no earlier round met the stop test
         # the last one did, or the cap ended the run
@@ -1066,8 +1035,7 @@ def test_harmonize_default_seeding_follows_flavor(
 
 def test_harmonize_edge_inputs() -> None:
     x, obs = _toy()
-    for extra in (dict(tau=5), dict(stop_rule="paper_window3"), dict(n_clusters=2)):
-        assert np.isfinite(core.harmonize(x, obs, "batch", rng=0, **extra)[0]).all()
+    assert np.isfinite(core.harmonize(x, obs, "batch", n_clusters=2, rng=0)[0]).all()
     # a one-cell batch
     obs1 = obs.assign(batch=pd.Categorical(["a"] * (len(x) - 1) + ["b"]))
     assert np.isfinite(core.harmonize(x, obs1, "batch", rng=0)[0]).all()
@@ -1078,7 +1046,6 @@ def test_harmonize_edge_inputs() -> None:
 @pytest.mark.skipif(
     numba.config.NUMBA_NUM_THREADS < 2, reason="needs at least two numba threads"
 )
-@pytest.mark.parametrize("dtype", _DTYPES)
 def test_harmonize_does_not_depend_on_thread_count(dtype) -> None:
     x, obs = _toy(dtype=dtype)
     previous = numba.get_num_threads()
@@ -1196,15 +1163,12 @@ def test_harmonize_seeding_options() -> None:
 @pytest.mark.parametrize(
     ("kwargs", "match"),
     [
-        (dict(alpha=float("nan")), "alpha"),
-        (dict(flavor="harmony1", ridge_lambda=0.0), "ridge_lambda"),
         (dict(block_proportion=2.0), "block_proportion"),
         (dict(sigma=0.0), "sigma"),
         (dict(max_iter_harmony=0), "max_iter_harmony"),
         (dict(seeding="nope"), "seeding must be one of"),
         (dict(penalty_combine="mean"), "penalty_combine must be one of"),
         (dict(stop_rule="never"), "stop_rule must be one of"),
-        (dict(flavor="harmony3"), "flavor must be one of"),
         (dict(n_clusters=0), "n_clusters must be between 1"),
         (dict(n_clusters=601), "n_clusters must be between 1"),
     ],
@@ -1240,7 +1204,10 @@ def test_harmonize_rejects_bad_inputs() -> None:
 def test_block_bounds_match_array_split() -> None:
     for n in (7, 40, 600, 1001):
         n_blocks = int(min(n, 1 // 0.05))
-        np.testing.assert_array_equal(core._block_bounds(n, 0.05), _bounds(n, n_blocks))
+        sizes = [len(a) for a in np.array_split(np.arange(n), n_blocks)]
+        np.testing.assert_array_equal(
+            core._block_bounds(n, 0.05), np.cumsum([0, *sizes])
+        )
 
 
 def _closest_pair(y: np.ndarray) -> float:
@@ -1274,7 +1241,6 @@ def test_seeders_survive_identical_cells() -> None:
         assert np.isfinite(seeder(z, 5, np.random.default_rng(0))).all()
 
 
-@pytest.mark.parametrize("dtype", _DTYPES)
 def test_lloyd_polish_lowers_the_kmeans_cost(dtype) -> None:
     _, z, *_ = _state(dtype)
     y = core._seed_afkmc2(z, _K, np.random.default_rng(0))

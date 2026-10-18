@@ -12,6 +12,7 @@ from __future__ import annotations
 import numpy as np
 from fast_array_utils.numba import njit
 from numba import prange
+from numba.extending import register_jitable
 
 
 @njit
@@ -39,17 +40,9 @@ def _cluster_pass(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
     Returns ``(dist, ent, o_fresh, y_t_next)``: ``dist = sum r*2(1-z.y)``, ``ent = sum r*log(r)``
     (float64), ``o`` rebuilt from the new ``r``, and the normalised centroids of the new ``r``.
 
-    ``scatter`` selects how a block's counts are moved: ``False`` sums them in per-chunk accumulators in the
-    parallel sweeps (work per block ~ n_chunks * levels * K, best for many cells per level); ``True`` moves them
-    with serial loops over the block's cells and fills the penalty table only for levels that occur in the
-    block (work per block ~ cells * K, best for thousands of small levels). Same result up to rounding.
-
-    ``sum_penalties`` selects how the penalty factors of a cell's several batch keys are combined: ``False``
-    multiplies them :cite:p:`Korsunsky2019`; ``True`` adds them, as the assignment rule is printed in
-    :cite:t:`Patikas2026`, skipping levels with ``theta == 0``. With one key the two are the same.
-
-    ``want_y=False`` skips the centroids and returns the input ``y_t``, for an iteration whose centroids are
-    never read.
+    ``scatter``: move a block's counts by serial scatters instead of per-chunk accumulators (see ``_use_scatter``).
+    ``sum_penalties``: add the keys' penalty factors (over levels with ``theta != 0``) instead of multiplying them.
+    ``want_y=False``: skip the centroids and return the input ``y_t``.
     """
     ft = z_norm.dtype.type
     n_pc = z_norm.shape[1]
@@ -202,19 +195,27 @@ def _cluster_pass(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
     if not want_y:
         return dist_total, ent_total, o_fresh, y_t
     # 5. centroids of the new r: y_k = normalise(sum_i r_ik z_i)
-    y_t_next = np.empty((n_pc, n_clusters), dtype=z_norm.dtype)
+    return dist_total, ent_total, o_fresh, _centroids(y_acc)
+
+
+@register_jitable
+def _centroids(y_acc):
+    """Sum per-chunk centroid accumulators (chunks x d x K) serially and L2-normalise every column."""
+    ft = y_acc.dtype.type
+    n_chunks, n_pc, n_clusters = y_acc.shape
+    y_t = np.empty((n_pc, n_clusters), dtype=y_acc.dtype)
     for k in range(n_clusters):
         sq = ft(0.0)
         for dd in range(n_pc):
             v = ft(0.0)
             for t in range(n_chunks):
                 v += y_acc[t, dd, k]
-            y_t_next[dd, k] = v
+            y_t[dd, k] = v
             sq += v * v
-        scale = one / max(np.sqrt(sq), ft(1e-12))
+        scale = ft(1.0) / max(np.sqrt(sq), ft(1e-12))
         for dd in range(n_pc):
-            y_t_next[dd, k] *= scale
-    return dist_total, ent_total, o_fresh, y_t_next
+            y_t[dd, k] *= scale
+    return y_t
 
 
 @njit
@@ -274,19 +275,16 @@ def _joint_stats(x, r, joint, order, n_joint, n_chunks):  # noqa: PLR0912, PLR09
 
 
 @njit
-def _apply_correction(x, r, cat, w, z_hat, z_norm, n_chunks):  # noqa: PLR0912, PLR0917
-    """Apply the correction, normalise, and accumulate the next centroids.
+def _apply_correction(x, r, cat, w, z_hat, z_norm, n_chunks, normalise):  # noqa: PLR0917
+    """Write ``z_hat = x_i - sum_k r_ik * sum_c w[cat_ic, k, :]`` in place.
 
-    Writes ``z_hat = x_i - sum_k r_ik * sum_c w[cat_ic, k, :]`` and its row-normalised copy ``z_norm`` in place;
-    returns ``y_t`` (d x K), the normalised centroids of ``r`` on the new ``z_norm``.
-
-    Each row i is written in full before it is read and no other row is touched, so passing the same array as both
-    ``z_hat`` and ``z_norm`` is safe and yields the normalised result (the low_memory path relies on this).
+    With ``normalise``, also write its row-normalised copy into ``z_norm`` and return the normalised centroids
+    ``y_t`` (d x K) of ``r`` on it; otherwise return an empty array. Each row is written in full before it is read,
+    so ``z_hat`` and ``z_norm`` may be the same array (the low_memory path).
     """
     ft = x.dtype.type
     n_cells, n_pc = x.shape
     n_clusters = r.shape[1]
-    one = ft(1.0)
     y_acc = np.zeros((n_chunks, n_pc, n_clusters), dtype=x.dtype)
     for t in prange(n_chunks):
         y_loc = y_acc[t]
@@ -299,48 +297,17 @@ def _apply_correction(x, r, cat, w, z_hat, z_norm, n_chunks):  # noqa: PLR0912, 
                     j = cat[i, c]
                     for dd in range(n_pc):
                         z_hat[i, dd] -= rk * w[j, k, dd]
+            if not normalise:
+                continue
             sq = ft(0.0)
             for dd in range(n_pc):
                 sq += z_hat[i, dd] * z_hat[i, dd]
-            scale = one / max(np.sqrt(sq), ft(1e-12))
+            scale = ft(1.0) / max(np.sqrt(sq), ft(1e-12))
             for dd in range(n_pc):
                 zv = z_hat[i, dd] * scale
                 z_norm[i, dd] = zv
                 for k in range(n_clusters):
                     y_loc[dd, k] += zv * r[i, k]
-    y_t = np.empty((n_pc, n_clusters), dtype=x.dtype)
-    for k in range(n_clusters):
-        sq = ft(0.0)
-        for dd in range(n_pc):
-            v = ft(0.0)
-            for t in range(n_chunks):
-                v += y_acc[t, dd, k]
-            y_t[dd, k] = v
-            sq += v * v
-        scale = one / max(np.sqrt(sq), ft(1e-12))
-        for dd in range(n_pc):
-            y_t[dd, k] *= scale
-    return y_t
-
-
-@njit
-def _apply_only(x, r, cat, w, out, n_chunks):  # noqa: PLR0917
-    """``out[i] = x[i] - sum_k r_ik * sum_c w[cat_ic, k]``: the unnormalised corrected embedding, no centroids.
-
-    The last step of the low-memory path, which reconstructs ``z_hat`` into the reused ``z_norm`` buffer once at the
-    end instead of keeping a separate ``z_hat`` array for every iteration (``z_hat`` is written but never read until
-    the return). Same per-cell arithmetic as the first half of ``_apply_correction``.
-    """
-    n_cells, n_pc = x.shape
-    n_clusters = r.shape[1]
-    for t in prange(n_chunks):
-        for i in range(t * n_cells // n_chunks, (t + 1) * n_cells // n_chunks):
-            for dd in range(n_pc):
-                out[i, dd] = x[i, dd]
-            for k in range(n_clusters):
-                rk = r[i, k]
-                for c in range(cat.shape[1]):
-                    j = cat[i, c]
-                    for dd in range(n_pc):
-                        out[i, dd] -= rk * w[j, k, dd]
-    return out
+    if not normalise:
+        return np.empty((0, 0), dtype=x.dtype)
+    return _centroids(y_acc)

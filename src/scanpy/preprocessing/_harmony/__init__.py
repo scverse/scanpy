@@ -209,10 +209,6 @@ def harmony_integrate(  # noqa: PLR0913
     """
     from .core import harmonize
 
-    # Resolve flavor into internal flags
-    if flavor not in {"harmony1", "harmony2"}:
-        msg = f"flavor must be 'harmony1' or 'harmony2', got {flavor!r}."
-        raise ValueError(msg)
     if correction_method != "fast":
         msg = f"correction_method must be 'fast', got {correction_method!r}."
         raise ValueError(msg)
@@ -253,14 +249,6 @@ def harmony_integrate(  # noqa: PLR0913
     except Exception as e:
         msg = f"Could not convert input of type {type(input_data).__name__} to NumPy array."
         raise TypeError(msg) from e
-
-    # Check for NaN values
-    if np.isnan(x).any():
-        msg = (
-            "Input data contains NaN values. Please handle these before "
-            "running harmony_integrate."
-        )
-        raise ValueError(msg)
 
     adata.obsm[adjusted_basis], _ = harmonize(
         x,

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 from scipy import sparse
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, kmeans_plusplus
 from tqdm.auto import tqdm
 
 from ... import logging as log
@@ -13,7 +13,7 @@ from ..._compat import warn
 from ..._settings import settings
 from ..._settings.verbosity import Verbosity
 from ..._utils.random import _legacy_random_state
-from ._kernels import _apply_correction, _apply_only, _cluster_pass, _joint_stats
+from ._kernels import _apply_correction, _cluster_pass, _joint_stats
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -29,17 +29,16 @@ __all__ = ["_SUPPRESS_PENALTY", "_compute_lambda_kb", "harmonize"]
 
 _SUPPRESS_PENALTY = 1e30
 
-# stop_rule -> (window of the clustering test, record every round's objective,
-#               {flavor: (max_iter_clustering, tol_clustering, tol_harmony)})
-_REFERENCE = {"harmony1": (200, 1e-5, 1e-4), "harmony2": (4, 1e-3, 1e-2)}
-_PAPER = {"harmony1": (200, 1e-5, 1e-4), "harmony2": (200, 1e-5, 1e-4)}
+# flavor -> (max_iter_clustering, tol_clustering, tol_harmony); the "paper" rules use harmony1's for both
+_DEFAULTS = {"harmony1": (200, 1e-5, 1e-4), "harmony2": (4, 1e-3, 1e-2)}
+# stop_rule -> (window of the clustering test, record every round's objective)
 STOP_RULES = {
     # the round objective is only recorded if clustering converged
-    "reference": (3, False, _REFERENCE),
+    "reference": (3, False),
     # every round's objective is recorded, as in rapids-singlecell
-    "reference_record": (3, True, _REFERENCE),
-    "paper": (1, True, _PAPER),
-    "paper_window3": (3, True, _PAPER),
+    "reference_record": (3, True),
+    "paper": (1, True),
+    "paper_window3": (3, True),
 }
 SEEDINGS = ("afkmc2", "kmeans", "kmeans++", "paper_nearest")
 # Fixed number of static chunks per parallel sweep, so results do not depend on the thread count.
@@ -80,48 +79,53 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
     Returns the corrected embedding and a dict with the Harmony objective per round
     (``objectives``) and the clustering iterations per round (``iterations``).
     """
-    stabilized = dynamic_lambda = flavor == "harmony2"
+    stabilized = flavor == "harmony2"
     if seeding is None:
-        seeding = "afkmc2" if flavor == "harmony2" else "kmeans"
-    choices = dict(
-        flavor=("harmony1", "harmony2"),
-        stop_rule=tuple(STOP_RULES),
-        seeding=SEEDINGS,
-        penalty_combine=("product", "sum"),
-    )
-    given = dict(
-        flavor=flavor,
-        stop_rule=stop_rule,
-        seeding=seeding,
-        penalty_combine=penalty_combine,
-    )
-    for name, allowed in choices.items():
-        if given[name] not in allowed:
-            msg = f"{name} must be one of {allowed}, got {given[name]!r}."
+        seeding = "afkmc2" if stabilized else "kmeans"
+    for name, value, allowed in (
+        ("flavor", flavor, ("harmony1", "harmony2")),
+        ("stop_rule", stop_rule, tuple(STOP_RULES)),
+        ("seeding", seeding, SEEDINGS),
+        ("penalty_combine", penalty_combine, ("product", "sum")),
+    ):
+        if value not in allowed:
+            msg = f"{name} must be one of {allowed}, got {value!r}."
             raise ValueError(msg)
-    checks = {
-        "max_iter_harmony must be >= 1": max_iter_harmony >= 1,
-        "max_iter_clustering must be >= 1": max_iter_clustering is None
-        or max_iter_clustering >= 1,
-        f"sigma must be a finite positive number, got {sigma}.": np.isfinite(sigma)
-        and sigma > 0,
-        f"block_proportion must be in (0, 1], got {block_proportion}.": 0
-        < block_proportion
-        <= 1,
-        f"alpha must be a finite positive number when flavor='harmony2', got {alpha}.": not dynamic_lambda
-        or (np.isfinite(alpha) and alpha > 0),
-        f"batch_prune_threshold must be in [0, 1] or None, got {batch_prune_threshold}.": not dynamic_lambda
-        or batch_prune_threshold is None
-        or 0 <= batch_prune_threshold <= 1,
-        f"ridge_lambda must be a finite positive number when flavor='harmony1', got {ridge_lambda}.": dynamic_lambda
-        or (np.isfinite(ridge_lambda) and ridge_lambda > 0),
-        f"seeding_lloyd_steps must be >= 0, got {seeding_lloyd_steps}.": seeding_lloyd_steps
-        >= 0,
-        f"seeding_cells_per_cluster must be >= 1 or None, got {seeding_cells_per_cluster}.": seeding_cells_per_cluster
-        is None
-        or seeding_cells_per_cluster >= 1,
-    }
-    for msg, ok in checks.items():
+    finite_pos = lambda v: np.isfinite(v) and v > 0  # noqa: E731
+    for ok, msg in (
+        (max_iter_harmony >= 1, "max_iter_harmony must be >= 1"),
+        (
+            max_iter_clustering is None or max_iter_clustering >= 1,
+            "max_iter_clustering must be >= 1",
+        ),
+        (finite_pos(sigma), f"sigma must be a finite positive number, got {sigma}."),
+        (
+            0 < block_proportion <= 1,
+            f"block_proportion must be in (0, 1], got {block_proportion}.",
+        ),
+        (
+            not stabilized or finite_pos(alpha),
+            f"alpha must be a finite positive number when flavor='harmony2', got {alpha}.",
+        ),
+        (
+            not stabilized
+            or batch_prune_threshold is None
+            or 0 <= batch_prune_threshold <= 1,
+            f"batch_prune_threshold must be in [0, 1] or None, got {batch_prune_threshold}.",
+        ),
+        (
+            stabilized or finite_pos(ridge_lambda),
+            f"ridge_lambda must be a finite positive number when flavor='harmony1', got {ridge_lambda}.",
+        ),
+        (
+            seeding_lloyd_steps >= 0,
+            f"seeding_lloyd_steps must be >= 0, got {seeding_lloyd_steps}.",
+        ),
+        (
+            seeding_cells_per_cluster is None or seeding_cells_per_cluster >= 1,
+            f"seeding_cells_per_cluster must be >= 1 or None, got {seeding_cells_per_cluster}.",
+        ),
+    ):
         if not ok:
             raise ValueError(msg)
     x = np.ascontiguousarray(x)
@@ -135,10 +139,11 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
         msg = "Input data contains non-finite values."
         raise ValueError(msg)
     ft = x.dtype.type
-    window, record_always, defaults = STOP_RULES[stop_rule]
-    # only differs from the product with two or more batch keys
+    window, record_always = STOP_RULES[stop_rule]
     sum_penalties = penalty_combine == "sum"
-    d_iter, d_tol_c, d_tol_h = defaults[flavor]
+    d_iter, d_tol_c, d_tol_h = _DEFAULTS[
+        "harmony1" if stop_rule.startswith("paper") else flavor
+    ]
     max_iter_clustering = d_iter if max_iter_clustering is None else max_iter_clustering
     tol_clustering = d_tol_c if tol_clustering is None else tol_clustering
     tol_harmony = d_tol_h if tol_harmony is None else tol_harmony
@@ -232,7 +237,7 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
 
     bounds = _block_bounds(n_cells, block_proportion)
     scatter = _use_scatter(n_batches, codes.shape[1], int(bounds[1]))
-    # low_memory reuses the z_norm buffer as z_hat's scratch; otherwise z_hat is its own array
+    # low_memory: z_hat shares z_norm's buffer and is rebuilt once at the end
     z_hat = z_norm if low_memory else np.empty_like(x)
     with tqdm(
         range(max_iter_harmony), disable=settings.verbosity < Verbosity.info
@@ -289,21 +294,18 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
                 alpha=alpha,
                 threshold=batch_prune_threshold,
                 ridge_lambda=ridge_lambda,
-                dynamic_lambda=dynamic_lambda,
+                dynamic_lambda=stabilized,
             )
             w = _correction_weights(x, r, plan, n_levels, lam)
-            # low_memory: write the normalised result into z_norm in place (z_hat aliases it)
-            y_t = _apply_correction(x, r, plan.cat, w, z_hat, z_norm, N_CHUNKS)
+            y_t = _apply_correction(x, r, plan.cat, w, z_hat, z_norm, N_CHUNKS, True)  # noqa: FBT003
             if _converged(objs_harmony, tol_harmony, window=1, signed=True):
                 log.info(f"Harmony converged in {i + 1} iterations")
                 break
         else:
             log.info(f"Harmony did not converge after {max_iter_harmony} iterations.")
     info["objectives"] = objs_harmony
-    if (
-        low_memory
-    ):  # the shared buffer holds the normalised embedding; rebuild z_hat into it
-        z_hat = _apply_only(x, r, plan.cat, w, z_hat, N_CHUNKS)
+    if low_memory:
+        _apply_correction(x, r, plan.cat, w, z_hat, z_norm, N_CHUNKS, False)  # noqa: FBT003
     if not keep.all():
         x_all = x_all.copy()
         x_all[keep] = z_hat
@@ -406,8 +408,7 @@ def _seed_paper_nearest(
     dist = np.full(n, np.inf, dtype=z_norm.dtype)
     while len(chosen) < k:
         taken[chosen[-1]] = True
-        # unit rows: ||a - b|| = sqrt(2 - 2 a.b)
-        d = np.sqrt(np.maximum(2.0 - 2.0 * (z_norm @ z_norm[chosen[-1]]), 0.0))
+        d = np.sqrt(_sqdist(z_norm, z_norm[chosen[-1]]))
         np.minimum(dist, d, out=dist)
         with np.errstate(divide="ignore"):
             s_j = np.log(rng.random(n)) / dist
@@ -417,22 +418,14 @@ def _seed_paper_nearest(
 
 
 def _seed_kmeanspp(z_norm: np.ndarray, k: int, rng: np.random.Generator) -> np.ndarray:
-    """k-means++ on unit vectors: each seed drawn with probability ∝ squared distance to the nearest seed."""
-    n = z_norm.shape[0]
-    chosen = [int(rng.integers(n))]
-    closest = np.full(n, np.inf, dtype=z_norm.dtype)
-    while len(chosen) < k:
-        d2 = np.maximum(2.0 - 2.0 * (z_norm @ z_norm[chosen[-1]]), 0.0)
-        np.minimum(closest, d2, out=closest)
-        cum = np.cumsum(closest, dtype=np.float64)
-        # all remaining cells coincide with a seed: fall back to a uniform draw
-        pick = (
-            np.searchsorted(cum, rng.random() * cum[-1], side="right")
-            if cum[-1] > 0
-            else rng.integers(n)
-        )
-        chosen.append(int(min(pick, n - 1)))
-    return z_norm[chosen].copy()
+    """k-means++ seeding, scikit-learn's with one candidate per step (the classic rule)."""
+    rs = _legacy_random_state(rng, always_state=True)
+    return z_norm[kmeans_plusplus(z_norm, k, random_state=rs, n_local_trials=1)[1]]
+
+
+def _sqdist(z_norm: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Squared Euclidean distances between unit rows: ``2 - 2 a.b``, clipped at 0."""
+    return np.maximum(2.0 - 2.0 * (z_norm @ y.T), 0.0)
 
 
 def _seed_afkmc2(
@@ -444,7 +437,7 @@ def _seed_afkmc2(
     """
     n = z_norm.shape[0]
     first = int(rng.integers(n))
-    d2 = np.maximum(2.0 - 2.0 * (z_norm @ z_norm[first]), 0.0).astype(np.float64)
+    d2 = _sqdist(z_norm, z_norm[first]).astype(np.float64)
     total = d2.sum()
     q = 0.5 * d2 / total + 0.5 / n if total > 0 else np.full(n, 1.0 / n)
     candidates = rng.choice(n, size=(k - 1, chain), p=q)
@@ -454,7 +447,7 @@ def _seed_afkmc2(
     for c in range(1, k):
         cand = z_norm[candidates[c - 1]]
         # d² to the nearest seed so far
-        dist = np.maximum(2.0 - 2.0 * (cand @ seeds[:c].T), 0.0).min(axis=1)
+        dist = _sqdist(cand, seeds[:c]).min(axis=1)
         weight = dist / q[candidates[c - 1]]
         cur = 0
         for j in range(1, chain):
@@ -474,16 +467,11 @@ def _lloyd_spherical(z_norm: np.ndarray, y: np.ndarray, steps: int) -> np.ndarra
             shape=(y.shape[0], cells.size),
         )
         sums = np.asarray(onehot @ z_norm)
-        norms = np.linalg.norm(sums, axis=1, keepdims=True)
         # empty clusters keep their centroid
-        y = np.where(norms > 0, sums / np.maximum(norms, 1e-12), y).astype(y.dtype)
+        y = np.where(
+            sums.any(axis=1, keepdims=True), _normalize_rows_l2(sums), y
+        ).astype(y.dtype)
     return y
-
-
-def _joint_categories(codes: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Index of each cell's combination of batch levels, and the levels (J x C) of every combination."""
-    levels, joint = np.unique(codes, axis=0, return_inverse=True)
-    return np.ascontiguousarray(joint.ravel().astype(np.int32)), levels
 
 
 class _Plan(NamedTuple):
@@ -502,7 +490,8 @@ def _correction_plan(codes: np.ndarray, n_batches: int) -> _Plan:
     Few joint categories (any single key, nested keys) take one statistics pass and one coefficient row per
     category. Many (crossed keys) take one pass per key, so nothing larger than levels x K x d is held.
     """
-    joint, levels = _joint_categories(codes)
+    levels, joint = np.unique(codes, axis=0, return_inverse=True)
+    joint = np.ascontiguousarray(joint.ravel(), dtype=np.int32)
     joint_order = np.argsort(joint, kind="stable")
     # the cut-off keeps the per-category arrays within twice the per-level ones
     by_joint = levels.shape[0] <= 2 * n_batches
@@ -542,19 +531,18 @@ def _correction_weights(
         # masses per joint category: a pass without the PC dimension
         no_pc = np.empty((x.shape[0], 0), dtype=x.dtype)
         _, o_joint = _joint_stats(no_pc, r, joint, joint_order, n_joint, N_CHUNKS)
-    w = _solve_correction(s, o_joint, levels, n_levels, lam, _SUPPRESS_PENALTY)
+    w = _solve_correction(s, o_joint, levels, n_levels, lam)
     if by_joint:
         w = w[levels].sum(axis=1)
     return np.ascontiguousarray(w, dtype=x.dtype)
 
 
-def _solve_correction(  # noqa: PLR0915, PLR0917
+def _solve_correction(  # noqa: PLR0915
     s: np.ndarray,
     o_joint: np.ndarray,
     levels: np.ndarray,
     n_levels: np.ndarray,
     lam: np.ndarray,
-    sentinel: float,
 ) -> np.ndarray:
     """Ridge coefficients of every cluster per batch level (L x K x d, float64), without the intercept.
 
@@ -562,7 +550,7 @@ def _solve_correction(  # noqa: PLR0915, PLR0917
     Per cluster the normal equations are ``(Phi* diag(r_k) Phi*^T + Lambda_k) W_k = Phi* diag(r_k) X^T``
     with an unpenalised intercept. The block of the covariate with the most levels is diagonal,
     so it is eliminated in closed form and only the Schur complement over the intercept and the remaining
-    levels is solved; with one covariate that is a 1 x 1 system. ``lam[b, k] >= sentinel`` removes level b
+    levels is solved; with one covariate that is a 1 x 1 system. ``lam[b, k] >= _SUPPRESS_PENALTY`` removes level b
     from cluster k (its coefficient is 0). Runs in float64, ``_SOLVE_CHUNK`` clusters at a time,
     so the dense systems stay at chunk x m x n_big.
     """
@@ -596,7 +584,7 @@ def _solve_correction(  # noqa: PLR0915, PLR0917
         o = o_all[:, ks]  # J x c
         c = o.shape[1]
         kl = np.arange(c)
-        pruned = lam[:, ks] >= sentinel
+        pruned = lam[:, ks] >= _SUPPRESS_PENALTY
         lam_big, pruned_big = lam[big_lv, ks].T, pruned[big_lv].T  # c x n_big
         lam_small, pruned_small = lam[small, ks].T, pruned[small].T  # c x small
         row_k = kl * m + rows[:, :, None]  # J x C x c
@@ -629,14 +617,8 @@ def _solve_correction(  # noqa: PLR0915, PLR0917
         schur[kk, ss + 1, ss + 1] = 1
         empty = gram[:, 0, 0] <= 1e-12  # cluster without cells: no correction
         schur[empty] = np.eye(m)
-        try:
-            w_small = np.linalg.solve(schur, rhs)  # c x m x d
-        except np.linalg.LinAlgError:
-            # guard only: from `harmonize` every unpruned lambda is positive and the system is positive definite
-            w_small = np.stack([
-                np.linalg.lstsq(a, b, rcond=None)[0]
-                for a, b in zip(schur, rhs, strict=True)
-            ])
+        # positive definite: every unpruned lambda is positive
+        w_small = np.linalg.solve(schur, rhs)  # c x m x d
         w_big = d_inv[:, :, None] * (rhs_big - coupling.transpose(0, 2, 1) @ w_small)
         w_small[empty] = 0
         w_big[empty] = 0
@@ -645,24 +627,6 @@ def _solve_correction(  # noqa: PLR0915, PLR0917
             1, 0, 2
         )  # the intercept is not part of the correction
     return w
-
-
-def _correction_multi(
-    x: np.ndarray,
-    batch_codes: np.ndarray,
-    n_batches: int,
-    r: np.ndarray,
-    *,
-    lambda_kb: np.ndarray,
-) -> np.ndarray:
-    """Ridge correction of ``x`` for any number of batch keys, as one Harmony round applies it."""
-    # per-covariate level counts from the code ranges; an unused level has no mass,
-    # so where its range is cut does not change the result
-    ends = np.append(batch_codes.max(axis=0)[:-1] + 1, n_batches)
-    n_levels = np.diff(ends, prepend=0)
-    plan = _correction_plan(batch_codes, n_batches)
-    w = _correction_weights(x, r, plan, n_levels, lambda_kb)
-    return _apply_only(x, r, plan.cat, w, np.empty_like(x), N_CHUNKS)
 
 
 def _masses(idx: np.ndarray, o: np.ndarray, shape: tuple[int, ...]) -> np.ndarray:
