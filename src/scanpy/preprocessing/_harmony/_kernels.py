@@ -44,8 +44,8 @@ def _cluster_pass(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
     block (work per block ~ cells * K, best for thousands of small levels). Same result up to rounding.
 
     ``sum_penalties`` selects how the penalty factors of a cell's several batch keys are combined: ``False``
-    multiplies them (scanpy, rapids-singlecell, [M1 p.9]); ``True`` adds them, as the assignment rule is printed
-    in [V2 p.10]. With one key the two are the same.
+    multiplies them :cite:p:`Korsunsky2019`; ``True`` adds them, as the assignment rule is printed in
+    :cite:t:`Patikas2026`, skipping levels with ``theta == 0``. With one key the two are the same.
     """
     ft = z_norm.dtype.type
     n_pc = z_norm.shape[1]
@@ -54,7 +54,7 @@ def _cluster_pass(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
     one = ft(1.0)
     inv_cov = one / ft(n_cov)
     combine_sum = sum_penalties and n_cov > 1
-    tiny = ft(1e-38)
+    neg_inf = ft(-np.inf)
     logpen = np.empty((n_levels, n_clusters), dtype=z_norm.dtype)
     acc = np.empty(
         (1 if scatter else n_chunks, n_levels, n_clusters), dtype=z_norm.dtype
@@ -102,15 +102,12 @@ def _cluster_pass(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
                     e = pr_b[b] * r_sum[k]
                     den = o[b, k] + e + one if stabilized else o[b, k] + one
                     logpen[b, k] = theta[b] * (np.log(e + one) - np.log(den))
-                    if combine_sum:  # the table then holds the factors; cap the exponent so a huge e cannot overflow to inf
-                        logpen[b, k] = np.exp(min(logpen[b, k], ft(80.0)))
         # 3. new assignments; cells of a block are independent given the table
         if not scatter:
             acc[:] = 0
         for t in prange(n_chunks):
             dots = np.empty(n_clusters, dtype=z_norm.dtype)
             logit = np.empty(n_clusters, dtype=z_norm.dtype)
-            factor = np.empty(n_clusters, dtype=z_norm.dtype)
             y_loc = y_acc[t]
             dist_t = 0.0
             ent_t = 0.0
@@ -125,14 +122,20 @@ def _cluster_pass(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
                 for k in range(n_clusters):
                     logit[k] = term * (one - dots[k])
                 if combine_sum:
+                    # log of the summed factors of the keys with theta > 0, shifted by their maximum
                     for k in range(n_clusters):
-                        factor[k] = 0
-                    for c in range(n_cov):
-                        b = codes[i, c]
-                        for k in range(n_clusters):
-                            factor[k] += logpen[b, k]
-                    for k in range(n_clusters):
-                        logit[k] += np.log(max(factor[k], tiny))
+                        top_pen = neg_inf
+                        for c in range(n_cov):
+                            b = codes[i, c]
+                            if theta[b] != 0:
+                                top_pen = max(top_pen, logpen[b, k])
+                        if top_pen > neg_inf:
+                            summed = ft(0.0)
+                            for c in range(n_cov):
+                                b = codes[i, c]
+                                if theta[b] != 0:
+                                    summed += np.exp(logpen[b, k] - top_pen)
+                            logit[k] += top_pen + np.log(summed)
                 else:
                     for c in range(n_cov):
                         b = codes[i, c]
@@ -199,7 +202,12 @@ def _cluster_pass(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
         scale = one / max(np.sqrt(sq), ft(1e-12))
         for dd in range(n_pc):
             y_t_next[dd, k] *= scale
-    return dist.sum(), ent.sum(), o_fresh, y_t_next
+    # serial sums: a reduction over the parallel chunks would depend on the thread count
+    dist_total = ent_total = 0.0
+    for t in range(n_chunks):
+        dist_total += dist[t]
+        ent_total += ent[t]
+    return dist_total, ent_total, o_fresh, y_t_next
 
 
 @njit

@@ -716,10 +716,15 @@ def _clustering_iteration(  # noqa: PLR0917
             np.add.at(o, covariate, -r[idx])
         r_sum -= r[idx].sum(axis=0)
         e = pr_b[:, None] * r_sum
-        factor = ((e + 1) / (o + e + 1 if stabilized else o + 1)) ** theta[:, None]
-        per_key = factor[codes[idx]]  # cells x keys x K
-        penalty = per_key.sum(axis=1) if sum_penalties else per_key.prod(axis=1)
-        new = np.exp(-2 / _SIGMA * (1 - z[idx] @ y.T)) * penalty
+        den = o + e + 1 if stabilized else o + 1
+        log_factor = theta[:, None] * (np.log(e + 1) - np.log(den))
+        per_key = log_factor[codes[idx]]  # cells x keys x K
+        if sum_penalties:
+            log_penalty = np.logaddexp.reduce(per_key, axis=1)
+        else:
+            log_penalty = per_key.sum(axis=1)
+        logit = -2 / _SIGMA * (1 - z[idx] @ y.T) + log_penalty
+        new = np.exp(logit - logit.max(axis=1, keepdims=True))
         r[idx] = new / new.sum(axis=1, keepdims=True)
         for covariate in codes[idx].T:
             np.add.at(o, covariate, r[idx])
@@ -776,6 +781,30 @@ def test_cluster_pass_matches_numpy(
             sum_penalties=not sum_penalties,
         )
         assert np.abs(r_ref - other).max() > 1e-3
+
+
+@pytest.mark.parametrize("dtype", _DTYPES)
+def test_cluster_pass_sum_rule_handles_large_penalties(dtype) -> None:
+    """Summed penalty factors far above exp(80) keep their order between clusters."""
+    x, z, codes, _, r0, o0, _, pr_b = _state(dtype, ["batch", "half"])
+    r0[codes[:, 0] == 0, :2] = 0  # batch 0 absent from clusters 0 and 1
+    r0[:, 1] *= 0.3  # with different expected counts
+    r0 /= r0.sum(axis=1, keepdims=True)
+    o0[:] = 0
+    for covariate in codes.T:
+        np.add.at(o0, covariate, r0)
+    theta = np.full(o0.shape[0], 30, dtype=dtype)
+    perm = np.random.default_rng(7).permutation(len(x))
+    r_ref, _ = _clustering_iteration(
+        *(z, codes, pr_b, r0, o0, theta, perm), stabilized=False, sum_penalties=True
+    )
+    y = core._normalize_rows_l2(r0.T @ z)
+    r, o, r_sum = r0.copy(), o0.copy(), r0.sum(axis=0)
+    _cluster_pass(
+        *(z, np.ascontiguousarray(y.T), r, codes, o, r_sum, pr_b, theta, perm),
+        *(_bounds(len(x)), dtype(-2 / _SIGMA), False, 32, False, True),
+    )
+    np.testing.assert_allclose(r, r_ref, atol=5e-5 if dtype == np.float32 else 1e-10)
 
 
 def test_cluster_pass_without_penalty_is_soft_kmeans() -> None:
@@ -1012,18 +1041,23 @@ def test_harmonize_edge_inputs() -> None:
     assert np.isfinite(core.harmonize(x[:40], obs[:40], "batch", rng=0)[0]).all()
 
 
-def test_harmonize_does_not_depend_on_thread_count() -> None:
-    x, obs = _toy()
+@pytest.mark.skipif(
+    numba.config.NUMBA_NUM_THREADS < 2, reason="needs at least two numba threads"
+)
+@pytest.mark.parametrize("dtype", _DTYPES)
+def test_harmonize_does_not_depend_on_thread_count(dtype) -> None:
+    x, obs = _toy(dtype=dtype)
     previous = numba.get_num_threads()
     try:
         out = []
         for n_threads in (1, 2):
             numba.set_num_threads(n_threads)
             # afkmc2 is bit-reproducible; scikit-learn's KMeans is not
-            out.append(core.harmonize(x, obs, "batch", rng=0)[0])
+            out.append(core.harmonize(x, obs, ["batch", "half"], rng=0))
     finally:
         numba.set_num_threads(previous)
-    np.testing.assert_array_equal(out[0], out[1])
+    np.testing.assert_array_equal(out[0][0], out[1][0])
+    assert out[0][1]["objectives"] == out[1][1]["objectives"]
 
 
 @pytest.mark.parametrize("keys", ["batch", ["batch", "half"]])
@@ -1090,6 +1124,15 @@ def test_harmonize_penalty_combine() -> None:
     ]
     assert np.isfinite(two_keys[1]).all()
     assert not np.array_equal(two_keys[0], two_keys[1])
+    # a key with theta = 0 is switched off under either rule, so with the other key alone
+    # the sum equals the product
+    off = [
+        core.harmonize(
+            x, obs, ["batch", "half"], theta=[2.0, 0.0], penalty_combine=rule, rng=0
+        )[0]
+        for rule in ("product", "sum")
+    ]
+    np.testing.assert_allclose(off[0], off[1], atol=1e-5)
 
 
 def test_harmonize_seeding_options() -> None:
