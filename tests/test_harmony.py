@@ -857,8 +857,8 @@ def _random_design(rng: np.random.Generator, n: int, sizes: tuple[int, ...]):
 
 
 @pytest.mark.parametrize("dtype", _DTYPES)
-# big block first / last / a size-1 key / one key
-@pytest.mark.parametrize("sizes", [(4, 9, 3), (4, 3, 9), (1, 8), (7,)])
+# big block in the middle / first / last / a size-1 key / one key
+@pytest.mark.parametrize("sizes", [(4, 9, 3), (9, 4, 3), (4, 3, 9), (1, 8), (7,)])
 def test_correction_with_pruning_and_an_empty_cluster(
     dtype, sizes, monkeypatch: pytest.MonkeyPatch
 ) -> None:
