@@ -845,7 +845,12 @@ def _random_design(rng: np.random.Generator, n: int, sizes: tuple[int, ...]):
 @pytest.mark.parametrize("dtype", _DTYPES)
 # big block first / last / a size-1 key / one key
 @pytest.mark.parametrize("sizes", [(4, 9, 3), (4, 3, 9), (1, 8), (7,)])
-def test_correction_with_pruning_and_an_empty_cluster(dtype, sizes) -> None:
+def test_correction_with_pruning_and_an_empty_cluster(
+    dtype, sizes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        core, "_SOLVE_CHUNK", 2
+    )  # the pruned and the empty cluster in different chunks
     rng = np.random.default_rng(sum(sizes))
     codes, n_levels, x, r = _random_design(rng, 500, sizes)
     r[:, 3] = 0  # an empty cluster
@@ -904,13 +909,10 @@ def test_apply_correction_normalises_and_returns_centroids(dtype) -> None:
         ridge_lambda=1.0,
         dynamic_lambda=True,
     )
-    joint, levels = core._joint_categories(codes)
-    s, o_joint = _joint_stats(
-        x, r, joint, np.argsort(joint, kind="stable"), len(levels), 3
-    )
-    w = core._solve_correction(s, o_joint, levels, n_levels, lam, _SUPPRESS_PENALTY)
+    plan = core._correction_plan(codes, int(n_levels.sum()))
+    w = core._correction_weights(x, r, plan, n_levels, lam)
     z_hat, z_norm = np.empty_like(x), np.empty_like(x)
-    y_t = _apply_correction(x, r, joint, w, z_hat, z_norm, 3)
+    y_t = _apply_correction(x, r, plan.cat, w, z_hat, z_norm, 3)
     assert z_hat.dtype == z_norm.dtype == y_t.dtype == dtype
     np.testing.assert_allclose(
         z_hat,

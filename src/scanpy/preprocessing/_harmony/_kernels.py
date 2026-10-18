@@ -267,10 +267,10 @@ def _joint_stats(x, r, joint, order, n_joint, n_chunks):  # noqa: PLR0912, PLR09
 
 
 @njit
-def _apply_correction(x, r, joint, w_joint, z_hat, z_norm, n_chunks):  # noqa: PLR0917
+def _apply_correction(x, r, cat, w, z_hat, z_norm, n_chunks):  # noqa: PLR0912, PLR0917
     """Apply the correction, normalise, and accumulate the next centroids.
 
-    Writes ``z_hat = x_i - sum_k r_ik * w_joint[joint_i, k, :]`` and its row-normalised copy ``z_norm`` in place;
+    Writes ``z_hat = x_i - sum_k r_ik * sum_c w[cat_ic, k, :]`` and its row-normalised copy ``z_norm`` in place;
     returns ``y_t`` (d x K), the normalised centroids of ``r`` on the new ``z_norm``.
 
     Each row i is written in full before it is read and no other row is touched, so passing the same array as both
@@ -284,13 +284,14 @@ def _apply_correction(x, r, joint, w_joint, z_hat, z_norm, n_chunks):  # noqa: P
     for t in prange(n_chunks):
         y_loc = y_acc[t]
         for i in range(t * n_cells // n_chunks, (t + 1) * n_cells // n_chunks):
-            j = joint[i]
             for dd in range(n_pc):
                 z_hat[i, dd] = x[i, dd]
             for k in range(n_clusters):
                 rk = r[i, k]
-                for dd in range(n_pc):
-                    z_hat[i, dd] -= rk * w_joint[j, k, dd]
+                for c in range(cat.shape[1]):
+                    j = cat[i, c]
+                    for dd in range(n_pc):
+                        z_hat[i, dd] -= rk * w[j, k, dd]
             sq = ft(0.0)
             for dd in range(n_pc):
                 sq += z_hat[i, dd] * z_hat[i, dd]
@@ -316,8 +317,8 @@ def _apply_correction(x, r, joint, w_joint, z_hat, z_norm, n_chunks):  # noqa: P
 
 
 @njit
-def _apply_only(x, r, joint, w_joint, out, n_chunks):  # noqa: PLR0917
-    """``out[i] = x[i] - sum_k r_ik * w_joint[joint_i, k]``: the unnormalised corrected embedding, no centroids.
+def _apply_only(x, r, cat, w, out, n_chunks):  # noqa: PLR0917
+    """``out[i] = x[i] - sum_k r_ik * sum_c w[cat_ic, k]``: the unnormalised corrected embedding, no centroids.
 
     The last step of the low-memory path, which reconstructs ``z_hat`` into the reused ``z_norm`` buffer once at the
     end instead of keeping a separate ``z_hat`` array for every iteration (``z_hat`` is written but never read until
@@ -327,11 +328,12 @@ def _apply_only(x, r, joint, w_joint, out, n_chunks):  # noqa: PLR0917
     n_clusters = r.shape[1]
     for t in prange(n_chunks):
         for i in range(t * n_cells // n_chunks, (t + 1) * n_cells // n_chunks):
-            j = joint[i]
             for dd in range(n_pc):
                 out[i, dd] = x[i, dd]
             for k in range(n_clusters):
                 rk = r[i, k]
-                for dd in range(n_pc):
-                    out[i, dd] -= rk * w_joint[j, k, dd]
+                for c in range(cat.shape[1]):
+                    j = cat[i, c]
+                    for dd in range(n_pc):
+                        out[i, dd] -= rk * w[j, k, dd]
     return out

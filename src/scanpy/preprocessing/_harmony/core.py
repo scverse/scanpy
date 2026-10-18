@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import pairwise
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 from scipy import sparse
@@ -44,6 +44,8 @@ STOP_RULES = {
 SEEDINGS = ("afkmc2", "kmeans", "kmeans++", "paper_nearest")
 # Fixed number of static chunks per parallel sweep, so results do not depend on the thread count.
 N_CHUNKS = 32
+# clusters per batched solve of the correction; bounds its dense systems
+_SOLVE_CHUNK = 8
 
 
 def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
@@ -161,8 +163,7 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
         msg = "No cell has a non-zero embedding."
         raise ValueError(msg)
     n_batches = int(n_levels.sum())
-    joint, levels = _joint_categories(codes)
-    joint_order = np.argsort(joint, kind="stable")
+    plan = _correction_plan(codes, n_batches)
     n_b = np.bincount(codes.ravel(), minlength=n_batches).astype(ft)
     pr_b = n_b / ft(n_cells)
     theta_b = _get_theta_array(theta, n_levels, x.dtype).ravel()
@@ -287,14 +288,9 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
                 ridge_lambda=ridge_lambda,
                 dynamic_lambda=dynamic_lambda,
             )
-            s_joint, o_joint = _joint_stats(
-                x, r, joint, joint_order, levels.shape[0], N_CHUNKS
-            )
-            w_joint = _solve_correction(
-                s_joint, o_joint, levels, n_levels, lam, _SUPPRESS_PENALTY
-            )
+            w = _correction_weights(x, r, plan, n_levels, lam)
             # low_memory: write the normalised result into z_norm in place (z_hat aliases it)
-            y_t = _apply_correction(x, r, joint, w_joint, z_hat, z_norm, N_CHUNKS)
+            y_t = _apply_correction(x, r, plan.cat, w, z_hat, z_norm, N_CHUNKS)
             if _converged(objs_harmony, tol_harmony, window=1, signed=True):
                 log.info(f"Harmony converged in {i + 1} iterations")
                 break
@@ -304,7 +300,7 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
     if (
         low_memory
     ):  # the shared buffer holds the normalised embedding; rebuild z_hat into it
-        z_hat = _apply_only(x, r, joint, w_joint, z_hat, N_CHUNKS)
+        z_hat = _apply_only(x, r, plan.cat, w, z_hat, N_CHUNKS)
     if not keep.all():
         x_all = x_all.copy()
         x_all[keep] = z_hat
@@ -487,26 +483,91 @@ def _joint_categories(codes: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return np.ascontiguousarray(joint.ravel().astype(np.int32)), levels
 
 
+class _Plan(NamedTuple):
+    levels: np.ndarray  # J x C, the levels of every joint category
+    joint: np.ndarray  # joint category of every cell
+    joint_order: np.ndarray
+    cols: list[np.ndarray]  # category columns summed by the statistics passes
+    orders: list[np.ndarray]
+    cat: np.ndarray  # n x C', the categories whose coefficients a cell receives
+    by_joint: bool
+
+
+def _correction_plan(codes: np.ndarray, n_batches: int) -> _Plan:
+    """How the correction groups cells: by joint category when there are few, else by each key's level.
+
+    Few joint categories (any single key, nested keys) take one statistics pass and one coefficient row per
+    category. Many (crossed keys) take one pass per key, so nothing larger than levels x K x d is held.
+    """
+    joint, levels = _joint_categories(codes)
+    joint_order = np.argsort(joint, kind="stable")
+    # the cut-off keeps the per-category arrays within twice the per-level ones
+    by_joint = levels.shape[0] <= 2 * n_batches
+    cols = [joint] if by_joint else [np.ascontiguousarray(c) for c in codes.T]
+    orders = [joint_order] if by_joint else [np.argsort(c, kind="stable") for c in cols]
+    cat = np.ascontiguousarray(joint[:, None] if by_joint else codes)
+    return _Plan(levels, joint, joint_order, cols, orders, cat, by_joint)
+
+
+def _correction_weights(
+    x: np.ndarray,
+    r: np.ndarray,
+    plan: _Plan,
+    n_levels: np.ndarray,
+    lam: np.ndarray,
+) -> np.ndarray:
+    """Coefficients per category of ``plan`` (categories x K x d) for the apply kernels."""
+    levels, joint, joint_order, cols, orders, _, by_joint = plan
+    n_joint, n_batches = levels.shape[0], int(n_levels.sum())
+    if by_joint:
+        s_joint, o_joint = _joint_stats(x, r, joint, joint_order, n_joint, N_CHUNKS)
+        fold = sparse.csr_matrix(  # noqa: TID251
+            (
+                np.ones(levels.size),
+                (levels.ravel(), np.repeat(np.arange(n_joint), levels.shape[1])),
+            ),
+            shape=(n_batches, n_joint),
+        )
+        s = (fold @ s_joint.reshape(n_joint, -1).astype(np.float64)).reshape(
+            n_batches, *s_joint.shape[1:]
+        )
+    else:
+        s = sum(
+            _joint_stats(x, r, c, order, n_batches, N_CHUNKS)[0]
+            for c, order in zip(cols, orders, strict=True)
+        )
+        # masses per joint category: a pass without the PC dimension
+        no_pc = np.empty((x.shape[0], 0), dtype=x.dtype)
+        _, o_joint = _joint_stats(no_pc, r, joint, joint_order, n_joint, N_CHUNKS)
+    w = _solve_correction(s, o_joint, levels, n_levels, lam, _SUPPRESS_PENALTY)
+    if by_joint:
+        w = w[levels].sum(axis=1)
+    return np.ascontiguousarray(w, dtype=x.dtype)
+
+
 def _solve_correction(  # noqa: PLR0915, PLR0917
-    s_joint: np.ndarray,
+    s: np.ndarray,
     o_joint: np.ndarray,
     levels: np.ndarray,
     n_levels: np.ndarray,
     lam: np.ndarray,
     sentinel: float,
 ) -> np.ndarray:
-    """Ridge coefficients of every cluster, returned as the total correction per joint category (J x K x d).
+    """Ridge coefficients of every cluster per batch level (L x K x d, float64), without the intercept.
 
+    ``s[l, k] = sum of r_ik * x_i`` over the cells with level l; ``o_joint`` holds the masses per joint category.
     Per cluster the normal equations are ``(Phi* diag(r_k) Phi*^T + Lambda_k) W_k = Phi* diag(r_k) X^T``
     with an unpenalised intercept. The block of the covariate with the most levels is diagonal,
     so it is eliminated in closed form and only the Schur complement over the intercept and the remaining
     levels is solved; with one covariate that is a 1 x 1 system. ``lam[b, k] >= sentinel`` removes level b
-    from cluster k (its coefficient is 0). Runs in float64; nothing here has a cell dimension.
+    from cluster k (its coefficient is 0). Runs in float64, ``_SOLVE_CHUNK`` clusters at a time,
+    so the dense systems stay at chunk x m x n_big.
     """
-    n_joint, n_clusters, n_pc = s_joint.shape
+    n_clusters, n_pc = s.shape[1:]
     offsets = np.concatenate([[0], np.cumsum(n_levels)])
     big = int(np.argmax(n_levels))
     n_big = int(n_levels[big])
+    big_lv = np.arange(offsets[big], offsets[big + 1])
     others = [c for c in range(len(n_levels)) if c != big]
     big_of_joint = levels[:, big] - offsets[big]
     small = np.concatenate(
@@ -519,73 +580,68 @@ def _solve_correction(  # noqa: PLR0915, PLR0917
     # rows[j] = the rows of the small system that joint category j belongs to:
     # the intercept and one level per other key
     rows = np.concatenate(
-        [np.zeros((n_joint, 1), dtype=np.int64), row_of_level[levels[:, others]]],
+        [np.zeros((len(levels), 1), dtype=np.int64), row_of_level[levels[:, others]]],
         axis=1,
     )
 
-    o = o_joint.astype(np.float64)  # J x K
-    s = s_joint.astype(np.float64)  # J x K x d
+    o_all = o_joint.astype(np.float64)  # J x K
+    s = s.astype(np.float64)  # L x K x d
     lam = lam.astype(np.float64)
-    pruned = lam >= sentinel
-    lam_big = lam[offsets[big] : offsets[big + 1]].T  # K x n_big
-    pruned_big = pruned[offsets[big] : offsets[big + 1]].T
-    lam_small, pruned_small = lam[small].T, pruned[small].T  # K x small
+    w = np.zeros(s.shape)
+    for k0 in range(0, n_clusters, _SOLVE_CHUNK):
+        ks = slice(k0, min(k0 + _SOLVE_CHUNK, n_clusters))
+        o = o_all[:, ks]  # J x c
+        c = o.shape[1]
+        kl = np.arange(c)
+        pruned = lam[:, ks] >= sentinel
+        lam_big, pruned_big = lam[big_lv, ks].T, pruned[big_lv].T  # c x n_big
+        lam_small, pruned_small = lam[small, ks].T, pruned[small].T  # c x small
+        row_k = kl * m + rows[:, :, None]  # J x C x c
+        o_big = _masses(kl * n_big + big_of_joint[:, None], o, (c, n_big))
+        gram = _masses(row_k[:, :, None] * m + rows[:, None, :, None], o, (c, m, m))
+        coupling = _masses(  # mass shared by a small row and a big level
+            row_k * n_big + big_of_joint[:, None, None], o, (c, m, n_big)
+        )
+        rhs_big = s[big_lv, ks].transpose(1, 0, 2)  # c x n_big x d
+        rhs = np.empty((c, m, n_pc))
+        rhs[:, 0] = rhs_big.sum(axis=1)
+        rhs[:, 1:] = s[small, ks].transpose(1, 0, 2)
 
-    # sums over joint categories; cluster axis last while accumulating, first afterwards
-    o_big = np.zeros((n_big, n_clusters))
-    np.add.at(o_big, big_of_joint, o)
-    rhs_big = np.zeros((n_big, n_clusters, n_pc))
-    np.add.at(rhs_big, big_of_joint, s)
-    gram = np.zeros((m, m, n_clusters))
-    rhs = np.zeros((m, n_clusters, n_pc))
-    coupling = np.zeros((
-        m,
-        n_big,
-        n_clusters,
-    ))  # mass shared by a small row and a big level
-    for a in range(rows.shape[1]):
-        np.add.at(rhs, rows[:, a], s)
-        np.add.at(coupling, (rows[:, a], big_of_joint), o)
-        for b in range(rows.shape[1]):
-            np.add.at(gram, (rows[:, a], rows[:, b]), o)
-    gram = gram.transpose(2, 0, 1).copy()
-    rhs = rhs.transpose(1, 0, 2).copy()
-    coupling = coupling.transpose(2, 0, 1).copy()
-    o_big, rhs_big = o_big.T, rhs_big.transpose(1, 0, 2)  # K x n_big, K x n_big x d
-
-    diag = o_big + lam_big
-    # 0 drops the level
-    d_inv = np.where(pruned_big | (diag <= 0), 0.0, 1.0 / np.where(diag > 0, diag, 1.0))
-    idx = np.arange(1, m)
-    gram[:, idx, idx] += np.where(pruned_small, 0.0, lam_small)
-    # a pruned small level: empty row and column, unit diagonal after elimination
-    kk, ss = np.nonzero(pruned_small)
-    gram[kk, ss + 1, :] = 0
-    gram[kk, :, ss + 1] = 0
-    coupling[kk, ss + 1, :] = 0
-    rhs[kk, ss + 1] = 0
-    scaled = coupling * d_inv[:, None, :]  # C D^-1, K x m x n_big
-    schur = gram - scaled @ coupling.transpose(0, 2, 1)
-    rhs -= scaled @ rhs_big
-    schur[kk, ss + 1, ss + 1] = 1
-    empty = gram[:, 0, 0] <= 1e-12  # cluster without cells: no correction
-    schur[empty] = np.eye(m)
-    try:
-        w_small = np.linalg.solve(schur, rhs)  # K x m x d
-    except np.linalg.LinAlgError:
-        # guard only: from `harmonize` every unpruned lambda is positive and the system is positive definite
-        w_small = np.stack([
-            np.linalg.lstsq(a, b, rcond=None)[0]
-            for a, b in zip(schur, rhs, strict=True)
-        ])
-    w_big = d_inv[:, :, None] * (rhs_big - coupling.transpose(0, 2, 1) @ w_small)
-    w_small[:, 0] = 0  # the intercept is not part of the correction
-    w_small[empty] = 0
-    w_big[empty] = 0
-    w_joint = w_big[:, big_of_joint]  # K x J x d
-    for a in range(1, rows.shape[1]):
-        w_joint = w_joint + w_small[:, rows[:, a]]
-    return np.ascontiguousarray(w_joint.transpose(1, 0, 2), dtype=s_joint.dtype)
+        diag = o_big + lam_big
+        # 0 drops the level
+        d_inv = np.where(
+            pruned_big | (diag <= 0), 0.0, 1.0 / np.where(diag > 0, diag, 1.0)
+        )
+        idx = np.arange(1, m)
+        gram[:, idx, idx] += np.where(pruned_small, 0.0, lam_small)
+        # a pruned small level: empty row and column, unit diagonal after elimination
+        kk, ss = np.nonzero(pruned_small)
+        gram[kk, ss + 1, :] = 0
+        gram[kk, :, ss + 1] = 0
+        coupling[kk, ss + 1, :] = 0
+        rhs[kk, ss + 1] = 0
+        scaled = coupling * d_inv[:, None, :]  # C D^-1, c x m x n_big
+        schur = gram - scaled @ coupling.transpose(0, 2, 1)
+        rhs -= scaled @ rhs_big
+        schur[kk, ss + 1, ss + 1] = 1
+        empty = gram[:, 0, 0] <= 1e-12  # cluster without cells: no correction
+        schur[empty] = np.eye(m)
+        try:
+            w_small = np.linalg.solve(schur, rhs)  # c x m x d
+        except np.linalg.LinAlgError:
+            # guard only: from `harmonize` every unpruned lambda is positive and the system is positive definite
+            w_small = np.stack([
+                np.linalg.lstsq(a, b, rcond=None)[0]
+                for a, b in zip(schur, rhs, strict=True)
+            ])
+        w_big = d_inv[:, :, None] * (rhs_big - coupling.transpose(0, 2, 1) @ w_small)
+        w_small[empty] = 0
+        w_big[empty] = 0
+        w[big_lv, ks] = w_big.transpose(1, 0, 2)
+        w[small, ks] = w_small[:, 1:].transpose(
+            1, 0, 2
+        )  # the intercept is not part of the correction
+    return w
 
 
 def _correction_multi(
@@ -601,14 +657,17 @@ def _correction_multi(
     # so where its range is cut does not change the result
     ends = np.append(batch_codes.max(axis=0)[:-1] + 1, n_batches)
     n_levels = np.diff(ends, prepend=0)
-    joint, levels = _joint_categories(batch_codes)
-    s_joint, o_joint = _joint_stats(
-        x, r, joint, np.argsort(joint, kind="stable"), levels.shape[0], N_CHUNKS
+    plan = _correction_plan(batch_codes, n_batches)
+    w = _correction_weights(x, r, plan, n_levels, lambda_kb)
+    return _apply_only(x, r, plan.cat, w, np.empty_like(x), N_CHUNKS)
+
+
+def _masses(idx: np.ndarray, o: np.ndarray, shape: tuple[int, ...]) -> np.ndarray:
+    """Sum the joint masses ``o`` (J x c) into a dense array of ``shape`` at flat indices ``idx`` (J x ... x c)."""
+    weights = np.broadcast_to(
+        o.reshape(o.shape[0], *[1] * (idx.ndim - 2), -1), idx.shape
     )
-    w_joint = _solve_correction(
-        s_joint, o_joint, levels, n_levels, lambda_kb, _SUPPRESS_PENALTY
-    )
-    return _apply_only(x, r, joint, w_joint, np.empty_like(x), N_CHUNKS)
+    return np.bincount(idx.ravel(), weights.ravel(), int(np.prod(shape))).reshape(shape)
 
 
 def _compute_lambda_kb(
