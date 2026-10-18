@@ -758,7 +758,7 @@ def test_cluster_pass_matches_numpy(
     dist, ent, o_fresh, y_t = _cluster_pass(
         *(z, np.ascontiguousarray(y.T), r, codes, o, r_sum, pr_b, theta, perm),
         *(_bounds(len(x)), dtype(-2 / _SIGMA), stabilized, n_chunks, scatter),
-        sum_penalties,
+        *(sum_penalties, True),
     )
     atol = 2e-5 if dtype == np.float32 else 1e-10
     np.testing.assert_allclose(r, r_ref, atol=atol)
@@ -775,6 +775,20 @@ def test_cluster_pass_matches_numpy(
         np.add.at(exact, covariate, r)
     np.testing.assert_allclose(o_fresh, exact, rtol=1e-4, atol=1e-5)
     np.testing.assert_allclose(y_t.T, core._normalize_rows_l2(r.T @ z), atol=1e-5)
+    # without the centroids: same assignments, the input centroids back
+    y_in, r2, o2, r_sum2 = (
+        np.ascontiguousarray(y.T),
+        r0.copy(),
+        o0.copy(),
+        r0.sum(axis=0),
+    )
+    *_, y_out = _cluster_pass(
+        *(z, y_in, r2, codes, o2, r_sum2, pr_b, theta, perm),
+        *(_bounds(len(x)), dtype(-2 / _SIGMA), stabilized, n_chunks, scatter),
+        *(sum_penalties, False),
+    )
+    np.testing.assert_array_equal(r2, r)
+    assert y_out is y_in
     if isinstance(keys, list):  # the two rules really differ on this input
         other, _ = _clustering_iteration(
             *(z, codes, pr_b, r0, o0, theta, perm),
@@ -803,7 +817,7 @@ def test_cluster_pass_sum_rule_handles_large_penalties(dtype) -> None:
     r, o, r_sum = r0.copy(), o0.copy(), r0.sum(axis=0)
     _cluster_pass(
         *(z, np.ascontiguousarray(y.T), r, codes, o, r_sum, pr_b, theta, perm),
-        *(_bounds(len(x)), dtype(-2 / _SIGMA), False, 32, False, True),
+        *(_bounds(len(x)), dtype(-2 / _SIGMA), False, 32, False, True, True),
     )
     np.testing.assert_allclose(r, r_ref, atol=5e-5 if dtype == np.float32 else 1e-10)
 
@@ -817,7 +831,7 @@ def test_cluster_pass_without_penalty_is_soft_kmeans() -> None:
     _cluster_pass(
         *(z, np.ascontiguousarray(y.T), r, codes, o, r_sum, pr_b),
         *(np.zeros(_N_BATCH, np.float32), np.arange(n), np.array([0, n])),
-        *(np.float32(-20), True, 3, False, False),
+        *(np.float32(-20), True, 3, False, False, True),
     )
     expected = np.exp(-20 * (1 - z @ y.T).astype(np.float64))
     expected /= expected.sum(axis=1, keepdims=True)
@@ -980,8 +994,8 @@ def test_harmonize_many_small_batches() -> None:
     assert core._use_scatter(
         4000, 1, 20_000 // 19
     )  # thousands of tiny batches: scatters
-    assert core._use_scatter(11, 1, 10 * core.N_CHUNKS)
-    assert not core._use_scatter(10, 1, 10 * core.N_CHUNKS)
+    assert core._use_scatter(41, 1, 10 * core.N_CHUNKS)
+    assert not core._use_scatter(40, 1, 10 * core.N_CHUNKS)
     x, obs = _toy(n=1500, dtype=np.float64)
     obs = obs.assign(well=pd.Categorical(np.arange(1500) % 250))
     assert core._use_scatter(250, 1, 1500 // 19)

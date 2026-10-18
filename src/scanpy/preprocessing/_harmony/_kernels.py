@@ -31,6 +31,7 @@ def _cluster_pass(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
     n_chunks,
     scatter,
     sum_penalties,
+    want_y,
 ):
     """One clustering iteration: block-wise soft assignment, objective parts, next centroids.
 
@@ -46,6 +47,9 @@ def _cluster_pass(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
     ``sum_penalties`` selects how the penalty factors of a cell's several batch keys are combined: ``False``
     multiplies them :cite:p:`Korsunsky2019`; ``True`` adds them, as the assignment rule is printed in
     :cite:t:`Patikas2026`, skipping levels with ``theta == 0``. With one key the two are the same.
+
+    ``want_y=False`` skips the centroids and returns the input ``y_t``, for an iteration whose centroids are
+    never read.
     """
     ft = z_norm.dtype.type
     n_pc = z_norm.shape[1]
@@ -165,10 +169,11 @@ def _cluster_pass(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
                         b = codes[i, c]
                         for k in range(n_clusters):
                             acc[t, b, k] += r[i, k]
-                for dd in range(n_pc):
-                    zv = z_norm[i, dd]
-                    for k in range(n_clusters):
-                        y_loc[dd, k] += zv * r[i, k]
+                if want_y:
+                    for dd in range(n_pc):
+                        zv = z_norm[i, dd]
+                        for k in range(n_clusters):
+                            y_loc[dd, k] += zv * r[i, k]
             dist[t] += dist_t
             ent[t] += ent_t
         # 4. put the block back
@@ -189,6 +194,13 @@ def _cluster_pass(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
                         o[b, k] += acc[t, b, k]
                         o_fresh[b, k] += acc[t, b, k]
                         r_sum[k] += acc[t, b, k] * inv_cov
+    # serial sums: a reduction over the parallel chunks would depend on the thread count
+    dist_total = ent_total = 0.0
+    for t in range(n_chunks):
+        dist_total += dist[t]
+        ent_total += ent[t]
+    if not want_y:
+        return dist_total, ent_total, o_fresh, y_t
     # 5. centroids of the new r: y_k = normalise(sum_i r_ik z_i)
     y_t_next = np.empty((n_pc, n_clusters), dtype=z_norm.dtype)
     for k in range(n_clusters):
@@ -202,11 +214,6 @@ def _cluster_pass(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
         scale = one / max(np.sqrt(sq), ft(1e-12))
         for dd in range(n_pc):
             y_t_next[dd, k] *= scale
-    # serial sums: a reduction over the parallel chunks would depend on the thread count
-    dist_total = ent_total = 0.0
-    for t in range(n_chunks):
-        dist_total += dist[t]
-        ent_total += ent[t]
     return dist_total, ent_total, o_fresh, y_t_next
 
 

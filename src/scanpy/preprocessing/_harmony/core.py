@@ -223,6 +223,7 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
         N_CHUNKS,
         _use_scatter(n_batches, codes.shape[1], n_cells),
         sum_penalties,
+        True,  # noqa: FBT003
     )
     e = pr_b[:, None] * r_sum[None, :]
     objs_harmony = [
@@ -239,9 +240,9 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
         for i in bar:
             objs: list[float] = []
             done = False
-            for _ in range(max_iter_clustering):
+            for it in range(max_iter_clustering):
                 perm = rng.permutation(n_cells)
-                # sort each block's cells so the kernels read z_norm/r/z_hat in ascending order;
+                # sort each block's cells so the kernel reads z_norm and r in ascending order;
                 # block membership is unchanged, only the order within a block differs
                 for lo, hi in pairwise(bounds):
                     perm[lo:hi].sort()
@@ -261,6 +262,8 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
                     N_CHUNKS,
                     scatter,
                     sum_penalties,
+                    # the correction recomputes the centroids after the last iteration
+                    it < max_iter_clustering - 1,
                 )
                 if recompute_counts:
                     o[:] = o_fresh
@@ -700,10 +703,10 @@ def _compute_lambda_kb(
 def _use_scatter(n_batches: int, n_cov: int, block_size: int) -> bool:
     """Whether the clustering kernel moves a block's counts by serial scatters instead of per-chunk accumulators.
 
-    Accumulators cost about N_CHUNKS * levels * K per block, scatters about cells * keys * K.
-    Scatters win for thousands of small batches, accumulators on atlases with few large ones.
+    Accumulators cost about N_CHUNKS * levels * K per block, scatters about cells * keys * K, but the scatters
+    are serial: they win only at about four times the accumulators' work (measured at 200k to 1M cells).
     """
-    return N_CHUNKS * n_batches > block_size * n_cov
+    return N_CHUNKS * n_batches > 4 * block_size * n_cov
 
 
 def _block_bounds(n_cells: int, block_proportion: float) -> np.ndarray:
