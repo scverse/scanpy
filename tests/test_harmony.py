@@ -1127,6 +1127,9 @@ def test_harmonize_seeding_options() -> None:
         (dict(seeding="nope"), "seeding must be one of"),
         (dict(penalty_combine="mean"), "penalty_combine must be one of"),
         (dict(stop_rule="never"), "stop_rule must be one of"),
+        (dict(flavor="harmony3"), "flavor must be one of"),
+        (dict(n_clusters=0), "n_clusters must be between 1"),
+        (dict(n_clusters=601), "n_clusters must be between 1"),
     ],
 )
 def test_harmonize_rejects_bad_parameters(kwargs: dict, match: str) -> None:
@@ -1143,6 +1146,9 @@ def test_harmonize_rejects_bad_inputs() -> None:
         core.harmonize(x[:500], obs, "batch")
     with pytest.raises(ValueError, match="2-dimensional"):
         core.harmonize(x[:, 0], obs, "batch")
+    for dtype in (np.float16, np.int64):
+        with pytest.raises(ValueError, match="dtype must be float32 or float64"):
+            core.harmonize(x.astype(dtype), obs, "batch")
     x0 = x.copy()
     x0[0, 0] = np.inf
     with pytest.raises(ValueError, match="non-finite"):

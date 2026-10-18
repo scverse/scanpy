@@ -34,7 +34,7 @@ _SUPPRESS_PENALTY = 1e30
 _REFERENCE = {"harmony1": (200, 1e-5, 1e-4), "harmony2": (4, 1e-3, 1e-2)}
 _PAPER = {"harmony1": (200, 1e-5, 1e-4), "harmony2": (200, 1e-5, 1e-4)}
 STOP_RULES = {
-    # the round objective is only recorded if clustering converged, as in harmonypy
+    # the round objective is only recorded if clustering converged
     "reference": (3, False, _REFERENCE),
     # every round's objective is recorded, as in rapids-singlecell
     "reference_record": (3, True, _REFERENCE),
@@ -80,11 +80,17 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
     """
     stabilized = dynamic_lambda = flavor == "harmony2"
     choices = dict(
+        flavor=("harmony1", "harmony2"),
         stop_rule=tuple(STOP_RULES),
         seeding=SEEDINGS,
         penalty_combine=("product", "sum"),
     )
-    given = dict(stop_rule=stop_rule, seeding=seeding, penalty_combine=penalty_combine)
+    given = dict(
+        flavor=flavor,
+        stop_rule=stop_rule,
+        seeding=seeding,
+        penalty_combine=penalty_combine,
+    )
     for name, allowed in choices.items():
         if given[name] not in allowed:
             msg = f"{name} must be one of {allowed}, got {given[name]!r}."
@@ -115,6 +121,9 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
         if not ok:
             raise ValueError(msg)
     x = np.ascontiguousarray(x)
+    if x.dtype not in (np.float32, np.float64):
+        msg = f"dtype must be float32 or float64, got {x.dtype}."
+        raise ValueError(msg)
     if x.ndim != 2:
         msg = f"x must be a 2-dimensional array (cells x components), got {x.ndim} dimension(s)."
         raise ValueError(msg)
@@ -156,6 +165,9 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
     pr_b = n_b / ft(n_cells)
     theta_b = _get_theta_array(theta, n_levels, x.dtype).ravel()
     k = max(2, int(min(100, n_cells / 30))) if n_clusters is None else n_clusters
+    if not 1 <= k <= n_cells:
+        msg = f"n_clusters must be between 1 and the number of cells ({n_cells}), got {k}."
+        raise ValueError(msg)
     if tau > 0:
         theta_b = (theta_b * (1 - np.exp(-n_b / (k * tau)) ** 2)).astype(ft)
 
