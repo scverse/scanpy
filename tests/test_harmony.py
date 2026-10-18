@@ -68,8 +68,6 @@ _integrate_harmony2_reference = partial(
     rng=734,
     alpha=0.2,
     batch_prune_threshold=1e-5,
-    seeding="kmeans",  # harmonypy seeds with k-means
-    stop_rule="reference",  # and records a round's objective only if clustering converged
 )
 
 
@@ -413,6 +411,9 @@ def test_harmony2_multikey_reference(
         dtype=np.float64,
         n_clusters=n_clusters,
         max_iter_harmony=max_iter_harmony,
+        # these 80-cell outputs start from k-means centroids;
+        # test_harmony2_multikey_default_seeding covers the default
+        seeding="kmeans",
     )
 
     result = adata.obsm["X_pca_harmony"]
@@ -434,10 +435,10 @@ def _within_group_r2(x: np.ndarray, group: np.ndarray, covariate: np.ndarray) ->
 
 
 def test_harmony2_multikey_default_seeding(adata_harmonypy2_multikey: AnnData) -> None:
-    """The default seeding integrates at least as well as harmonypy on its multikey fixture.
+    """The default seeding integrates the multikey fixture at least as well as the stored output.
 
-    It starts further from the k-means fixed point than harmonypy, so it runs more rounds
-    and lands farther from the stored output: compare the biology, not the coordinates.
+    It starts further from the k-means fixed point, so it runs more rounds
+    and lands farther from the stored coordinates: compare the biology instead.
     """
     from sklearn.cluster import KMeans
     from sklearn.metrics import silhouette_score
