@@ -40,7 +40,7 @@ def harmony_integrate(  # noqa: PLR0913
     stop_rule: Literal[
         "reference_record", "reference", "paper", "paper_window3"
     ] = "reference_record",
-    seeding: Literal["afkmc2", "kmeans", "kmeans++", "paper_nearest"] = "afkmc2",
+    seeding: Literal["afkmc2", "kmeans", "kmeans++", "paper_nearest"] | None = None,
     seeding_lloyd_steps: int = 0,
     seeding_cells_per_cluster: int | None = None,
     penalty_combine: Literal["product", "sum"] = "product",
@@ -52,8 +52,7 @@ def harmony_integrate(  # noqa: PLR0913
 
     Integration adjusts a PCA embedding to reduce experiment-specific technical variation,
     allowing cells from different experiments to be compared.
-    This CPU implementation runs in parallel numba kernels
-    and follows the rapids-singlecell and harmony-pytorch packages.
+    This CPU implementation runs in parallel numba kernels.
     Multiple batch variables follow the per-covariate formulation described in the Harmony papers:
     each key is modeled separately instead of combining all keys into one joint category.
     As Harmony works by adjusting the principal components,
@@ -82,7 +81,7 @@ def harmony_integrate(  # noqa: PLR0913
     adjusted_basis
         The name of the field in ``adata.obsm`` where the adjusted PCA table will be stored.
     dtype
-        The data type to use for Harmony computation.
+        The data type to use for Harmony computation, ``float32`` or ``float64``.
         If you use 32-bit you may experience numerical instability.
     flavor
         Which version of the Harmony algorithm to use.
@@ -165,19 +164,22 @@ def harmony_integrate(  # noqa: PLR0913
         ``"reference_record"`` (default) and ``"reference"`` use the iteration limits and tolerances
         listed under ``max_iter_clustering``, ``tol_clustering`` and ``tol_harmony``,
         and test clustering convergence over a window of 3 iterations.
-        ``"reference_record"`` records every round's objective for the outer test, as rapids-singlecell does;
-        ``"reference"`` records it only when the clustering converged, as harmonypy does.
+        ``"reference_record"`` records every round's objective for the outer test;
+        ``"reference"`` records it only when the clustering converged.
         ``"paper"`` and ``"paper_window3"`` use the tolerances of :cite:t:`Korsunsky2019`
         (200 clustering iterations, ``1e-5`` and ``1e-4``) for both flavors,
         testing clustering convergence on the last iteration or a window of 3.
     seeding
         How the initial cluster centroids are chosen.
-        ``"afkmc2"`` (default) approximates k-means++ seeding with Markov chains :cite:p:`Bachem2016`
+        If :data:`None`, ``"afkmc2"`` for ``"harmony2"`` and ``"kmeans"`` for ``"harmony1"``.
+        ``"afkmc2"`` approximates k-means++ seeding with Markov chains :cite:p:`Bachem2016`
         and needs a single pass over the cells.
-        ``"kmeans"`` runs :class:`~sklearn.cluster.KMeans` (k-means++ and up to 25 Lloyd iterations),
-        as harmonypy does.
+        ``"kmeans"`` runs :class:`~sklearn.cluster.KMeans` (k-means++ and up to 25 Lloyd iterations).
         ``"kmeans++"`` is exact k-means++ seeding.
-        ``"paper_nearest"`` is the sampler of :cite:t:`Patikas2026`.
+        ``"paper_nearest"`` follows the sampler of :cite:t:`Patikas2026`,
+        taking the cell with the *highest* ``log(u) / D`` (the paper prints "lowest"),
+        where ``D`` is the distance to the nearest centroid chosen so far:
+        this draws cells with probability proportional to that distance.
     seeding_lloyd_steps
         Hard spherical k-means iterations applied to the seeds before Harmony starts.
     seeding_cells_per_cluster
@@ -186,7 +188,8 @@ def harmony_integrate(  # noqa: PLR0913
     penalty_combine
         How the diversity penalties of several batch keys are combined in the soft assignment.
         ``"product"`` (default) multiplies the per-key penalty factors, as in :cite:t:`Korsunsky2019`;
-        ``"sum"`` adds them, as the assignment rule is printed in :cite:t:`Patikas2026`.
+        ``"sum"`` adds them, as the assignment rule is printed in :cite:t:`Patikas2026`,
+        leaving out levels with ``theta == 0``.
         Identical for a single key.
     recompute_counts
         Rebuild the per-batch cluster counts from the assignments after every clustering iteration.

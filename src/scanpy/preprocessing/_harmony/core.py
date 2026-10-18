@@ -65,7 +65,7 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
     tol_harmony: float | None = None,
     tol_clustering: float | None = None,
     stop_rule: str = "reference_record",
-    seeding: str = "afkmc2",
+    seeding: str | None = None,
     penalty_combine: str = "product",
     seeding_lloyd_steps: int = 0,
     seeding_cells_per_cluster: int | None = None,
@@ -79,6 +79,8 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
     (``objectives``) and the clustering iterations per round (``iterations``).
     """
     stabilized = dynamic_lambda = flavor == "harmony2"
+    if seeding is None:
+        seeding = "afkmc2" if flavor == "harmony2" else "kmeans"
     choices = dict(
         flavor=("harmony1", "harmony2"),
         stop_rule=tuple(STOP_RULES),
@@ -393,10 +395,11 @@ def _converged(objs: list[float], tol: float, *, window: int, signed: bool) -> b
 def _seed_paper_nearest(
     z_norm: np.ndarray, k: int, rng: np.random.Generator
 ) -> np.ndarray:
-    """Seeding of :cite:t:`Patikas2026`.
+    """Seed as :cite:t:`Patikas2026` describe, read so that the seeds spread.
 
-    k distinct cells; each new one is the cell with the highest ``log(u_j) / D_j``, ``u ~ U(0, 1)``,
-    which draws it with probability proportional to its Euclidean distance D_j to the nearest cell chosen so far.
+    k distinct cells; each new one is the cell with the highest ``log(u_j) / D_j``, ``u ~ U(0, 1)``
+    (the paper prints "lowest", which would pick the closest cells), which draws it with probability
+    proportional to its Euclidean distance D_j to the nearest cell chosen so far.
     """
     n = z_norm.shape[0]
     chosen = [int(rng.integers(n))]

@@ -1030,6 +1030,23 @@ def test_harmonize_seedings_are_reproducible(seeding: str) -> None:
     assert np.isfinite(out[0]).all()
 
 
+def test_harmonize_default_seeding_follows_flavor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class SeededError(Exception):
+        pass
+
+    def afkmc2(*_args, **_kwargs):
+        raise SeededError
+
+    monkeypatch.setattr(core, "_seed_afkmc2", afkmc2)
+    x, obs = _toy()
+    with pytest.raises(SeededError):
+        core.harmonize(x, obs, "batch", max_iter_harmony=1, rng=0)
+    # harmony1 keeps the k-means initialisation
+    core.harmonize(x, obs, "batch", flavor="harmony1", max_iter_harmony=1, rng=0)
+
+
 def test_harmonize_edge_inputs() -> None:
     x, obs = _toy()
     for extra in (dict(tau=5), dict(stop_rule="paper_window3"), dict(n_clusters=2)):
