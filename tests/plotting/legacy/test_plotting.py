@@ -109,7 +109,7 @@ def test_heatmap_var_as_dict(plot_cmp) -> None:
     pbmc = pbmc68k_reduced()
     sc.tl.leiden(
         pbmc,
-        key_added="clusters",
+        out="obs.clusters",
         resolution=0.5,
         flavor="igraph",
         n_iterations=2,
@@ -461,12 +461,12 @@ def test_stacked_violin_swap_axes_match(plot_cmp) -> None:
         method="wilcoxon",
         tie_correct=True,
         pts=True,
-        key_added="wilcoxon",
+        out=sc.Prefix("wilcoxon"),
     )
     swapped_ax = sc.pl.rank_genes_groups_stacked_violin(
         pbmc,
         n_genes=2,
-        key="wilcoxon",
+        key="wilcoxon_rank_genes_groups",
         groupby="bulk_labels",
         swap_axes=True,
         return_fig=True,
@@ -1400,7 +1400,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
 def pbmc_68k_dpt_session() -> AnnData:
     adata = pbmc68k_reduced()
     sc.pp.neighbors(adata, n_neighbors=5, method="gauss", knn=False)
-    sc.tl.leiden(adata, resolution=0.5, key_added="leiden_0_5", flavor="leidenalg")
+    sc.tl.leiden(adata, resolution=0.5, out="obs.leiden_0_5", flavor="leidenalg")
     adata.uns["iroot"] = np.flatnonzero(adata.obs["leiden_0_5"] == "0")[0]
     sc.tl.diffmap(adata, n_comps=10)
     with warnings.catch_warnings():
@@ -1762,7 +1762,6 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
 
     sc.tl.filter_rank_genes_groups(
         adata,
-        key_added="rank_genes_groups_filtered",
         min_in_group_fraction=0.25,
         min_fold_change=1,
         max_out_group_fraction=0.5,

@@ -110,7 +110,13 @@ def test_log1p_rep(count_matrix_format: _MatrixFormat, base, dtype: DTypeLike) -
         np.abs(sparse.random(100, 200, density=0.3, dtype=dtype)).toarray()
     )
     check_rep_mutation(sc.pp.log1p, x, base=base)
-    check_rep_results(sc.pp.log1p, x, base=base)
+    check_rep_results(_log1p_no_marker, x, base=base)
+
+
+def _log1p_no_marker(adata: AnnData, **kwargs) -> None:
+    """`sc.pp.log1p`, minus the `.X`-only `.uns['log1p']` (see `test_log1p_marks_only_x`)."""
+    sc.pp.log1p(adata, **kwargs)
+    adata.uns.pop("log1p", None)
 
 
 def _random_probs(n: int, frac_zero: float) -> NDArray[np.float64]:

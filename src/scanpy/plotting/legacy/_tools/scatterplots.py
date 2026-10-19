@@ -22,7 +22,7 @@ from ...._keys import _existing_preset_keys
 from ...._settings import Default, settings
 from ...._utils import _doc_params, _get_basis_key, sanitize_anndata
 from ...._utils._doctests import doctest_internet
-from ....get import _check_mask
+from ....get._use import _check_mask
 from .. import _utils, mpl_settings
 from .._docs import (
     doc_adata_color_etc,

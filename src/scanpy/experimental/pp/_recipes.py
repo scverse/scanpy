@@ -6,9 +6,8 @@ from typing import TYPE_CHECKING
 if sys.version_info < (3, 15):
     from types import MappingProxyType as frozendict  # noqa: N813
 
-import numpy as np
 
-from ... import experimental, settings
+from ... import experimental
 from ..._keys import _embedding_keys
 from ..._utils import _doc_params
 from ..._utils.random import _accepts_legacy_random_state
@@ -21,6 +20,7 @@ from ...experimental._docs import (
     doc_pca_chunk,
 )
 from ...preprocessing import pca
+from ._normalization import _pca_kwargs_dests, _write_pca_from
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -107,20 +107,20 @@ def recipe_pearson_residuals(  # noqa: PLR0913
     `.uns['pearson_residuals_normalization']['clip']`
          The used value of the clipping parameter.
 
-    `.obsm[kwargs_pca.get('key_added', 'X_pca')]`
+    `.obsm['X_pca' | prefix]`
         PCA representation of data after gene selection and Pearson residual
         normalization.
-    `.varm[kwargs_pca.get('key_added', 'PCs')]`
+    `.varm['PCs' | prefix]`
          The principal components containing the loadings. When `inplace=True` this
          will contain empty rows for the genes not selected during HVG selection.
-    `.uns[kwargs_pca.get('key_added', 'pca')]['variance_ratio']`
+    `.uns['pca' | prefix]['variance_ratio']`
          Ratio of explained variance.
-    `.uns[kwargs_pca.get('key_added', 'pca')]['variance']`
+    `.uns['pca' | prefix]['variance']`
          Explained variance, equivalent to the eigenvalues of the covariance matrix.
 
     """
-    key_added = kwargs_pca.get("key_added", settings.preset.pca.key_added)
-    keys = _embedding_keys("pca", key_added)
+    key, dests = _pca_kwargs_dests(kwargs_pca)
+    keys = _embedding_keys("pca", key)
     hvg_args = dict(
         flavor="pearson_residuals",
         n_top_genes=n_top_genes,
@@ -152,10 +152,10 @@ def recipe_pearson_residuals(  # noqa: PLR0913
         )
 
         adata.uns[keys.uns] = adata_pca.uns[keys.uns]
-        adata.varm[keys.varm] = np.zeros(shape=(adata.n_vars, n_comps))
-        adata.varm[keys.varm][adata.var["highly_variable"]] = adata_pca.varm[keys.varm]
+        _write_pca_from(
+            adata, adata_pca, dests, adata.var["highly_variable"].to_numpy()
+        )
         adata.uns["pearson_residuals_normalization"] = normalization_dict
-        adata.obsm[keys.obsm] = adata_pca.obsm[keys.obsm]
         return None
     else:
         return adata_pca, hvg

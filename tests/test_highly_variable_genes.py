@@ -224,11 +224,10 @@ def test_pearson_residuals_general(
     del adata.var
 
     # compute reference output
-    residuals_res = sc.experimental.pp.normalize_pearson_residuals(
-        adata, clip=clip, theta=theta, inplace=False
+    residuals = sc.experimental.pp.normalize_pearson_residuals(
+        adata, clip=clip, theta=theta, out=True
     )
-    assert isinstance(residuals_res, dict)
-    residual_variances_reference = np.var(residuals_res["X"], axis=0)
+    residual_variances_reference = np.var(residuals, axis=0)
 
     if subset:
         # lazyly sort by residual variance and take top N

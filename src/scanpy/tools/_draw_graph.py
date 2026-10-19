@@ -4,10 +4,11 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
+from scverse_misc import deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
-from .._docs import doc_rng
+from .._docs import DEPR_KEY_ADDED, doc_out_key, doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default
 from .._utils import _choose_graph, _doc_params, get_literal_vals
@@ -17,6 +18,7 @@ from .._utils.random import (
     _LegacyRng,
     _set_igraph_rng,
 )
+from ..get._out import _out_key, deprecated_copy
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
@@ -24,18 +26,38 @@ if TYPE_CHECKING:
     from typing import LiteralString
 
     from anndata import AnnData
+    from anndata.acc import MultiAcc
     from colour.hints import NDArray
 
     from .._compat import CSBase
     from .._utils.random import RNGLike, SeedLike
+    from ..get._out import Prefix
 
 
 type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
 
 
-@_doc_params(rng=doc_rng)
+@_doc_params(
+    rng=doc_rng,
+    out=doc_out_key(
+        "the embedding",
+        example="A.obsm['fa']",
+        prefixed="`.obsm['p_graph_{layout}']` and `.uns['p_graph_{layout}']`",
+        key_added=(
+            "`key_added='k'` is `out=A.obsm['k']`, "
+            "except that `'{layout}'` in it is replaced by the layout."
+        ),
+        default=(
+            "`.obsm['X_draw_graph_{layout}']` and `.uns['draw_graph']` "
+            "(`.obsm['graph_{layout}']` if :attr:`scanpy.settings.preset` is "
+            ":attr:`~scanpy.Preset.ScanpyV2Preview`)"
+        ),
+    ),
+)
 @_accepts_legacy_random_state(0)
-def draw_graph(  # noqa: PLR0913
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_copy
+def draw_graph(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     layout: _Layout = "fa",
     *,
@@ -44,14 +66,15 @@ def draw_graph(  # noqa: PLR0913
     rng: SeedLike | RNGLike | None = None,
     n_jobs: int | None = None,
     adjacency: CSBase | None = None,
-    key_added: str | Default | None = Default(preset=("draw_graph", "key_added")),
     neighbors_key: str | None = None,
     obsp: str | None = None,
-    copy: bool = False,
+    out: MultiAcc | str | Prefix | bool = False,
     # deprecated
+    key_added: str | None = None,
+    copy: bool = False,
     key_added_ext: str | None = None,
     **kwds,
-) -> AnnData | None:
+) -> AnnData | np.ndarray | None:
     """Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
 
     An alternative to tSNE that often preserves the topology of the data
@@ -90,8 +113,6 @@ def draw_graph(  # noqa: PLR0913
         Applies to layouts with random initialization like `'fr'`.
     adjacency
         Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
-    key_added
-        Template for the key. If `None`, uses `f'X_draw_graph_{{layout}}'` for `obsm`.
     init_pos
         `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
         Use precomputed coordinates for initialization.
@@ -104,6 +125,7 @@ def draw_graph(  # noqa: PLR0913
     obsp
         Use `.obsp[obsp]` as adjacency. You can't specify both
         `obsp` and `neighbors_key` at the same time.
+    {out}
     copy
         Return a copy instead of writing to adata.
     **kwds
@@ -113,7 +135,7 @@ def draw_graph(  # noqa: PLR0913
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the embedding if `out=True`, else `None`. Sets the following fields:
 
     `adata.obsm[(f'X_draw_graph_{{layout}}' | key_added).format(layout=layout)]` : :class:`numpy.ndarray` (dtype `float`)
         Coordinates of graph layout. E.g. for `layout='fa'` (the default),
@@ -124,8 +146,21 @@ def draw_graph(  # noqa: PLR0913
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     layout = coerce_fa2_layout(layout)
-    keys = _embedding_keys(
-        "draw_graph", key_added, layout=layout, key_added_ext=key_added_ext
+    key = _out_key(
+        out,
+        key_added,
+        kind="obsm",
+        base=f"graph_{layout}",
+        default=Default(),
+    )
+    if isinstance(key, str) and out is not False:
+        key = key.replace("{", "{{").replace("}", "}}")  # keys from `out` are literal
+    keys = (
+        None
+        if key is True
+        else _embedding_keys(
+            "draw_graph", key, layout=layout, key_added_ext=key_added_ext
+        )
     )
     rng = np.random.default_rng(rng)
     meta_random_state = (
@@ -134,7 +169,6 @@ def draw_graph(  # noqa: PLR0913
     if layout not in (layouts := get_literal_vals(_Layout)):
         msg = f"Provide a valid layout, one of {layouts}."
         raise ValueError(msg)
-    adata = adata.copy() if copy else adata
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)
     # init coordinates
@@ -166,6 +200,9 @@ def draw_graph(  # noqa: PLR0913
             else:
                 ig_layout = g.layout(layout, **kwds)
         positions = np.array(ig_layout.coords)
+    if keys is None:
+        logg.info("    finished", time=start)
+        return positions
     adata.uns[keys.uns] = {}
     adata.uns[keys.uns]["params"] = dict(layout=layout, **meta_random_state)
     adata.obsm[keys.obsm] = positions
@@ -176,7 +213,7 @@ def draw_graph(  # noqa: PLR0913
         f"\n    {keys.obsm!r}, draw_graph coordinates (adata.obsm)"
         f"\n    {keys.uns!r}, draw_graph parameters (adata.uns)",
     )
-    return adata if copy else None
+    return None
 
 
 def fa2_positions(

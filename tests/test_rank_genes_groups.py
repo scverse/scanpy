@@ -582,3 +582,23 @@ def test_mean_in_log_space(
         )
     logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
     np.testing.assert_equal(logfcs, expected_logfc)
+
+
+def test_rank_genes_groups_out() -> None:
+    """`out=True` returns what would be stored, `Prefix`/`key_added` rename it."""
+    pbmc = pbmc68k_reduced()
+    before = set(pbmc.uns)
+    res = rank_genes_groups(pbmc, "bulk_labels", n_genes=3, out=True)
+    assert set(pbmc.uns) == before
+    assert {"params", "names", "scores"} <= res.keys()
+
+    rank_genes_groups(pbmc, "bulk_labels", n_genes=3, out=sc.Prefix("p"))
+    np.testing.assert_array_equal(
+        pbmc.uns["p_rank_genes_groups"]["names"], res["names"]
+    )
+    with pytest.warns(FutureWarning, match=r"argument key_added is deprecated"):
+        rank_genes_groups(pbmc, "bulk_labels", n_genes=3, key_added="k")
+    np.testing.assert_array_equal(pbmc.uns["k"]["names"], res["names"])
+
+    with pytest.raises(TypeError, match=r"`out` must be a `bool` or `sc.Prefix`"):
+        rank_genes_groups(pbmc, "bulk_labels", out="obs.x")

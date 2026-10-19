@@ -164,10 +164,14 @@ def test_graph_metrics_w_constant_values(
     ("neigh_params", "metric_params"),
     [
         pytest.param(
-            dict(key_added="foo"), dict(use_graph="foo_connectivities"), id="use_graph"
+            dict(out=sc.Prefix("foo")),
+            dict(use_graph="foo_connectivities"),
+            id="use_graph",
         ),
         pytest.param(
-            dict(key_added="bar"), dict(neighbors_key="bar"), id="neighbors_key"
+            dict(out=sc.Prefix("bar")),
+            dict(neighbors_key="bar_neighbors"),
+            id="neighbors_key",
         ),
     ],
 )

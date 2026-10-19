@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 n_neighbors = 5
 key = "test"
+uns_key = f"{key}_neighbors"
 
 
 @pytest.fixture(scope="session")
@@ -36,12 +37,12 @@ def test_neighbors_key_added(
     adata: sc.AnnData, rng_arg: Literal["rng", "random_state"]
 ) -> None:
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, **{rng_arg: 0})
-    sc.pp.neighbors(adata, n_neighbors=n_neighbors, **{rng_arg: 0}, key_added=key)
+    sc.pp.neighbors(adata, n_neighbors=n_neighbors, **{rng_arg: 0}, out=sc.Prefix(key))
 
-    conns_key = adata.uns[key]["connectivities_key"]
-    dists_key = adata.uns[key]["distances_key"]
+    conns_key = adata.uns[uns_key]["connectivities_key"]
+    dists_key = adata.uns[uns_key]["distances_key"]
 
-    assert adata.uns["neighbors"]["params"] == adata.uns[key]["params"]
+    assert adata.uns["neighbors"]["params"] == adata.uns[uns_key]["params"]
     assert np.allclose(
         adata.obsp["connectivities"].toarray(), adata.obsp[conns_key].toarray()
     )
@@ -74,12 +75,12 @@ def test_neighbors_key_obsp(
     adata1 = adata.copy()
 
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, **{rng_arg: 0})
-    sc.pp.neighbors(adata1, n_neighbors=n_neighbors, **{rng_arg: 0}, key_added=key)
+    sc.pp.neighbors(adata1, n_neighbors=n_neighbors, **{rng_arg: 0}, out=sc.Prefix(key))
 
     if field == "neighbors_key":
-        arg = {field: key}
+        arg = {field: uns_key}
     else:
-        arg = {field: adata1.uns[key]["connectivities_key"]}
+        arg = {field: adata1.uns[uns_key]["connectivities_key"]}
 
     sc.tl.draw_graph(adata, layout="fr", **{rng_arg: 1})
     sc.tl.draw_graph(adata1, layout="fr", **{rng_arg: 1}, **arg)
@@ -100,14 +101,14 @@ def test_neighbors_key_obsp(
     # no obsp in umap, paga
     if field == "neighbors_key":
         sc.tl.umap(adata, **{rng_arg: 0})
-        sc.tl.umap(adata1, **{rng_arg: 0}, neighbors_key=key)
+        sc.tl.umap(adata1, **{rng_arg: 0}, neighbors_key=uns_key)
 
         with subtests.test("umap"):
             assert adata.uns["umap"]["params"] == adata1.uns["umap"]["params"]
             assert np.allclose(adata.obsm["X_umap"], adata1.obsm["X_umap"])
 
         sc.tl.paga(adata, groups="leiden")
-        sc.tl.paga(adata1, groups="leiden", neighbors_key=key)
+        sc.tl.paga(adata1, groups="leiden", neighbors_key=uns_key)
 
         with subtests.test("paga"):
             assert np.allclose(

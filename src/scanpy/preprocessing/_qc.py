@@ -11,8 +11,7 @@ from fast_array_utils.numba import njit
 from scipy import sparse
 from scverse_misc import Deprecation, deprecated_arg
 
-from scanpy.get import _get_arr
-from scanpy.get.get import _resolve_obs
+from scanpy.get._use import _get_arr, _resolve_obs
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 
 from .._compat import CSBase, CSRBase, DaskArray, warn
@@ -33,7 +32,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy._typing._array_like import NDArray
 
-    from ..get.get import RepAcc
+    from ..get._types import RepAcc
 
 
 @_doc_params(

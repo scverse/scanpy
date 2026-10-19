@@ -4,16 +4,17 @@ from __future__ import annotations
 
 from ..neighbors import neighbors
 from ..neighbors._bbknn import bbknn
+from ..neighbors._types import NeighborsOut
 from ._combat import combat
 from ._deprecated.sampling import subsample
 from ._harmony import harmony_integrate
-from ._hashsolo import hashsolo
+from ._hashsolo import HashsoloOut, hashsolo
 from ._highly_variable_genes import highly_variable_genes
-from ._normalization import normalize_total
-from ._pca import pca
+from ._normalization import NormalizeTotalOut, normalize_total
+from ._pca import PcaOut, pca
 from ._qc import calculate_qc_metrics
 from ._recipes import recipe_seurat, recipe_weinreb17, recipe_zheng17
-from ._scale import scale
+from ._scale import ScaleOut, scale
 from ._scrublet import scrublet, scrublet_simulate_doublets
 from ._simple import (
     downsample_counts,
@@ -26,6 +27,11 @@ from ._simple import (
 )
 
 __all__ = [
+    "HashsoloOut",
+    "NeighborsOut",
+    "NormalizeTotalOut",
+    "PcaOut",
+    "ScaleOut",
     "bbknn",
     "calculate_qc_metrics",
     "combat",

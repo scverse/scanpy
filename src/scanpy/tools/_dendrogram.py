@@ -9,9 +9,11 @@ from pandas.api.types import CategoricalDtype
 from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
-from .._docs import DEPR_RAW
+from .._docs import DEPR_KEY_ADDED, DEPR_RAW, doc_out_key
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
-from ..get.get import _rep_to_json, _resolve_obs
+from ..get._out import _legacy_out, _out_key
+from ..get._uns import _use_to_uns
+from ..get._use import _resolve_obs
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation_compat
 
@@ -21,12 +23,26 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..get.get import RepAcc
+    from ..get._out import Prefix
+    from ..get._types import RepAcc
 
 
-@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+@_doc_params(
+    n_pcs=doc_n_pcs,
+    use_rep=doc_use_rep,
+    out=doc_out_key(
+        "the dendrogram information",
+        default="`.uns[f'dendrogram_{{groupby}}']` (with `groupby` joined by `_`)",
+        prefixed="`.uns[f'p_dendrogram_{{groupby}}']`",
+        key_added="`key_added='k'` wrote to `.uns['k']`.",
+    ),
+)
 @deprecated_arg("use_rep", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("use_raw", DEPR_RAW)
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
+)
 def dendrogram(  # noqa: PLR0913
     adata: AnnData,
     groupby: str | Sequence[str],
@@ -38,10 +54,11 @@ def dendrogram(  # noqa: PLR0913
     cor_method: str = "pearson",
     linkage_method: str = "complete",
     optimal_ordering: bool = False,
-    key_added: str | None = None,
-    inplace: bool = True,
+    out: Prefix | bool = False,
     # deprecated
     use_rep: str | None = None,
+    key_added: str | None = None,
+    inplace: bool = True,
 ) -> dict[str, Any] | None:
     """Compute a hierarchical clustering for the given `groupby` categories.
 
@@ -88,17 +105,13 @@ def dendrogram(  # noqa: PLR0913
         Same as the optimal_ordering argument of :func:`scipy.cluster.hierarchy.linkage`
         which reorders the linkage matrix so that the distance between successive
         leaves is minimal.
-    key_added
-        By default, the dendrogram information is added to
-        `.uns[f'dendrogram_{{groupby}}']`.
-        Notice that the `groupby` information is added to the dendrogram.
+    {out}
     inplace
-        If `True`, adds dendrogram information to `adata.uns[key_added]`,
-        else this function returns the information.
+        `inplace=False` is `out=True`.
 
     Returns
     -------
-    Returns `None` if `inplace=True`, else returns a `dict` with dendrogram information. Sets the following field if `inplace=True`:
+    Returns a `dict` with dendrogram information if `out=True`, else `None`. Sets the following field:
 
     `adata.uns[f'dendrogram_{{group_by}}' | key_added]` : :class:`dict`
         Dendrogram information.
@@ -114,12 +127,15 @@ def dendrogram(  # noqa: PLR0913
     >>> sc.pl.dotplot(adata, markers, groupby="bulk_labels", dendrogram=True)
 
     """
-    raise_not_implemented_error_if_backed_type(adata.X, "dendrogram")
-    if use is not None:
-        use = _resolve_obs(use, rep=True)
+    out = _legacy_out(out, "inplace", None if inplace else True)
     if isinstance(groupby, str):
         # if not a list, turn into a list
         groupby = [groupby]
+    default = f"dendrogram_{'_'.join(groupby)}"
+    key = _out_key(out, key_added, kind="uns", base=default, default=default)
+    raise_not_implemented_error_if_backed_type(adata.X, "dendrogram")
+    if use is not None:
+        use = _resolve_obs(use, rep=True)
     for group in groupby:
         if group not in adata.obs:
             msg = (
@@ -178,7 +194,7 @@ def dendrogram(  # noqa: PLR0913
     dat = dict(
         linkage=z_var,
         groupby=groupby,
-        use_rep=_rep_to_json(use if use is not None else use_rep),
+        **_use_to_uns(use, use_rep, rep=True),
         cor_method=cor_method,
         linkage_method=linkage_method,
         categories_ordered=dendro_info["ivl"],
@@ -187,10 +203,8 @@ def dendrogram(  # noqa: PLR0913
         correlation_matrix=corr_matrix.values,
     )
 
-    if inplace:
-        if key_added is None:
-            key_added = f"dendrogram_{'_'.join(groupby)}"
-        logg.info(f"Storing dendrogram info using `.uns[{key_added!r}]`")
-        adata.uns[key_added] = dat
-    else:
+    if key is True:
         return dat
+    logg.info(f"Storing dendrogram info using `.uns[{key!r}]`")
+    adata.uns[key] = dat
+    return None

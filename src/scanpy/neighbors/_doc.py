@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .._docs import doc_out_multi
+
 doc_neighbors_key = """\
 neighbors_key
     Where to look for neighbors connectivities.
@@ -31,3 +33,35 @@ doc_n_pcs = """\
 n_pcs
     Use this many PCs. If `n_pcs==0` use `.X` if `use is None`.\
 """
+
+_doc_outs = dict(
+    connectivities=(
+        "The weighted adjacency matrix. "
+        "By default written to `A.obsp['connectivities']`, "
+        "with `sc.Prefix('p')` to `A.obsp['p_connectivities']`."
+    ),
+    distances=(
+        "The distance matrix. "
+        "By default written to `A.obsp['distances']`, "
+        "with `sc.Prefix('p')` to `A.obsp['p_distances']`."
+    ),
+)
+
+doc_out = doc_out_multi(
+    _doc_outs,
+    example="{'connectivities': A.obsp['conns']}",
+    returns=":class:`~scanpy.pp.NeighborsOut`",
+    uns="neighbors",
+)
+
+doc_out_key_added = doc_out_multi(
+    _doc_outs,
+    example="{'connectivities': A.obsp['conns']}",
+    returns=":class:`~scanpy.pp.NeighborsOut`",
+    uns="neighbors",
+    key_added=(
+        "`key_added='k'` wrote `.obsp['k_connectivities']`, `.obsp['k_distances']`, "
+        "and `.uns['k']`, so it is `out=sc.Prefix('k')`, "
+        "except that the latter names the `.uns` entry `'k_neighbors'`."
+    ),
+)

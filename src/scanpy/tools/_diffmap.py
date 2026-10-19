@@ -3,34 +3,57 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+from scverse_misc import deprecated_arg
 
 from .. import logging
-from .._docs import doc_rng
+from .._docs import DEPR_KEY_ADDED, doc_out_key, doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default, settings
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state
+from ..get._out import _out_key, deprecated_copy
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from anndata import AnnData
+    from anndata.acc import MultiAcc
 
     from .._utils.random import RNGLike, SeedLike
+    from ..get._out import Prefix
 
 
 __all__ = ["diffmap"]
 
 
-@_doc_params(rng=doc_rng)
+@_doc_params(
+    rng=doc_rng,
+    out=doc_out_key(
+        "the embedding",
+        example="A.obsm['diffmap']",
+        prefixed="`.obsm['p_diffmap']` and `.uns['p_diffmap']`",
+        key_added="`key_added='k'` is `out=A.obsm['k']`.",
+        default=(
+            "`.obsm['X_diffmap']` and the eigenvalues to `.uns['diffmap_evals']` "
+            "(`.obsm['diffmap']` and `.uns['diffmap']['evals']` if :attr:`scanpy.settings.preset` is "
+            ":attr:`~scanpy.Preset.ScanpyV2Preview`)"
+        ),
+    ),
+)
 @_accepts_legacy_random_state(0)
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_copy
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,
     *,
     neighbors_key: str | None = None,
-    key_added: str | Default | None = Default(preset=("diffmap", "key_added")),
     rng: SeedLike | RNGLike | None = None,
+    out: MultiAcc | str | Prefix | bool = False,
+    # deprecated
+    key_added: str | None = None,
     copy: bool = False,
-) -> AnnData | None:
+) -> AnnData | np.ndarray | None:
     """Diffusion Maps :cite:p:`Coifman2005,Haghverdi2015,Wolf2018`.
 
     Diffusion maps :cite:p:`Coifman2005` have been proposed for visualizing single-cell
@@ -61,15 +84,14 @@ def diffmap(
         .obsp[.uns[neighbors_key]['connectivities_key']] and
         .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances,
         respectively.
-    key_added
-        Control where the embedding and eigenvalues are stored.
     {rng}
+    {out}
     copy
         Return a copy instead of writing to adata.
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the embedding if `out=True`, else `None`. Sets the following fields:
 
     `adata.obsm['X_diffmap' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
         Diffusion map representation of data, which is the right eigen basis of
@@ -97,15 +119,11 @@ def diffmap(
     if n_comps <= 2:
         msg = "Provide any value greater than 2 for `n_comps`. "
         raise ValueError(msg)
-    adata = adata.copy() if copy else adata
-    _diffmap(
-        adata,
-        n_comps=n_comps,
-        neighbors_key=neighbors_key,
-        key_added=key_added,
-        rng=rng,
+    key = _out_key(out, key_added, kind="obsm", base="diffmap", default=Default())
+    emb = _diffmap(
+        adata, n_comps=n_comps, neighbors_key=neighbors_key, key_added=key, rng=rng
     )
-    return adata if copy else None
+    return emb if key is True else None
 
 
 def _diffmap(
@@ -113,18 +131,22 @@ def _diffmap(
     n_comps: int = 15,
     *,
     neighbors_key: str | None,
-    key_added: str | Default | None,
+    key_added: str | Default | Literal[True] | None,
     rng: np.random.Generator,
-) -> None:
+) -> np.ndarray | None:
+    """Compute diffusion maps, returning them for `key_added=True` instead of writing them."""
     from ._dpt import DPT
 
-    if isinstance(key_added, Default):
-        key_added = settings.preset.diffmap.key_added
-    keys = _embedding_keys("diffmap", key_added)
     start = logging.info(f"computing Diffusion Maps using {n_comps=}(=n_dcs)")
     dpt = DPT(adata, neighbors_key=neighbors_key)
     dpt.compute_transitions()
     dpt.compute_eigen(n_comps=n_comps, rng=rng)
+    if key_added is True:
+        logging.info("    finished", time=start)
+        return dpt.eigen_basis
+    if isinstance(key_added, Default):
+        key_added = settings.preset.diffmap.key_added
+    keys = _embedding_keys("diffmap", key_added)
     adata.obsm[keys.obsm] = dpt.eigen_basis
     adata.uns[keys.uns], acc = (
         (dpt.eigen_values, "")
@@ -140,3 +162,4 @@ def _diffmap(
             f"    {keys.uns!r}{acc}, eigenvalues of transition matrix (adata.uns)"
         ),
     )
+    return None

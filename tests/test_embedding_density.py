@@ -7,6 +7,7 @@ from anndata import AnnData
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 
 def test_embedding_density():
@@ -51,3 +52,51 @@ def test_embedding_density_plot():
     adata = pbmc68k_reduced()
     sc.tl.embedding_density(adata, "umap")
     sc.pl.embedding_density(adata, "umap", key="umap_density", show=False)
+
+
+@pytest.fixture
+def adata_rand() -> AnnData:
+    adata = AnnData(X=np.ones((40, 1)))
+    adata.obs["group"] = np.repeat(["a", "b"], 20)  # str, not yet categorical
+    adata.obsm["X_test"] = np.random.default_rng(0).normal(size=(40, 2))
+    return adata
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize("as_str", [True, False], ids=["str", "acc"])
+def test_embedding_density_out_acc(adata_rand: AnnData, *, as_str: bool) -> None:
+    from anndata.acc import A
+
+    sc.tl.embedding_density(adata_rand, "test", out="obs.d" if as_str else A.obs["d"])
+    assert "d" in adata_rand.obs
+    assert "test_density" not in adata_rand.obs
+    assert "d_params" in adata_rand.uns
+
+
+def test_embedding_density_prefix(adata_rand: AnnData) -> None:
+    sc.tl.embedding_density(adata_rand, "test", groupby="group", out=sc.Prefix("p"))
+    assert "p_test_density_group" in adata_rand.obs
+    assert "p_test_density_group_params" in adata_rand.uns
+
+
+def test_embedding_density_out_true(adata_rand: AnnData) -> None:
+    """`out=True` returns the densities and writes nothing (not even categoricals)."""
+    before = adata_rand.copy()
+    dens = sc.tl.embedding_density(adata_rand, "test", groupby="group", out=True)
+    pd.testing.assert_frame_equal(adata_rand.obs, before.obs)
+    assert not adata_rand.uns
+    sc.tl.embedding_density(adata_rand, "test", groupby="group")
+    np.testing.assert_array_equal(dens, adata_rand.obs["test_density_group"])
+
+
+@needs.anndata_acc
+def test_embedding_density_key_added_deprecated(adata_rand: AnnData) -> None:
+    """`key_added='k'` works like `out=A.obs['k']`, but warns."""
+    from anndata.acc import A
+
+    expected = adata_rand.copy()
+    sc.tl.embedding_density(expected, "test", out=A.obs["k"])
+    with pytest.warns(FutureWarning, match=r"argument key_added is deprecated"):
+        sc.tl.embedding_density(adata_rand, "test", key_added="k")
+    pd.testing.assert_frame_equal(adata_rand.obs, expected.obs)
+    assert adata_rand.uns.keys() == expected.uns.keys() == {"k_params"}

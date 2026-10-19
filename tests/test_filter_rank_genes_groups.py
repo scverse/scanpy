@@ -105,3 +105,17 @@ def test_filter_rank_genes_groups(
         EXPECTED[reference, abs],
         np.array(adata.uns["rank_genes_groups_filtered"]["names"].tolist()),
     )
+
+
+def test_filter_rank_genes_groups_out() -> None:
+    import scanpy as sc
+
+    adata = pbmc68k_reduced()
+    rank_genes_groups(adata, "bulk_labels", method="wilcoxon", n_genes=5)
+    res = filter_rank_genes_groups(adata, out=True)
+    assert "rank_genes_groups_filtered" not in adata.uns
+    filter_rank_genes_groups(adata, out=sc.Prefix("p"))
+    with pytest.warns(FutureWarning, match=r"argument key_added is deprecated"):
+        filter_rank_genes_groups(adata, key_added="k")
+    for key in ("p_rank_genes_groups_filtered", "k"):
+        assert adata.uns[key]["names"].tolist() == res["names"].tolist()

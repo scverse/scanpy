@@ -204,7 +204,7 @@ def embedding_density(
     groupby
         ``groupby`` as specified in :func:`scanpy.tl.embedding_density`.
     key
-        ``key_added`` as specified in :func:`scanpy.tl.embedding_density`.
+        The `.obs` column written by :func:`scanpy.tl.embedding_density` (see its ``out``).
 
     Returns
     -------

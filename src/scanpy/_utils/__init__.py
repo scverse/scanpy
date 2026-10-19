@@ -903,15 +903,17 @@ class NeighborsView:
                 msg = 'No "neighbors" in .uns'
                 raise KeyError(msg)
             self._neighbors_dict = adata.uns["neighbors"]
-            self._conns_key = "connectivities"
-            self._dists_key = "distances"
+            # old `.uns['neighbors']` entries don’t store their keys
+            default_conns, default_dists = "connectivities", "distances"
         else:
             if key not in adata.uns:
                 msg = f"No {key!r} in .uns"
                 raise KeyError(msg)
             self._neighbors_dict = adata.uns[key]
-            self._conns_key = self._neighbors_dict["connectivities_key"]
-            self._dists_key = self._neighbors_dict["distances_key"]
+            default_conns = default_dists = None
+        # a key is missing if `pp.neighbors`’ `out` didn’t write that matrix
+        self._conns_key = self._neighbors_dict.get("connectivities_key", default_conns)
+        self._dists_key = self._neighbors_dict.get("distances_key", default_dists)
 
         if self._conns_key in adata.obsp:
             self._connectivities = adata.obsp[self._conns_key]

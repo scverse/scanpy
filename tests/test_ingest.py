@@ -79,7 +79,7 @@ def test_representation(adatas):
 
 @needs.anndata_acc
 def test_representation_acc(adatas) -> None:
-    """An accessor `use_rep` round-trips through `.uns` and is used for the new data."""
+    """`use` is stored in `.uns` like `use_rep`, and used for the new data."""
     adata_ref, adata_new = (a.copy() for a in adatas)
     adata_new.obsm["X_pca"] = adata_ref.obsm["X_pca"][: adata_new.n_obs]
     sc.pp.neighbors(adata_ref, use=A.obsm["X_pca"])
@@ -87,7 +87,7 @@ def test_representation_acc(adatas) -> None:
     ing = sc.tl.Ingest(adata_ref)
     ing.fit(adata_new)
 
-    assert ing._use_rep == A.obsm["X_pca"]
+    assert ing._use_rep == "X_pca"
     np.testing.assert_array_equal(ing._obsm["rep"], adata_new.obsm["X_pca"])
 
 

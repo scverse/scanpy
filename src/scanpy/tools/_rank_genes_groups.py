@@ -15,7 +15,13 @@ from scverse_misc import Deprecation, deprecated_arg
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, warn
-from .._docs import DEPR_RAW, doc_mask, doc_use
+from .._docs import (
+    DEPR_KEY_ADDED,
+    DEPR_RAW,
+    doc_mask,
+    doc_out_key,
+    doc_use,
+)
 from .._settings import Default, Preset, settings
 from .._settings.presets import DETest
 from .._utils import (
@@ -26,17 +32,20 @@ from .._utils import (
     get_literal_vals,
     raise_not_implemented_error_if_backed_type,
 )
-from ..get import _check_mask, _get_arr, aggregate
+from ..get import aggregate
 from ..get._aggregated import _chan_combine
-from ..get.get import _mask_arg, _rep_to_json, _resolve_obs
+from ..get._out import _out_key, deprecated_copy
+from ..get._uns import _use_to_uns
+from ..get._use import _check_mask, _get_arr, _mask_arg, _resolve_obs
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
-    from typing import Literal
+    from typing import Any, Literal
 
     from numpy.typing import NDArray
 
-    from ..get.get import Mask, RepAcc
+    from ..get._out import Prefix
+    from ..get._types import Mask, RepAcc
 
 
 type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
@@ -755,10 +764,18 @@ def _build_stats_dataframe(
 @_doc_params(
     mask=doc_mask("Select subset of genes to use in statistical tests.", dim="var"),
     use=doc_use("Which matrix to perform tests on.", legacy=("layer",)),
+    out=doc_out_key(
+        "the results",
+        default="`.uns['rank_genes_groups']`",
+        prefixed="`.uns['p_rank_genes_groups']`",
+        key_added="`key_added='k'` wrote to `.uns['k']`.",
+    ),
 )
 @deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("use_raw", DEPR_RAW)
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_copy
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
@@ -770,19 +787,21 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     n_genes: int | None = None,
     rankby_abs: bool = False,
     pts: bool = False,
-    key_added: str | None = None,
-    copy: bool = False,
     method: DETest | Default = Default(preset=("rank_genes_groups", "method")),
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
     use: RepAcc | str | None = None,
-    layer: str | None = None,
     mean_in_log_space: bool | Default = Default(
         preset=("rank_genes_groups", "mean_in_log_space")
     ),
+    out: Prefix | bool = False,
+    # deprecated
+    layer: str | None = None,
     mask_var: Mask | None = None,
+    key_added: str | None = None,
+    copy: bool = False,
     **kwds,
-) -> AnnData | None:
+) -> AnnData | dict[str, Any] | None:
     r"""Rank genes for characterizing groups.
 
     Expects logarithmized data.
@@ -838,10 +857,6 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         score. The returned scores are never the absolute values.
     pts
         Compute the fraction of cells expressing the genes.
-    key_added
-        The key in `adata.uns` information is saved to.
-    copy
-        Whether to copy `adata` or modify it inplace.
     mean_in_log_space
         Whether to do :math:`\log(\operatorname{{mean}}(e^x))` (`False`)
         or :math:`\log(e^{{\operatorname{{mean}}(x)}})` (`True`).
@@ -853,10 +868,13 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         For instance, you can pass `penalty='l1'` to try to come up with a
         minimal set of genes that are good predictors (sparse solution meaning
         few non-zero fitted coefficients).
+    {out}
+    copy
+        Whether to copy `adata` or modify it inplace.
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the results as a :class:`dict` if `out=True`, else `None`. Sets the following fields:
 
     `adata.uns['rank_genes_groups' | key_added]['names']` : structured :class:`numpy.ndarray` (dtype `object`)
         Structured array to be indexed by group id storing the gene
@@ -895,6 +913,13 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
+    key = _out_key(
+        out,
+        key_added,
+        kind="uns",
+        base="rank_genes_groups",
+        default="rank_genes_groups",
+    )
     if use is not None:
         use = _resolve_obs(use, rep=True)
     mask = _mask_arg(mask, mask_var, dim="var")
@@ -933,8 +958,6 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     if corr_method not in avail_corr:
         msg = f"Correction method must be one of {avail_corr}."
         raise ValueError(msg)
-
-    adata = adata.copy() if copy else adata
     _utils.sanitize_anndata(adata)
     # for clarity, rename variable
     if groups == "all":
@@ -953,16 +976,13 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         msg = f"reference = {reference} needs to be one of groupby = {cats}."
         raise ValueError(msg)
 
-    if key_added is None:
-        key_added = "rank_genes_groups"
-    adata.uns[key_added] = {}
-    adata.uns[key_added]["params"] = dict(
+    res: dict[str, Any] = {}
+    res["params"] = dict(
         groupby=groupby,
         reference=reference,
         method=method,
         use_raw=use_raw,
-        layer=layer,
-        **({} if use is None else dict(use=_rep_to_json(use))),
+        **dict(layer=layer) | _use_to_uns(use, rep=False),
         corr_method=corr_method,
     )
 
@@ -1007,11 +1027,11 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     if test_obj.pts is not None:
         groups_names = [str(name) for name in test_obj.groups_order]
-        adata.uns[key_added]["pts"] = pd.DataFrame(
+        res["pts"] = pd.DataFrame(
             test_obj.pts.T, index=test_obj.var_names, columns=groups_names
         )
     if test_obj.pts_rest is not None:
-        adata.uns[key_added]["pts_rest"] = pd.DataFrame(
+        res["pts_rest"] = pd.DataFrame(
             test_obj.pts_rest.T, index=test_obj.var_names, columns=groups_names
         )
 
@@ -1026,15 +1046,19 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     }
 
     for col in test_obj.stats.columns.levels[0]:
-        adata.uns[key_added][col] = test_obj.stats[col].to_records(
+        res[col] = test_obj.stats[col].to_records(
             index=False, column_dtypes=dtypes[col]
         )
 
+    if key is True:
+        logg.info("    finished", time=start)
+        return res
+    adata.uns[key] = res
     logg.info(
         "    finished",
         time=start,
         deep=(
-            f"added to `.uns[{key_added!r}]`\n"
+            f"added to `.uns[{key!r}]`\n"
             "    'names', sorted np.recarray to be indexed by group ids\n"
             "    'scores', sorted np.recarray to be indexed by group ids\n"
             + (
@@ -1046,7 +1070,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
             )
         ),
     )
-    return adata if copy else None
+    return None
 
 
 def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
@@ -1056,8 +1080,17 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
     return n_nonzero / x.shape[0]
 
 
+@_doc_params(
+    out=doc_out_key(
+        "the filtered results",
+        default="`.uns['rank_genes_groups_filtered']`",
+        prefixed="`.uns['p_rank_genes_groups_filtered']`",
+        key_added="`key_added='k'` wrote to `.uns['k']`.",
+    )
+)
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("use_raw", DEPR_RAW)
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
 def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     *,
@@ -1066,12 +1099,14 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     use: RepAcc | str | None = None,
     layer: str | None = None,
     use_raw: bool | None = None,
-    key_added: str = "rank_genes_groups_filtered",
     min_in_group_fraction: float = 0.25,
     min_fold_change: float = 1,
     max_out_group_fraction: float = 0.5,
     compare_abs: bool = False,
-) -> None:
+    out: Prefix | bool = False,
+    # deprecated
+    key_added: str | None = None,
+) -> dict[str, Any] | None:
     """Filter out genes based on two criteria.
 
     1. log fold change and
@@ -1080,8 +1115,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
 
     See :func:`~scanpy.tl.rank_genes_groups`.
 
-    Results are stored in `adata.uns[key_added]`
-    (default: 'rank_genes_groups_filtered').
+    Results are stored in `adata.uns['rank_genes_groups_filtered']` (see `out`).
 
     To preserve the original structure of adata.uns['rank_genes_groups'],
     filtered genes are set to `NaN`.
@@ -1094,16 +1128,17 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     use
     layer
     use_raw
-    key_added
     min_in_group_fraction
     min_fold_change
     max_out_group_fraction
     compare_abs
         If `True`, compare absolute values of log fold change with `min_fold_change`.
+    {out}
 
     Returns
     -------
     Same output as :func:`scanpy.tl.rank_genes_groups` but with filtered genes names set to `nan`.
+    Returned as a :class:`dict` if `out=True`, else `None`.
 
     Examples
     --------
@@ -1117,6 +1152,13 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     >>> sc.pl.rank_genes_groups_dotplot(adata, key="rank_genes_groups_filtered")
 
     """
+    key_out = _out_key(
+        out,
+        key_added,
+        kind="uns",
+        base="rank_genes_groups_filtered",
+        default="rank_genes_groups_filtered",
+    )
     if key is None:
         key = "rank_genes_groups"
 
@@ -1217,6 +1259,9 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
         & (fraction_out_cluster_matrix < max_out_group_fraction)
         & (fold_change_matrix > min_fold_change)
     ]
-    # create new structured array using 'key_added'.
-    adata.uns[key_added] = adata.uns[key].copy()
-    adata.uns[key_added]["names"] = gene_names.to_records(index=False)
+    res = adata.uns[key].copy()
+    res["names"] = gene_names.to_records(index=False)
+    if key_out is True:
+        return res
+    adata.uns[key_out] = res
+    return None

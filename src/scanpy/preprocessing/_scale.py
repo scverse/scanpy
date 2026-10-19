@@ -2,18 +2,19 @@ from __future__ import annotations
 
 from functools import singledispatch
 from operator import truediv
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numba
 import numpy as np
 from anndata import AnnData
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
+from numpy.typing import NDArray  # runtime: `ScaleOut`’s default
 from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
-from .._docs import DEPR_COPY, doc_mask, doc_out, doc_use
+from .._docs import doc_mask, doc_out_multi, doc_use
 from .._settings import Default, settings
 from .._utils import (
     _doc_params,
@@ -24,15 +25,62 @@ from .._utils import (
     raise_not_implemented_error_if_backed_type,
     view_to_actual,
 )
-from ..get import _check_mask, _get_arr, _write_out
-from ..get.get import AdRef, _mask_arg, _resolve_obs
+from ..get._out import _dest_kind, _out_dests, _use_dest, _write_dests, deprecated_copy
+from ..get._types import AdRef
+from ..get._use import _check_mask, _get_arr, _mask_arg, _resolve_obs
 
 if TYPE_CHECKING:
-    from numpy.typing import ArrayLike, NDArray
+    from collections.abc import Mapping
 
-    from ..get.get import Mask, RepAcc
+    from numpy.typing import ArrayLike
+
+    from ..get._out import OutKind, Prefix
+    from ..get._types import ArrAcc, Mask, RepAcc, VecRef
 
 type _Array = CSBase | np.ndarray | DaskArray
+
+
+class ScaleOut[
+    M = np.ndarray | CSBase | DaskArray,
+    V = NDArray[np.float64] | DaskArray,
+](NamedTuple):
+    """Outputs of :func:`~scanpy.pp.scale`."""
+
+    scaled: M
+    """The scaled matrix."""
+    mean: V
+    """Means per variable before scaling."""
+    std: V
+    """Standard deviations per variable before scaling."""
+
+
+SCALE_KINDS: ScaleOut[set[OutKind], set[OutKind]] = ScaleOut(
+    {"layer", "obsm"}, {"var"}, {"var"}
+)
+"""Where `out` can write the outputs of `pp.scale`."""
+
+doc_out_scale = doc_out_multi(
+    dict(
+        scaled=(
+            "The scaled matrix. "
+            "By default written to the place `use` reads from, "
+            "with `sc.Prefix('p')` to `A.layers['p_scaled']` "
+            "(`A.obsm['p_scaled']` if `use` points to `.obsm`)."
+        ),
+        mean=(
+            "Means per variable before scaling. By default written to `A.var['mean']` "
+            "(`A.var['mean of {mask}']` or `A.var['mean with mask']` if `mask` is given), "
+            "with `sc.Prefix('p')` to `A.var['p_mean']` (or `'p_mean of {mask}'`, …)."
+        ),
+        std=(
+            "Standard deviations per variable before scaling. By default written to `A.var['std']` "
+            "(`A.var['std of {mask}']` or `A.var['std with mask']` if `mask` is given), "
+            "with `sc.Prefix('p')` to `A.var['p_std']` (or `'p_std of {mask}'`, …)."
+        ),
+    ),
+    example="{'scaled': A.layers['scaled']}",
+    returns=":class:`~scanpy.pp.ScaleOut`",
+)
 
 
 @singledispatch
@@ -89,27 +137,27 @@ def _scale(data, **kwargs):
         extra="This will transform data from csc to csr format if `issparse(data)`.",
     ),
     use=doc_use("Which matrix to scale."),
-    out=doc_out(),
+    out=doc_out_scale,
 )
 @expose_dispatch(_scale)
 @deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."))
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
 @deprecated_arg("obsm", Deprecation("1.13.0", "Use `use`/`out` instead."))
-@deprecated_arg("copy", DEPR_COPY)
+@deprecated_copy
 def scale[A: _Array](
     data: AnnData | A,
     *,
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | bool = False,
+    out: Mapping[str, ArrAcc | VecRef | str] | Prefix | bool = False,
     mask: Mask | None = None,
     # deprecated
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: Mask | None = None,
-) -> AnnData | A | None:
+) -> AnnData | A | ScaleOut | None:
     """Scale data to unit variance and zero mean.
 
     .. note::
@@ -146,17 +194,16 @@ def scale[A: _Array](
 
     Returns
     -------
-    Returns `None` if the result was written, else the scaled matrix.
+    For array input, returns the scaled matrix.
+    Otherwise, returns the outputs as a :class:`~scanpy.pp.ScaleOut` if `out=True`, else `None`.
     Sets the following fields:
 
-    `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse.csr_matrix` (dtype `float`)
+    `adata.X` | `adata.layers[...]` : :class:`numpy.ndarray` | :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Scaled count data matrix.
     `adata.var['mean']` : :class:`pandas.Series` (dtype `float`)
         Means per gene before scaling.
     `adata.var['std']` : :class:`pandas.Series` (dtype `float`)
         Standard deviations per gene before scaling.
-    `adata.var['var']` : :class:`pandas.Series` (dtype `float`)
-        Variances per gene before scaling.
 
     """
     # validated here, before dispatch, so array input gets these messages too
@@ -180,7 +227,6 @@ def scale[A: _Array](
         use=use,
         out=out,
         mask=mask,
-        copy=copy,
         layer=layer,
         obsm=obsm,
         mask_obs=mask_obs,
@@ -343,18 +389,12 @@ def scale_anndata(
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | bool = False,
+    out: Mapping[str, ArrAcc | VecRef | str] | Prefix | bool = False,
     mask: Mask | None = None,
-    copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: Mask | None = None,
-) -> AnnData | _Array | None:
-    if copy:
-        if out is True:
-            msg = "`copy=True` cannot be used with `out=True`."
-            raise TypeError(msg)
-        adata = adata.copy()
+) -> ScaleOut | None:
     use = _resolve_obs(use)
     mask = _mask_arg(mask, mask_obs, dim="obs")
     str_mean_std = ("mean", "std")
@@ -364,20 +404,36 @@ def scale_anndata(
         else:
             str_mean_std = ("mean with mask", "std with mask")
         mask = _check_mask(adata, mask, "obs")
+    # the scaled matrix goes back to where it was read from by default
+    src = _use_dest(use, layer=layer, obsm=obsm)
+    dests = _out_dests(
+        out,
+        None,
+        dests=lambda _: ScaleOut(
+            src, dict(var=str_mean_std[0]), dict(var=str_mean_std[1])
+        ),
+        kinds=SCALE_KINDS,
+        bases=ScaleOut(
+            {_dest_kind(src): "scaled"},
+            dict(var=str_mean_std[0]),
+            dict(var=str_mean_std[1]),
+        ),
+    )
     view_to_actual(adata)
     x = _get_arr(adata, use, layer=layer, obsm=obsm)
     raise_not_implemented_error_if_backed_type(x, "scale")
-    x, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = _scale(
-        x,
-        zero_center=zero_center,
-        max_value=max_value,
-        # scaling is in-place, so leave the source alone unless we write back over it
-        copy=out is not False,
-        return_mean_std=True,
-        mask=mask,
+    vals = ScaleOut(
+        *_scale(
+            x,
+            zero_center=zero_center,
+            max_value=max_value,
+            # scaling is in-place, so leave the source alone unless we write back over it
+            copy=dests is True or src != dests[1].scaled,
+            return_mean_std=True,
+            mask=mask,
+        )
     )
-    if (
-        unwritten := _write_out(adata, x, out=out, use=use, layer=layer, obsm=obsm)
-    ) is not None:
-        return unwritten
-    return adata if copy else None
+    if dests is True:
+        return vals
+    _write_dests(adata, vals, dests[1])
+    return None

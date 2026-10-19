@@ -123,10 +123,26 @@ def test_cell_demultiplexing(hashed: Hashed) -> None:
 
 
 @needs.anndata_acc
-def test_copy(adata: AnnData) -> None:
-    copied = sc.pp.hashsolo(adata, A.obs[HASHES], copy=True)
+def test_out_true(adata: AnnData) -> None:
+    res = sc.pp.hashsolo(adata, A.obs[HASHES], out=True)
+    assert isinstance(res, sc.pp.HashsoloOut)
     assert "hashsolo" not in adata.obs
-    assert "hashsolo" in copied.obs
+    assert not adata.obsm
+    assert res.classification.shape == (adata.n_obs,)
+    assert list(res.probabilities.columns) == ["negative", "singlet", "doublet"]
+
+
+@needs.anndata_acc
+def test_out_prefix_mapping(adata: AnnData) -> None:
+    sc.pp.hashsolo(adata, A.obs[HASHES], out=sc.Prefix("hs"))
+    assert "hs_hashsolo" in adata.obs
+    assert "hs_hashsolo" in adata.obsm
+
+    sc.pp.hashsolo(adata, A.obs[HASHES], out=dict(classification=A.obs["cls"]))
+    pd.testing.assert_series_equal(
+        adata.obs["cls"], adata.obs["hs_hashsolo"], check_names=False
+    )
+    assert set(adata.obsm) == {"hs_hashsolo"}
 
 
 @needs.anndata_acc

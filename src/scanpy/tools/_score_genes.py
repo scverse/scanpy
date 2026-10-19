@@ -12,12 +12,12 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase
-from .._docs import DEPR_COPY, DEPR_RAW, doc_out, doc_rng, doc_use
+from .._docs import DEPR_RAW, doc_out, doc_rng, doc_use
 from .._settings import Default, settings
 from .._utils import _doc_params, check_use_raw, is_backed_type
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
-from ..get import _get_arr, _write_out
-from ..get.get import _resolve_obs
+from ..get._out import _check_legacy, _write_out, deprecated_copy
+from ..get._use import _get_arr, _resolve_obs
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Sequence
@@ -27,7 +27,8 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
 
     from .._utils.random import RNGLike, SeedLike
-    from ..get.get import RepAcc, VecRef
+    from ..get._out import Prefix
+    from ..get._types import RepAcc, VecRef
 
 
 type _StrIdx = pd.Index[str]
@@ -98,12 +99,12 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
 @_doc_params(
     rng=doc_rng,
     use=doc_use("Which matrix to score on.", legacy=("layer",)),
-    out=doc_out("`.obs['score']`"),
+    out=doc_out("score", default="`.obs['score']`"),
 )
 @_accepts_legacy_random_state(0)
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("score_name", Deprecation("1.13.0", "Use `out` instead."))
-@deprecated_arg("copy", DEPR_COPY)
+@deprecated_copy
 @deprecated_arg("use_raw", DEPR_RAW)
 def score_genes(  # noqa: PLR0913
     adata: AnnData,
@@ -114,7 +115,7 @@ def score_genes(  # noqa: PLR0913
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
     use: RepAcc | str | None = None,
-    out: VecRef | str | bool = False,
+    out: VecRef | str | Prefix | bool = False,
     rng: SeedLike | RNGLike | None = None,
     # deprecated
     score_name: str | None = None,
@@ -178,20 +179,13 @@ def score_genes(  # noqa: PLR0913
 
     """
     if score_name is not None:  # deprecated: names an `.obs` column
-        if out is not False:
-            msg = "Pass either `out` or `score_name`, not both."
-            raise TypeError(msg)
+        _check_legacy(out, "score_name")
         key = score_name
     else:
         key = "score"
     start = logg.info(f"computing score {key if out is False else out!r}")
     rng = np.random.default_rng(rng)
     rng = _if_legacy_apply_global(rng)
-    if copy:
-        if out is True:
-            msg = "`copy=True` cannot be used with `out=True`."
-            raise TypeError(msg)
-        adata = adata.copy()
     use = _resolve_obs(use)
     if isinstance(ctrl_as_ref, Default):
         ctrl_as_ref = settings.preset.score_genes.ctrl_as_ref
@@ -244,9 +238,11 @@ def score_genes(  # noqa: PLR0913
             f"    {len(control_genes)} total control genes are used."
         ),
     )
-    if (unwritten := _write_out(adata, scores, out=out, obs=key)) is not None:
+    if (
+        unwritten := _write_out(adata, scores, out=out, base="score", obs=key)
+    ) is not None:
         return unwritten
-    return adata if copy else None
+    return None
 
 
 def _check_score_genes_args(

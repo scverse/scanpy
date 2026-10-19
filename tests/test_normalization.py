@@ -62,10 +62,13 @@ def test_normalize_matrix_types(
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
-    sc.pp.normalize_total(adata, key_added="n_counts")
+    sc.pp.normalize_total(adata)
     assert np.allclose(to_ndarray(stats.sum(adata.X, axis=1)), [3.0, 3.0, 3.0])
-    sc.pp.normalize_total(adata, target_sum=1, key_added="n_counts2")
-    assert np.allclose(to_ndarray(stats.sum(adata.X, axis=1)), [1.0, 1.0, 1.0])
+    sc.pp.normalize_total(adata, target_sum=1, out=sc.Prefix("p"))
+    assert np.allclose(
+        to_ndarray(stats.sum(adata.layers["p_normalized"], axis=1)), [1.0, 1.0, 1.0]
+    )
+    assert np.allclose(adata.obs["p_norm_factor"], 3.0)
 
     adata = AnnData(array_type(X_frac).astype(dtype))
     sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.7)
@@ -162,13 +165,11 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
 
     # compute output to test
     adata = AnnData(sparsity_func(x).astype(dtype))
-    output = sc.experimental.pp.normalize_pearson_residuals(
-        adata, theta=theta, clip=clip, inplace=False
+    output_x = sc.experimental.pp.normalize_pearson_residuals(
+        adata, theta=theta, clip=clip, out=True
     )
-    output_x = output["X"]
-    sc.experimental.pp.normalize_pearson_residuals(
-        adata, theta=theta, clip=clip, inplace=True
-    )
+    assert not adata.uns
+    sc.experimental.pp.normalize_pearson_residuals(adata, theta=theta, clip=clip)
 
     # check for correct new `adata.uns` keys
     assert {"pearson_residuals_normalization"} <= adata.uns.keys()

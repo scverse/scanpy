@@ -5,14 +5,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pandas as pd
+from scverse_misc import deprecated_arg
 
 from .. import logging as logg
-from .._utils import _get_basis_key, sanitize_anndata
+from .._docs import DEPR_KEY_ADDED, doc_out_key
+from .._utils import _doc_params, _get_basis_key, sanitize_anndata
+from ..get._out import _out_key
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from anndata import AnnData
+    from anndata.acc import AdRef
+
+    from ..get._out import Prefix
 
 
 def _calc_density(x: np.ndarray, y: np.ndarray):
@@ -32,14 +39,26 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
     return scaled_z
 
 
+@_doc_params(
+    out=doc_out_key(
+        "the densities",
+        example="A.obs['density']",
+        prefixed="`.obs['p_[basis]_density_[groupby]']` and `.uns['p_[basis]_density_[groupby]_params']`",
+        key_added="`key_added='k'` is `out=A.obs['k']`.",
+        default="`.obs['[basis]_density_[groupby]']` and `.uns['[basis]_density_[groupby]_params']`",
+    ).replace("are stored under the same key", "are named after its key")
+)
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
 def embedding_density(  # noqa: PLR0912
     adata: AnnData,
     basis: str = "umap",
     *,
     groupby: str | None = None,
-    key_added: str | None = None,
     components: str | Sequence[str] | None = None,
-) -> None:
+    out: AdRef | str | Prefix | bool = False,
+    # deprecated
+    key_added: str | None = None,
+) -> np.ndarray | None:
     """Calculate the density of cells in an embedding (per condition).
 
     Gaussian kernel density estimation is used to calculate the density of
@@ -69,20 +88,19 @@ def embedding_density(  # noqa: PLR0912
     groupby
         Key for categorical observation/cell annotation for which densities
         are calculated per category.
-    key_added
-        Name of the `.obs` covariate that will be added with the density
-        estimates.
     components
         The embedding dimensions over which the density should be calculated.
         This is limited to two components.
+    {out}
 
     Returns
     -------
-    Sets the following fields (`key_added` defaults to `[basis]_density_[groupby]`, where `[basis]` is one of `umap`, `diffmap`, `pca`, `tsne`, or `draw_graph_fa` and `[groupby]` denotes the parameter input):
+    Returns the densities if `out=True`, else `None`.
+    Sets the following fields (`key` defaults to `[basis]_density_[groupby]`, where `[basis]` is one of `umap`, `diffmap`, `pca`, `tsne`, or `draw_graph_fa` and `[groupby]` denotes the parameter input):
 
-    `adata.obs[key_added]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obs[key]` : :class:`numpy.ndarray` (dtype `float`)
         Embedding density values for each cell.
-    `adata.uns['[key_added]_params']` : :class:`dict`
+    `adata.uns['[key]_params']` : :class:`dict`
         A dict with the values for the parameters `covariate` (for the `groupby` parameter) and `components`.
 
     Examples
@@ -111,18 +129,19 @@ def embedding_density(  # noqa: PLR0912
     pl.embedding_density
 
     """
+    basis = basis.lower()
+    if basis == "fa":
+        basis = "draw_graph_fa"
+    default = f"{basis}_density" + ("" if groupby is None else f"_{groupby}")
+    key = _out_key(out, key_added, kind="obs", base=default, default=default)
     # to ensure that newly created covariates are categorical
     # to test for category numbers
-    sanitize_anndata(adata)
+    if key is not True:
+        sanitize_anndata(adata)
 
     logg.info(f"computing density on {basis!r}")
 
     # Test user inputs
-    basis = basis.lower()
-
-    if basis == "fa":
-        basis = "draw_graph_fa"
-
     if (basis_key := _get_basis_key(adata, basis)) is None:
         msg = (
             "Cannot find the embedded representation "
@@ -148,39 +167,33 @@ def embedding_density(  # noqa: PLR0912
             msg = f"Could not find {groupby!r} `.obs` column."
             raise ValueError(msg)
 
-        if adata.obs[groupby].dtype.name != "category":
+        groups = adata.obs[groupby]
+        if key is True and pd.api.types.is_string_dtype(groups):
+            groups = groups.astype("category")  # like `sanitize_anndata`, but local
+        if groups.dtype.name != "category":
             msg = f"{groupby!r} column does not contain categorical data"
             raise ValueError(msg)
 
-    # Define new covariate name
-    if key_added is not None:
-        density_covariate = key_added
-    elif groupby is not None:
-        density_covariate = f"{basis}_density_{groupby}"
-    else:
-        density_covariate = f"{basis}_density"
-
     # Calculate the densities over each category in the groupby column
     if groupby is not None:
-        categories = adata.obs[groupby].cat.categories
-
         density_values = np.zeros(adata.n_obs)
 
-        for cat in categories:
-            cat_mask = adata.obs[groupby] == cat
+        for cat in groups.cat.categories:
+            cat_mask = (groups == cat).to_numpy()
             embed_x = adata.obsm[basis_key][cat_mask, components[0]]
             embed_y = adata.obsm[basis_key][cat_mask, components[1]]
 
             dens_embed = _calc_density(embed_x, embed_y)
             density_values[cat_mask] = dens_embed
-
-        adata.obs[density_covariate] = density_values
     else:  # if groupby is None
         # Calculate the density over the whole embedding without subsetting
         embed_x = adata.obsm[basis_key][:, components[0]]
         embed_y = adata.obsm[basis_key][:, components[1]]
 
-        adata.obs[density_covariate] = _calc_density(embed_x, embed_y)
+        density_values = _calc_density(embed_x, embed_y)
+    if key is True:
+        return density_values
+    adata.obs[key] = density_values
 
     # Reduce diffmap components for labeling
     # Note: plot_scatter takes care of correcting diffmap components
@@ -188,12 +201,11 @@ def embedding_density(  # noqa: PLR0912
     if basis != "diffmap":
         components += 1
 
-    adata.uns[f"{density_covariate}_params"] = dict(
-        covariate=groupby, components=components.tolist()
-    )
+    adata.uns[f"{key}_params"] = dict(covariate=groupby, components=components.tolist())
 
     logg.hint(
         f"added\n"
-        f"    '{density_covariate}', densities (adata.obs)\n"
-        f"    '{density_covariate}_params', parameter (adata.uns)"
+        f"    '{key}', densities (adata.obs)\n"
+        f"    '{key}_params', parameter (adata.uns)"
     )
+    return None

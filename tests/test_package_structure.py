@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 import pytest
 from anndata import AnnData
+from scverse_misc.constants import ATTR_DEPRECATED_ARG
 
 # CLI is locally not imported by default but on travis it is?
 import scanpy.cli
@@ -102,13 +103,11 @@ copy_sigs["sc.pp.pca"]["first_name"] = "data"
 copy_sigs["sc.pp.scale"]["first_name"] = "data"
 copy_sigs["sc.pp.sqrt"]["first_name"] = "data"
 # other partial exceptions
-copy_sigs["sc.pp.normalize_total"]["return_ann"] = copy_sigs[
-    "sc.experimental.pp.normalize_pearson_residuals"
-]["return_ann"] = "AnnData | dict[str, np.ndarray] | None"
-# functions with `out` can return the result instead of writing it
-copy_sigs["sc.pp.regress_out"]["return_ann"] = "AnnData | np.ndarray | CSBase | None"
-copy_sigs["sc.tl.score_genes"]["return_ann"] = "AnnData | pd.Series | None"
 copy_sigs["sc.external.pp.magic"]["copy_default"] = None
+
+
+def _union(ann: str) -> set[str]:
+    return set(ann.split(" | "))
 
 
 @pytest.mark.parametrize(("f", "qualname"), api_functions)
@@ -142,6 +141,10 @@ def test_sig_conventions(f, qualname):
         expected_sig = expected_sig.copy()
         if expected_sig["return_ann"] is None:
             expected_sig["return_ann"] = f"{first_param.annotation} | None"
+        if "copy" in {d.arg for d in getattr(f, ATTR_DEPRECATED_ARG, [])}:
+            # `@deprecated_copy`: `copy=True` returns the data, writing returns `None`,
+            # and `out=True` returns whatever the function computes.
+            assert _union(s.pop("return_ann")) >= _union(expected_sig.pop("return_ann"))
         assert s == expected_sig
         assert not param_is_pos(copy_param)
 

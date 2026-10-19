@@ -169,7 +169,8 @@ def recipe_zheng17(
     # only consider genes with more than 1 count
     pp.filter_genes(adata, min_counts=1)
     # normalize with total UMI count per cell
-    pp.normalize_total(adata, key_added="n_counts_all")
+    with own_deprecations():  # `anndata.acc` is optional, so no `out`
+        pp.normalize_total(adata, key_added="n_counts_all")
     adata.layers[layer_log := "log1p"] = adata.X
     with own_deprecations():
         pp.log1p(adata, layer=layer_log)

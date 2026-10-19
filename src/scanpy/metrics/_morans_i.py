@@ -13,8 +13,7 @@ from scverse_misc import Deprecation, deprecated_arg
 from .._compat import CSRBase
 from .._docs import DEPR_RAW, doc_use
 from .._utils import _doc_params
-from ..get import _get_arr
-from ..get.get import _resolve_obs
+from ..get._use import _get_arr, _resolve_obs
 from ..neighbors._doc import doc_neighbors_key
 from ._common import _get_graph, _SparseMetric
 
@@ -22,7 +21,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from ..get.get import ArrAcc
+    from ..get._types import ArrAcc
     from ._common import _Vals
 
 

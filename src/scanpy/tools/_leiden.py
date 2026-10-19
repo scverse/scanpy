@@ -5,14 +5,16 @@ from typing import TYPE_CHECKING, cast
 import numpy as np
 import pandas as pd
 from natsort import natsorted
+from scverse_misc import deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
 from .._compat import warn
-from .._docs import doc_rng
+from .._docs import DEPR_KEY_ADDED, doc_out_key, doc_rng
 from .._settings import Default
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng, _set_igraph_rng
+from ..get._out import _out_key, deprecated_copy
 from ._docs import (
     doc_adata,
     doc_adjacency,
@@ -31,6 +33,8 @@ if TYPE_CHECKING:
     from .._compat import CSBase
     from .._settings.presets import LeidenFlavor
     from .._utils.random import RNGLike, SeedLike
+    from ..get._out import Prefix
+    from ..get._types import VecRef
 
     try:  # sphinx-autodoc-typehints + optional dependency
         from leidenalg.VertexPartition import MutableVertexPartition
@@ -50,15 +54,26 @@ if TYPE_CHECKING:
     neighbors_key=doc_neighbors_key.format(method="leiden"),
     obsp=doc_obsp,
     rng=doc_rng,
+    out=doc_out_key(
+        "the cluster labels",
+        example="A.obs['clusters']",
+        prefixed="`.obs['p_leiden']` and `.uns['p_leiden']`",
+        key_added="`key_added='k'` is `out=A.obs['k']`.",
+        default=(
+            "`.obs['leiden']` and `.uns['leiden']` "
+            "(`'leiden_R'` if `restrict_to` is passed)"
+        ),
+    ),
 )
 @_accepts_legacy_random_state(0)
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_copy
 def leiden(  # noqa: PLR0913
     adata: AnnData,
     resolution: float = 1,
     *,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     rng: SeedLike | RNGLike | None = None,
-    key_added: str = "leiden",
     adjacency: CSBase | None = None,
     directed: bool | None = None,
     use_weights: bool = True,
@@ -66,10 +81,13 @@ def leiden(  # noqa: PLR0913
     partition_type: type[MutableVertexPartition] | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
-    copy: bool = False,
     flavor: LeidenFlavor | Default = Default(preset=("leiden", "flavor")),
+    out: VecRef | Prefix | bool = False,
+    # deprecated
+    key_added: str | None = None,
+    copy: bool = False,
     **clustering_args,
-) -> AnnData | None:
+) -> AnnData | pd.Categorical | None:
     r"""Cluster cells into subgroups :cite:p:`Traag2019`.
 
     Cluster cells using the Leiden algorithm :cite:p:`Traag2019`,
@@ -91,8 +109,6 @@ def leiden(  # noqa: PLR0913
         to one that doesn’t accept a `resolution_parameter`.
     {rng}
     {restrict_to}
-    key_added
-        `adata.obs` key under which to add the cluster labels.
     {adjacency}
     directed
         Whether to treat the graph as directed or undirected.
@@ -111,17 +127,18 @@ def leiden(  # noqa: PLR0913
         :func:`~leidenalg.find_partition`.
     {neighbors_key}
     {obsp}
-    copy
-        Whether to copy `adata` or modify it inplace.
     flavor
         Which package's implementation to use.
+    {out}
+    copy
+        Whether to copy `adata` or modify it inplace.
     **clustering_args
         Any further arguments to pass to :func:`~leidenalg.find_partition` (which in turn passes arguments to the `partition_type`)
         or :meth:`igraph.Graph.community_leiden` from `igraph`.
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the cluster labels if `out=True`, else `None`. Sets the following fields:
 
     `adata.obs['leiden' | key_added]` : :class:`pandas.Series` (dtype ``category``)
         Array of dim (number of samples) that stores the subgroup id
@@ -146,8 +163,12 @@ def leiden(  # noqa: PLR0913
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
 
+    key = _out_key(out, key_added, kind="obs", base="leiden", default="leiden")
+    # like `key_added`, the default key gets a suffix, keys from `out` are literal
+    if restrict_to is not None and key == "leiden" and out is False:
+        key += "_R"
+
     start = logg.info("running Leiden clustering")
-    adata = adata.copy() if copy else adata
     # are we clustering a user-provided graph or the default AnnData one?
     if adjacency is None:
         adjacency = _utils._choose_graph(adata, obsp, neighbors_key)
@@ -197,35 +218,36 @@ def leiden(  # noqa: PLR0913
     # store output into adata.obs
     groups = np.array(part.membership)
     if restrict_to is not None:
-        if key_added == "leiden":
-            key_added += "_R"
         groups = rename_groups(
             adata,
-            key_added=key_added,
             restrict_key=restrict_key,
             restrict_categories=restrict_categories,
             restrict_indices=restrict_indices,
             groups=groups,
         )
-    adata.obs[key_added] = pd.Categorical(
+    labels = pd.Categorical(
         values=groups.astype("U"),
         categories=natsorted(map(str, np.unique(groups))),
     )
+    if key is True:
+        logg.info("    finished", time=start)
+        return labels
+    adata.obs[key] = labels
     # store information on the clustering parameters
-    adata.uns[key_added] = {}
-    adata.uns[key_added]["params"] = dict(
+    adata.uns[key] = {}
+    adata.uns[key]["params"] = dict(
         resolution=resolution, n_iterations=n_iterations, **meta_random_state
     )
-    adata.uns[key_added]["modularity"] = part.modularity
+    adata.uns[key]["modularity"] = part.modularity
     logg.info(
         "    finished",
         time=start,
         deep=(
             f"found {len(np.unique(groups))} clusters and added\n"
-            f"    {key_added!r}, the cluster labels (adata.obs, categorical)"
+            f"    {key!r}, the cluster labels (adata.obs, categorical)"
         ),
     )
-    return adata if copy else None
+    return None
 
 
 def _validate_flavor(

@@ -3,10 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+from scverse_misc import deprecated_arg
 from sklearn.utils import check_array
 
 from .. import logging as logg
-from .._docs import doc_rng
+from .._docs import DEPR_KEY_ADDED, doc_out_key, doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default, settings
 from .._utils import NeighborsView, _doc_params
@@ -15,22 +16,40 @@ from .._utils.random import (
     _legacy_random_state,
     _LegacyRng,
 )
-from ..get.get import _rep_from_json
+from ..get._out import _out_key, deprecated_copy
+from ..get._uns import _use_from_uns
 from ._utils import _choose_representation_compat, get_init_pos_from_paga
 
 if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
+    from anndata.acc import MultiAcc
 
     from .._utils.random import RNGLike, SeedLike
+    from ..get._out import Prefix
 
 
 type _InitPos = Literal["paga", "spectral", "random"]
 
 
 @_accepts_legacy_random_state(0)
-@_doc_params(rng=doc_rng)
+@_doc_params(
+    rng=doc_rng,
+    out=doc_out_key(
+        "the embedding",
+        example="A.obsm['umap']",
+        prefixed="`.obsm['p_umap']` and `.uns['p_umap']`",
+        key_added="`key_added='k'` is `out=A.obsm['k']`.",
+        default=(
+            "`.obsm['X_umap']` and `.uns['umap']` "
+            "(`.obsm['umap']` if :attr:`scanpy.settings.preset` is "
+            ":attr:`~scanpy.Preset.ScanpyV2Preview`)"
+        ),
+    ),
+)
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_copy
 def umap(  # noqa: PLR0913
     adata: AnnData,
     *,
@@ -46,10 +65,12 @@ def umap(  # noqa: PLR0913
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap"] = "umap",
-    key_added: str | Default | None = Default(preset=("umap", "key_added")),
     neighbors_key: str = "neighbors",
+    out: MultiAcc | str | Prefix | bool = False,
+    # deprecated
+    key_added: str | None = None,
     copy: bool = False,
-) -> AnnData | None:
+) -> AnnData | np.ndarray | None:
     r"""Embed the neighborhood graph using UMAP :cite:p:`McInnes2018`.
 
     UMAP (Uniform Manifold Approximation and Projection) is a manifold learning
@@ -118,23 +139,17 @@ def umap(  # noqa: PLR0913
 
         ``'umap'``
             Umap’s simplical set embedding.
-    key_added
-        If not specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\ `['X_umap']` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\ `['umap']`.
-        If specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\ ``[key_added]`` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\ ``[key_added]``.
     neighbors_key
         Umap looks in
         :attr:`~anndata.AnnData.uns`\ ``[neighbors_key]`` for neighbors settings and
         :attr:`~anndata.AnnData.obsp`\ ``[.uns[neighbors_key]['connectivities_key']]`` for connectivities.
+    {out}
     copy
         Return a copy instead of writing to adata.
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the embedding if `out=True`, else `None`. Sets the following fields:
 
     `adata.obsm['X_umap' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
         UMAP coordinates of data.
@@ -144,9 +159,7 @@ def umap(  # noqa: PLR0913
     """
     non_deterministic = rng is None
     rng = np.random.default_rng(rng)
-    adata = adata.copy() if copy else adata
-
-    keys = _embedding_keys("umap", key_added)
+    key = _out_key(out, key_added, kind="obsm", base="umap", default=Default())
 
     if neighbors_key is None:  # backwards compat
         neighbors_key = "neighbors"
@@ -170,7 +183,7 @@ def umap(  # noqa: PLR0913
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
-    adata.uns[keys.uns] = dict(params=dict(a=a, b=b, **meta_random_state))
+    params = dict(a=a, b=b, **meta_random_state)
     if isinstance(init_pos, str) and init_pos in adata.obsm:
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == "paga":
@@ -185,7 +198,7 @@ def umap(  # noqa: PLR0913
     neigh_params = neighbors["params"]
     x = _choose_representation_compat(
         adata,
-        use_rep=_rep_from_json(neigh_params.get("use_rep", None)),
+        use_rep=_use_from_uns(neigh_params),
         n_pcs=neigh_params.get("n_pcs", None),
         silent=True,
     )
@@ -217,6 +230,11 @@ def umap(  # noqa: PLR0913
     else:
         msg = f"Unknown method {method}"
         raise ValueError(msg)
+    if key is True:
+        logg.info("    finished", time=start)
+        return x_umap
+    keys = _embedding_keys("umap", key)
+    adata.uns[keys.uns] = dict(params=params)
     adata.obsm[keys.obsm] = x_umap  # annotate samples with UMAP coordinates
     logg.info(
         "    finished",
@@ -227,4 +245,4 @@ def umap(  # noqa: PLR0913
             f"    {keys.uns!r}, UMAP parameters (adata.uns)"
         ),
     )
-    return adata if copy else None
+    return None

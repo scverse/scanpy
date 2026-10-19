@@ -520,10 +520,12 @@ def test_rank_genes_groups_df_explicit_key(adata_rgg: AnnData):
         adata_rgg,
         groupby="celltype",
         method="wilcoxon",
-        key_added="different_key",
+        out=sc.Prefix("different"),
         pts=True,
     )
-    dedf2 = sc.get.rank_genes_groups_df(adata_rgg, "a", key="different_key")
+    dedf2 = sc.get.rank_genes_groups_df(
+        adata_rgg, "a", key="different_rank_genes_groups"
+    )
 
     pd.testing.assert_frame_equal(dedf, dedf2)
     assert "pct_nz_group" in dedf2.columns

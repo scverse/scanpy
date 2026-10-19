@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from operator import truediv
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numba
 import numpy as np
@@ -11,15 +11,44 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
-from .._docs import DEPR_COPY, doc_out, doc_use
+from .._docs import DEPR_KEY_ADDED, doc_out_multi, doc_use
 from .._utils import _doc_params, axis_mul_or_truediv, dematrix, view_to_actual
-from ..get import _get_arr, _write_out
-from ..get.get import _resolve_obs
+from ..get._out import (
+    _dest_key,
+    _dest_kind,
+    _legacy_out,
+    _out_dests,
+    _use_dest,
+    _write_dests,
+    deprecated_copy,
+)
+from ..get._use import _get_arr, _resolve_obs
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from anndata import AnnData
 
-    from ..get.get import RepAcc
+    from ..get._out import OutKind, Prefix
+    from ..get._types import ArrAcc, RepAcc, VecRef
+
+
+class NormalizeTotalOut[
+    M = np.ndarray | CSRBase | DaskArray,
+    V = np.ndarray | DaskArray,
+](NamedTuple):
+    """Outputs of :func:`~scanpy.pp.normalize_total`."""
+
+    normalized: M
+    """The normalized matrix."""
+    norm_factor: V
+    """The normalization factor (counts per cell before normalization, divided by `target_sum`)."""
+
+
+NORMALIZE_TOTAL_KINDS: NormalizeTotalOut[set[OutKind], set[OutKind]] = (
+    NormalizeTotalOut({"layer", "obsm"}, {"obs"})
+)
+"""Where `out` can write the outputs of `pp.normalize_total`."""
 
 
 def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
@@ -131,29 +160,47 @@ def _normalize_total_helper(
 
 @_doc_params(
     use=doc_use("Which matrix to normalize."),
-    out=doc_out(),
+    out=doc_out_multi(
+        dict(
+            normalized=(
+                "The normalized matrix. "
+                "By default written to the place `use` reads from, "
+                "with `sc.Prefix('p')` to `A.layers['p_normalized']` "
+                "(`A.obsm['p_normalized']` if `use` points to `.obsm`)."
+            ),
+            norm_factor=(
+                "The normalization factor of each cell. "
+                "By default not written, "
+                "with `sc.Prefix('p')` to `A.obs['p_norm_factor']`."
+            ),
+        ),
+        example="{'normalized': A.layers['normalized']}",
+        returns=":class:`~scanpy.pp.NormalizeTotalOut`",
+        key_added="`key_added='k'` is `out={'normalized': <use>, 'norm_factor': A.obs['k']}`.",
+    ),
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
 @deprecated_arg("obsm", Deprecation("1.13.0", "Use `use`/`out` instead."))
 @deprecated_arg(
     "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
 )
-@deprecated_arg("copy", DEPR_COPY)
-def normalize_total(  # noqa: PLR0912, PLR0913
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_copy
+def normalize_total(  # noqa: PLR0913
     adata: AnnData,
     *,
     target_sum: float | None = None,
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
-    key_added: str | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | bool = False,
+    out: Mapping[str, ArrAcc | VecRef | str] | Prefix | bool = False,
     # deprecated
+    key_added: str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> AnnData | dict[str, np.ndarray] | None:
+) -> AnnData | NormalizeTotalOut | dict[str, np.ndarray] | None:
     """Normalize counts per cell.
 
     Normalize each cell by total counts over all genes,
@@ -173,7 +220,7 @@ def normalize_total(  # noqa: PLR0912, PLR0913
     .. note::
         When used with a :class:`~dask.array.Array` in `adata.X`, this function will have to
         call functions that trigger `.compute()` on the :class:`~dask.array.Array` if `exclude_highly_expressed`
-        is `True`, `layer_norm` is not `None`, or if `key_added` is not `None`.
+        is `True`, or if `norm_factor` is written.
 
     Parameters
     ----------
@@ -195,9 +242,6 @@ def normalize_total(  # noqa: PLR0912, PLR0913
         If `exclude_highly_expressed=True`, consider cells as highly expressed
         that have more counts than `max_fraction` of the original total counts
         in at least one cell.
-    key_added
-        Name of the field in `adata.obs` where the normalization factor is
-        stored.
     {use}
     {out}
     inplace
@@ -207,9 +251,8 @@ def normalize_total(  # noqa: PLR0912, PLR0913
 
     Returns
     -------
-    Returns `None` if the result was written, else a dictionary holding the
-    normalized matrix in `'X'` and the counts per cell before normalization
-    in `'norm_factor'`.
+    Returns the outputs as a :class:`~scanpy.pp.NormalizeTotalOut` if `out=True`, else `None`.
+    The deprecated `inplace=False` returns them as a :class:`dict` instead.
 
     Example
     -------
@@ -233,7 +276,7 @@ def normalize_total(  # noqa: PLR0912, PLR0913
     array([[ 3.,  3.,  3.,  6.,  6.],
            [ 1.,  1.,  1.,  2.,  2.],
            [ 1., 22.,  1.,  2.,  2.]], dtype=float32)
-    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, out=True)["X"]
+    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, out=True).normalized
     normalizing counts per cell
         finished (0:00:00)
     >>> X_norm
@@ -246,7 +289,7 @@ def normalize_total(  # noqa: PLR0912, PLR0913
     ...     exclude_highly_expressed=True,
     ...     max_fraction=0.2,
     ...     out=True,
-    ... )["X"]
+    ... ).normalized
     normalizing counts per cell
     The following highly-expressed genes are not considered during normalization factor computation:
     ['1', '3', '4']
@@ -257,17 +300,21 @@ def normalize_total(  # noqa: PLR0912, PLR0913
            [ 0.5, 11. ,  0.5,  1. ,  1. ]], dtype=float32)
 
     """
-    if not inplace:  # deprecated: `inplace=False` means `out=True`
-        if out is not False:
-            msg = "Pass either `out` or `inplace`, not both."
-            raise TypeError(msg)
-        out = True
-    if copy:
-        if out is True:
-            msg = "`copy=True` cannot be used with `out=True`."
-            raise ValueError(msg)
-        adata = adata.copy()
+    out = _legacy_out(out, "inplace", None if inplace else True)
     use = _resolve_obs(use)
+    # the normalized matrix goes back to where it was read from by default
+    src = _use_dest(use, layer=layer, obsm=obsm)
+    dests = _out_dests(
+        out,
+        key_added,
+        dests=lambda key: NormalizeTotalOut(
+            src, None if key is None else dict(obs=key)
+        ),
+        kinds=NORMALIZE_TOTAL_KINDS,
+        bases=NormalizeTotalOut(
+            {_dest_kind(src): "normalized"}, dict(obs="norm_factor")
+        ),
+    )
 
     if max_fraction < 0 or max_fraction > 1:
         msg = "Choose max_fraction between 0 and 1."
@@ -278,7 +325,7 @@ def normalize_total(  # noqa: PLR0912, PLR0913
     x = _get_arr(adata, use, layer=layer, obsm=obsm)
     if isinstance(x, CSCBase):
         x = x.tocsr()
-    if out is not False:
+    if dests is True or src != dests[1].normalized:
         # normalization is in-place, so leave the source alone
         # unless we write back over it
         x = x.copy()
@@ -304,19 +351,15 @@ def normalize_total(  # noqa: PLR0912, PLR0913
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
         warn("Some cells have zero counts", UserWarning)
 
-    if out is not True and key_added is not None:
-        adata.obs[key_added] = counts_per_cell
-    unwritten = _write_out(adata, x, out=out, use=use, layer=layer, obsm=obsm)
-
-    logg.info(
-        "    finished ({time_passed})",
-        time=start,
-    )
-    if key_added is not None:
+    vals = NormalizeTotalOut(x, counts_per_cell)
+    logg.info("    finished ({time_passed})", time=start)
+    if dests is True:
+        if not inplace:  # deprecated, returns what it did in 1.12
+            return dict(X=vals.normalized, norm_factor=vals.norm_factor)
+        return vals
+    _write_dests(adata, vals, dests[1])
+    if (key := _dest_key(dests[1].norm_factor)) is not None:
         logg.debug(
-            f"and added {key_added!r}, counts per cell before normalization (adata.obs)"
+            f"and added {key!r}, counts per cell before normalization (adata.obs)"
         )
-
-    if unwritten is not None:
-        return dict(X=unwritten, norm_factor=counts_per_cell)
-    return adata if copy else None
+    return None

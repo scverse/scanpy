@@ -25,7 +25,7 @@ from ._kernels import (
     mean_var_csr,
     mean_var_dense,
 )
-from .get import _check_mask, _get_arr, _get_vec_compat, _refs_dim, _resolve_ref
+from ._use import _check_mask, _get_arr, _get_vec_compat, _refs_dim, _resolve_ref
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable

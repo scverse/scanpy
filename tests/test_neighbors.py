@@ -12,7 +12,6 @@ from sklearn.neighbors import KNeighborsTransformer
 import scanpy as sc
 from scanpy import Neighbors
 from scanpy._compat import CSBase
-from scanpy.get.get import _rep_from_json
 from scanpy.neighbors._common import (
     _get_indices_distances_from_rect_matrix,
     _get_indices_distances_from_sparse_matrix,
@@ -27,7 +26,7 @@ if TYPE_CHECKING:
 
     from pytest_mock import MockerFixture
 
-    from scanpy.get.get import RepAcc
+    from scanpy.get._types import RepAcc
 
 if TYPE_CHECKING or hasattr(anndata, "acc"):
     from anndata.acc import A
@@ -313,16 +312,26 @@ def test_use_and_use_rep(adata_pca: AnnData) -> None:
 
 
 @needs.anndata_acc
-def test_use_rep_acc_stored(adata_pca: AnnData, tmp_path: Path) -> None:
-    """A stored accessor `use_rep` survives a round trip and is understood by readers."""
-    sc.pp.neighbors(adata_pca, use=A.obsm["X_pca"])
-    assert adata_pca.uns["neighbors"]["params"]["use_rep"] == ['["obsm", "X_pca"]']
+@pytest.mark.parametrize(
+    ("use", "stored"),
+    [
+        pytest.param(A.obsm["X_pca"], dict(use_rep="X_pca"), id="obsm"),
+        pytest.param(A.X, dict(use_rep="X"), id="X"),
+        pytest.param(A.layers["l"], dict(layer="l"), id="layer"),
+    ],
+)
+def test_use_stored(
+    adata_pca: AnnData, tmp_path: Path, use: object, stored: dict[str, str]
+) -> None:
+    """`use` is stored in `.uns` like its predecessors, and understood by readers."""
+    adata_pca.layers["l"] = adata_pca.X.copy()
+    sc.pp.neighbors(adata_pca, use=use)
+    params = adata_pca.uns["neighbors"]["params"]
+    assert {k: params[k] for k in ("use_rep", "layer") if k in params} == stored
     adata_pca.write_h5ad(path := tmp_path / "adata.h5ad")
     adata = anndata.read_h5ad(path)
-    assert (
-        _rep_from_json(adata.uns["neighbors"]["params"]["use_rep"]) == A.obsm["X_pca"]
-    )
-    sc.tl.umap(adata)  # reads `use_rep` back out of `.uns`
+    sc.tl.umap(adata)  # reads `use_rep`/`layer` back out of `.uns`
+    sc.tl.ingest(adata.copy(), adata, embedding_method="umap")
 
 
 @needs.anndata_acc

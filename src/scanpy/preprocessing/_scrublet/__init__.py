@@ -14,14 +14,13 @@ from ... import preprocessing as pp
 from ..._docs import doc_rng, doc_use
 from ..._utils import _doc_params, own_deprecations
 from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
-from ...get import _get_arr
-from ...get.get import _resolve_obs
+from ...get._use import _get_arr, _resolve_obs
 from . import pipeline
 from .core import Scrublet
 
 if TYPE_CHECKING:
     from ..._utils.random import RNGLike, SeedLike
-    from ...get.get import RepAcc
+    from ...get._types import RepAcc
     from ...neighbors import _Metric, _MetricFn
 
 

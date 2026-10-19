@@ -24,8 +24,8 @@ from .._utils import (
     raise_if_dask_feature_axis_chunked,
     sanitize_anndata,
 )
-from ..get import _get_arr, aggregate
-from ..get.get import _resolve_obs
+from ..get import aggregate
+from ..get._use import _get_arr, _resolve_obs
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._settings.presets import HVGFlavor
-    from ..get.get import RepAcc
+    from ..get._types import RepAcc
 
 
 @singledispatch

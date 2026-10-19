@@ -21,8 +21,9 @@ from .._utils import (
 )
 from .._utils._doctests import doctest_skipif
 from .._utils.random import _legacy_random_state, _LegacyRng
-from ..get import _check_mask
-from ..get.get import MultiAcc, _ref_from_json, _rep_from_json
+from ..get._types import MultiAcc
+from ..get._uns import _use_from_uns
+from ..get._use import _check_mask, _mask_arg
 from ._utils import _choose_representation_compat
 
 if TYPE_CHECKING:
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
     from umap import UMAP
 
     from .._keys import _EmbeddingKeys
-    from ..get.get import RepAcc
+    from ..get._types import RepAcc
 
 
 @doctest_skipif(reason="illustrative short example but not runnable")
@@ -303,8 +304,8 @@ class Ingest:
 
         self._n_neighbors = neighbors["params"]["n_neighbors"]
 
-        if "use_rep" in neighbors["params"]:
-            self._use_rep = _rep_from_json(neighbors["params"]["use_rep"])
+        if (use_rep := _use_from_uns(neighbors["params"])) is not None:
+            self._use_rep = use_rep
             self._rep = _choose_representation_compat(
                 adata, use_rep=self._use_rep, n_pcs=None
             )
@@ -327,7 +328,9 @@ class Ingest:
     def _init_pca(self, adata: AnnData) -> None:
         self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
         self._pca_mask = _check_mask(
-            adata, _ref_from_json(adata.uns["pca"]["params"]["mask_var"]), "var"
+            adata,
+            _mask_arg(None, adata.uns["pca"]["params"]["mask_var"], dim="var"),
+            "var",
         )
 
         if self._pca_mask is not None:

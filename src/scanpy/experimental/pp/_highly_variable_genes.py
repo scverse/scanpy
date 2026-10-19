@@ -24,8 +24,7 @@ from ...experimental._docs import (
     doc_inplace,
     doc_layer,
 )
-from ...get import _get_arr
-from ...get.get import _resolve_obs
+from ...get._use import _get_arr, _resolve_obs
 from ...preprocessing._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
@@ -33,7 +32,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from ...get.get import RepAcc
+    from ...get._types import RepAcc
 
 
 @njit

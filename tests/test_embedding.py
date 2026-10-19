@@ -7,29 +7,30 @@ import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
 
 import scanpy as sc
-from scanpy._settings import Default
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Literal
+
+    from anndata import AnnData
 
 
 @pytest.mark.parametrize(
-    ("key_added", "key_obsm", "key_uns"),
+    ("out", "key_obsm", "key_uns"),
     [
-        pytest.param(None, "X_tsne", "tsne", id="None"),
-        pytest.param("custom_key", "custom_key", "custom_key", id="custom_key"),
+        pytest.param(False, "X_tsne", "tsne", id="default"),
+        pytest.param(sc.Prefix("custom"), "custom_tsne", "custom_tsne", id="prefix"),
     ],
 )
-def test_tsne(key_added: str | None, key_obsm: str, key_uns: str):
+def test_tsne(*, out: sc.Prefix | bool, key_obsm: str, key_uns: str):
     pbmc = pbmc68k_reduced()[:200].copy()
 
-    euclidean1 = sc.tl.tsne(pbmc, metric="euclidean", copy=True)
-    euclidean2 = sc.tl.tsne(
-        pbmc, metric="euclidean", n_jobs=2, key_added=key_added, copy=True
-    )
-    cosine = sc.tl.tsne(pbmc, metric="cosine", copy=True)
+    euclidean1, euclidean2, cosine = (pbmc.copy() for _ in range(3))
+    sc.tl.tsne(euclidean1, metric="euclidean")
+    sc.tl.tsne(euclidean2, metric="euclidean", n_jobs=2, out=out)
+    sc.tl.tsne(cosine, metric="cosine")
 
     # Reproducibility
     np.testing.assert_equal(euclidean1.obsm["X_tsne"], euclidean2.obsm[key_obsm])
@@ -46,17 +47,17 @@ def test_tsne(key_added: str | None, key_obsm: str, key_uns: str):
 
 
 @pytest.mark.parametrize(
-    ("key_added", "key_obsm", "key_uns"),
+    ("out", "key_obsm", "key_uns"),
     [
-        pytest.param(None, "X_umap", "umap", id="None"),
-        pytest.param("custom_key", "custom_key", "custom_key", id="custom_key"),
+        pytest.param(False, "X_umap", "umap", id="default"),
+        pytest.param(sc.Prefix("custom"), "custom_umap", "custom_umap", id="prefix"),
     ],
 )
-def test_umap_init_dtype(key_added: str | None, key_obsm: str, key_uns: str):
+def test_umap_init_dtype(*, out: sc.Prefix | bool, key_obsm: str, key_uns: str):
     pbmc1 = pbmc68k_reduced()[:100, :].copy()
     pbmc2 = pbmc1.copy()
-    for pbmc, dtype, k in [(pbmc1, np.float32, None), (pbmc2, np.float64, key_added)]:
-        sc.tl.umap(pbmc, init_pos=pbmc.obsm["X_pca"][:, :2].astype(dtype), key_added=k)
+    for pbmc, dtype, o in [(pbmc1, np.float32, False), (pbmc2, np.float64, out)]:
+        sc.tl.umap(pbmc, init_pos=pbmc.obsm["X_pca"][:, :2].astype(dtype), out=o)
 
     # check that embeddings are close for different dtypes
     assert_array_almost_equal(pbmc1.obsm["X_umap"], pbmc2.obsm[key_obsm])
@@ -102,8 +103,7 @@ def test_diffmap(
     pbmc = pbmc68k_reduced()
 
     d1, d2, d3 = (
-        sc.tl.diffmap(pbmc, copy=True, **{rng_arg: seed}).obsm["X_diffmap"].copy()
-        for seed in (0, 0, 1234)
+        sc.tl.diffmap(pbmc, out=True, **{rng_arg: seed}) for seed in (0, 0, 1234)
     )
 
     with subtests.test("reproducible"):
@@ -113,10 +113,13 @@ def test_diffmap(
 
 
 @pytest.mark.parametrize(
-    ("key_added", "key_obsm", "key_uns", "is_dict"),
+    ("out", "key_obsm", "key_uns", "is_dict"),
     [
-        pytest.param(None, "X_diffmap", "diffmap_evals", False, id="None"),
-        pytest.param("custom_key", "custom_key", "custom_key", True, id="custom_key"),
+        pytest.param(False, "X_diffmap", "diffmap_evals", False, id="default"),
+        pytest.param(
+            *(sc.Prefix("custom"), "custom_diffmap", "custom_diffmap", True),
+            id="prefix",
+        ),
         pytest.param(sc.Preset.ScanpyV1, "X_diffmap", "diffmap_evals", False, id="v1"),
         pytest.param(
             *(sc.Preset.ScanpyV2Preview, "diffmap", "diffmap", True),
@@ -125,18 +128,18 @@ def test_diffmap(
         ),
     ],
 )
-def test_diffmap_key_added(
+def test_diffmap_out(
     *,
-    key_added: str | Default | sc.Preset | None,
+    out: sc.Prefix | sc.Preset | bool,
     key_obsm: str,
     key_uns: str,
     is_dict: bool,
 ) -> None:
-    pbmc = pbmc68k_reduced()[:300, :100].copy()
-    if isinstance(key_added, sc.Preset):
-        sc.settings.preset = key_added
-        key_added = Default()
-    adata = sc.tl.diffmap(pbmc, key_added=key_added, copy=True)
+    adata = pbmc68k_reduced()[:300, :100].copy()
+    if isinstance(out, sc.Preset):
+        sc.settings.preset = out
+        out = False
+    sc.tl.diffmap(adata, out=out)
     assert key_obsm in adata.obsm
     assert key_uns in adata.uns
     assert isinstance(adata.uns[key_uns], dict if is_dict else np.ndarray)
@@ -144,10 +147,12 @@ def test_diffmap_key_added(
 
 @needs.igraph
 @pytest.mark.parametrize(
-    ("key_added", "key_obsm", "key_uns"),
+    ("out", "key_obsm", "key_uns"),
     [
-        pytest.param(None, "X_draw_graph_fr", "draw_graph", id="None"),
-        pytest.param("custom_{layout}", "custom_fr", "custom_fr", id="custom_template"),
+        pytest.param(False, "X_draw_graph_fr", "draw_graph", id="default"),
+        pytest.param(
+            sc.Prefix("custom"), "custom_graph_fr", "custom_graph_fr", id="prefix"
+        ),
         pytest.param(sc.Preset.ScanpyV1, "X_draw_graph_fr", "draw_graph", id="v1"),
         pytest.param(
             *(sc.Preset.ScanpyV2Preview, "graph_fr", "graph_fr"),
@@ -156,13 +161,78 @@ def test_diffmap_key_added(
         ),
     ],
 )
-def test_draw_graph_key_added(
-    key_added: str | Default | sc.Preset | None, key_obsm: str, key_uns: str
+def test_draw_graph_out(
+    *, out: sc.Prefix | sc.Preset | bool, key_obsm: str, key_uns: str
 ) -> None:
-    pbmc = pbmc68k_reduced()[:100, :100].copy()
-    if isinstance(key_added, sc.Preset):
-        sc.settings.preset = key_added
-        key_added = Default()
-    adata = sc.tl.draw_graph(pbmc, layout="fr", key_added=key_added, copy=True)
+    adata = pbmc68k_reduced()[:100, :100].copy()
+    if isinstance(out, sc.Preset):
+        sc.settings.preset = out
+        out = False
+    sc.tl.draw_graph(adata, layout="fr", out=out)
     assert key_obsm in adata.obsm
     assert key_uns in adata.uns
+
+
+EMBEDDINGS = [
+    pytest.param(sc.tl.tsne, id="tsne"),
+    pytest.param(sc.tl.diffmap, id="diffmap"),
+    pytest.param(
+        lambda a, **kw: sc.tl.draw_graph(a, layout="fr", **kw),
+        marks=needs.igraph,
+        id="draw_graph",
+    ),
+]
+
+
+@pytest.fixture
+def pbmc_small() -> AnnData:
+    adata = pbmc68k_reduced()[:100, :50].copy()
+    sc.pp.neighbors(adata)  # the subset’s graph has isolated cells
+    return adata
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize("func", EMBEDDINGS)
+@pytest.mark.parametrize("as_str", [True, False], ids=["str", "acc"])
+def test_embedding_out_acc(
+    pbmc_small: AnnData, func: Callable[..., object], *, as_str: bool
+) -> None:
+    """An accessor `out` is used literally, and `.uns` follows it."""
+    from anndata.acc import A
+
+    obsm_before = set(pbmc_small.obsm)
+    func(pbmc_small, out="obsm.m_{layout}" if as_str else A.obsm["m_{layout}"])
+    assert set(pbmc_small.obsm) - obsm_before == {"m_{layout}"}
+    assert "m_{layout}" in pbmc_small.uns
+
+
+@pytest.mark.parametrize("func", EMBEDDINGS)
+def test_embedding_out_true(pbmc_small: AnnData, func: Callable[..., object]) -> None:
+    """`out=True` returns the embedding and writes nothing."""
+    before = pbmc_small.copy()
+    emb = func(pbmc_small, out=True)
+    assert isinstance(emb, np.ndarray)
+    assert emb.shape[0] == pbmc_small.n_obs
+    assert pbmc_small.obsm.keys() == before.obsm.keys()
+    assert pbmc_small.uns.keys() == before.uns.keys()
+    with (
+        pytest.warns(FutureWarning, match=r"argument copy is deprecated"),
+        pytest.raises(ValueError, match=r"`copy=True` cannot be used"),
+    ):
+        func(pbmc_small, out=True, copy=True)
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize("func", EMBEDDINGS)
+def test_embedding_key_added_deprecated(
+    pbmc_small: AnnData, func: Callable[..., object]
+) -> None:
+    """`key_added='k'` works like `out=A.obsm['k']`, but warns."""
+    from anndata.acc import A
+
+    expected = pbmc_small.copy()
+    func(expected, out=A.obsm["k"])
+    with pytest.warns(FutureWarning, match=r"argument key_added is deprecated"):
+        func(pbmc_small, key_added="k")
+    assert pbmc_small.obsm.keys() == expected.obsm.keys()
+    assert pbmc_small.uns.keys() == expected.uns.keys()
