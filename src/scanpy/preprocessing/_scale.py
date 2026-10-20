@@ -31,13 +31,15 @@ from ..get._use import _check_mask, _get_arr, _mask_arg, _resolve_obs
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from typing import TypeAlias
 
     from numpy.typing import ArrayLike
 
     from ..get._out import OutKind, Prefix
     from ..get._types import ArrAcc, Mask, RepAcc, VecRef
 
-type _Array = CSBase | np.ndarray | DaskArray
+# not `type`: Sphinx would render the private name in signatures
+_Array: TypeAlias = CSBase | np.ndarray | DaskArray  # noqa: UP040
 
 
 class ScaleOut[
