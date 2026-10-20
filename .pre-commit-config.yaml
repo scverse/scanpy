@@ -1,3 +1,5 @@
+default_language_version:
+  python: python3.13  # check-ast must parse our minimum Python’s syntax
 repos:
 - repo: https://github.com/flying-sheep/bibfmt
   rev: v4.3.0
