@@ -232,6 +232,7 @@ texinfo_documents = [
 
 xref_overrides = {
     "numpy.typing.DTypeLike": ("py:data", "numpy.typing.DTypeLike"),
+    "numpy._typing._array_like.NDArray": ("py:data", "numpy.typing.NDArray"),
 }
 
 nitpick_ignore = [
