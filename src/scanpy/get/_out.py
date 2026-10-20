@@ -277,7 +277,7 @@ def _out_dests[D: tuple, K: tuple](
     `key_added` and `dests(key_added)` for the deprecated `key_added`,
     `{prefix}_{uns}` and the prefixed `bases` for a `Prefix`,
     and the primary output’s key (or `default`) for a mapping,
-    which only writes the outputs it names.
+    which only writes the outputs it names, and must name the primary output if there is a `uns` entry.
     """
     if key_added is not None:
         _check_legacy(out, "key_added")
@@ -310,6 +310,14 @@ def _out_dests[D: tuple, K: tuple](
             msg = f"Output {name!r} must be written to one of {sorted(valid)}, was {out[name]!r}"
             raise TypeError(msg)
     result = type(bases)(*(resolved.get(name) for name in names))
+    # falling back to `default` would overwrite the `.uns` entry of outputs this call doesn’t write
+    if uns is not None and result[0] is None:
+        msg = (
+            f"`out` must include {names[0]!r}, after which the `.uns` entry is named, "
+            f"until there are `.uns` accessors (https://github.com/scverse/anndata/issues/2657), "
+            f"was {out!r}"
+        )
+        raise TypeError(msg)
     return _dest_key(result[0]) or default, result
 
 

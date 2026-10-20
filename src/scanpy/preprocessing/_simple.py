@@ -389,7 +389,9 @@ def log1p(
 
 @_log1p.register(CSBase)
 def log1p_sparse(x: CSBase, *, base: Number | None = None, copy: bool = False):
-    x = check_array(x, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32))
+    x = check_array(
+        x, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
+    )
     x.data = _log1p(x.data, copy=False, base=base)
     return x
 

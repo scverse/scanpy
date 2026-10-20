@@ -7,11 +7,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata import AnnData
+from anndata.tests.helpers import asarray
 from scipy import sparse
 
 import scanpy as sc
 from scanpy.neighbors import NeighborsOut
 from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -29,7 +31,7 @@ def adata() -> AnnData:
 
 
 def _orig(adata: AnnData) -> np.ndarray:
-    return np.asarray(adata.layers["counts"])
+    return asarray(adata.layers["counts"])
 
 
 # `use`/`out` on the same-shape transforms.
@@ -50,23 +52,33 @@ def _out(name: str, acc: object) -> object:
     return {MULTI[name]: acc} if name in MULTI else acc
 
 
+@pytest.mark.filterwarnings("ignore:zero-centering a sparse:UserWarning")
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 @pytest.mark.parametrize("name", TRANSFORMS)
-def test_out_writes_elsewhere(adata: AnnData, name: str) -> None:
+def test_out_writes_elsewhere(
+    adata: AnnData, name: str, array_type: Callable[[np.ndarray], object]
+) -> None:
     """`out` writes to its own destination and leaves `use`’s source alone."""
     from anndata.acc import A
 
+    adata.layers["counts"] = array_type(adata.layers["counts"])
     before = _orig(adata).copy()
     TRANSFORMS[name](adata, use=A.layers["counts"], out=_out(name, A.layers["result"]))
     assert "result" in adata.layers
     np.testing.assert_array_equal(_orig(adata), before)
-    assert not np.allclose(adata.layers["result"], before)
+    assert not np.allclose(asarray(adata.layers["result"]), before)
 
 
+@pytest.mark.filterwarnings("ignore:zero-centering a sparse:UserWarning")
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 @pytest.mark.parametrize("name", TRANSFORMS)
-def test_out_none_returns(adata: AnnData, name: str) -> None:
+def test_out_none_returns(
+    adata: AnnData, name: str, array_type: Callable[[np.ndarray], object]
+) -> None:
     """`out=True` returns the result without touching `adata`."""
     from anndata.acc import A
 
+    adata.layers["counts"] = array_type(adata.layers["counts"])
     before = _orig(adata).copy()
     res = TRANSFORMS[name](adata, use=A.layers["counts"], out=True)
     if name in MULTI:
@@ -379,6 +391,11 @@ def test_out_multi_true(adata: AnnData) -> None:
             dict(distances="obsm.c"),
             r"Output 'distances' must be written to one of \['obsp'\]",
             id="kind",
+        ),
+        pytest.param(
+            dict(distances="obsp.d"),
+            r"`out` must include 'connectivities'",
+            id="no-primary",
         ),
     ],
 )

@@ -160,10 +160,18 @@ def doc_out_multi(
     uns_doc = (
         "" if uns is None else f" (and :attr:`~anndata.AnnData.uns`\\ `['p_{uns}']`)"
     )
+    uns_map_doc = (
+        ""
+        if uns is None
+        else (
+            f" (and a :attr:`~anndata.AnnData.uns` entry named after `{next(iter(outputs))}`,"
+            " which it therefore has to include)"
+        )
+    )
     return f"""\
 out
     Where to write the outputs.
-    A mapping from output names to accessors writes only the outputs it names,
+    A mapping from output names to accessors writes only the outputs it names{uns_map_doc},
     e.g. `{example}`.
     :class:`str`\\ s are :meth:`anndata.acc.AdAcc.resolve`\\ d.
     `sc.Prefix('p')` writes each output under its name below, prefixed by `p_`{uns_doc}.
