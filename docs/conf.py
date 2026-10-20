@@ -8,13 +8,13 @@ import sys
 from datetime import datetime
 from functools import partial
 from importlib.metadata import version as get_version
-from itertools import product
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib  # noqa
 from docutils import nodes
 from packaging.version import Version
+from scverse_doc.config import DEFAULTS
 from sphinxcontrib.katex import NODEJS_BINARY
 
 if TYPE_CHECKING:
@@ -26,13 +26,12 @@ sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
 
 # -- General configuration ------------------------------------------------
 
-nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = "4.0"  # Nicer param docs
 
 # General information
 project = "Scanpy"
 author = "Scanpy development team"
-repository_url = "https://github.com/scverse/scanpy"
+source_repository = "https://github.com/scverse/scanpy"
 copyright = f"{datetime.now():%Y}, scverse"
 version = get_version("scanpy").replace(".dirty", "")
 
@@ -50,41 +49,27 @@ bibtex_reference_style = "author_year"
 # default settings
 templates_path = ["_templates"]
 master_doc = "index"
-default_role = "literal"
 exclude_patterns = [
-    "_build",
-    "Thumbs.db",
-    ".DS_Store",
-    "**.ipynb_checkpoints",
+    *DEFAULTS.exclude_patterns,
     # exclude all 0.x.y.md files, but not index.md
     "release-notes/[!i]*.md",
 ]
 
 extensions = [
-    "myst_nb",
-    "sphinx_copybutton",
-    "sphinx.ext.autodoc",
-    "sphinx.ext.intersphinx",
+    "scverse_doc",  # sets up napoleon and so needs to be before s-a-t
     "sphinx.ext.doctest",
     "sphinx.ext.coverage",
-    "sphinx.ext.napoleon",
-    "sphinx.ext.autosummary",
     "sphinx_exec_jupyter",
     "sphinxcontrib.bibtex",
     "sphinxcontrib.katex",
-    "sphinx_autodoc_typehints",  # needs to be after napoleon
-    "git_ref",  # needs to be before scanpydoc.rtd_github_links
-    "scanpydoc",  # needs to be before sphinx.ext.linkcode
+    "sphinx_autodoc_typehints",
     "scverse_misc.sphinx_ext",
     "sphinx.ext.linkcode",
-    "sphinx_design",
     "sphinx_issues",
-    "sphinxext.opengraph",
-    *[p.stem for p in (HERE / "extensions").glob("*.py") if p.stem not in {"git_ref"}],
+    *[p.stem for p in (HERE / "extensions").glob("*.py")],
 ]
 
 # Generate the API documentation when building
-autosummary_generate = True
 autodoc_typehints = "none"
 autodoc_member_order = "bysource"
 autodoc_default_options = {
@@ -93,11 +78,6 @@ autodoc_default_options = {
     # show “Bases: SomeClass” at the top of class docs
     "show-inheritance": True,
 }
-napoleon_google_docstring = False
-napoleon_numpy_docstring = True
-napoleon_include_init_with_doc = False
-napoleon_use_rtype = True  # having a separate entry generally helps readability
-napoleon_use_param = True
 napoleon_custom_sections = [("Params", "Parameters")]
 todo_include_todos = False
 api_dir = HERE / "api"  # function_images
@@ -110,14 +90,6 @@ import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx
 del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib
 """
 holoviews_backends = ["bokeh", "matplotlib", "plotly"]
-myst_enable_extensions = [
-    "amsmath",
-    "colon_fence",
-    "deflist",
-    "dollarmath",
-    "html_image",
-    "html_admonition",
-]
 myst_url_schemes = ("http", "https", "mailto", "ftp")
 myst_heading_anchors = 3
 myst_ignore_mime_types = [  # from custom extension patch_myst_nb
@@ -128,16 +100,12 @@ nb_execution_excludepatterns = [
     f"{d}{'/*' * n}" for d in ["tutorials", "how-to"] for n in (1, 2, 3)
 ]
 nb_execution_show_tb = bool(os.environ.get("READTHEDOCS"))
-nb_merge_streams = True
 
 ogp_site_url = "https://scanpy.scverse.org/en/stable/"
 ogp_image = f"{ogp_site_url}_static/Scanpy_Logo_BrightFG.svg"
 
 typehints_defaults = "braces"
 always_use_bars_union = True  # Don’t use `Union` even when building with Python ≤3.14
-
-pygments_style = "default"
-pygments_dark_style = "native"
 
 katex_prerender = shutil.which(NODEJS_BINARY) is not None
 
@@ -229,12 +197,6 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
 
 # -- Options for HTML output ----------------------------------------------
 
-# The theme is sphinx-book-theme, with patches for readthedocs-sphinx-search
-html_theme = "scanpydoc"
-html_theme_options = {
-    "repository_url": repository_url,
-    "use_repository_button": True,
-}
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 html_show_sphinx = False
@@ -246,17 +208,6 @@ def setup(app: Sphinx) -> None:
     """App setup hook."""
     app.add_generic_role("small", partial(nodes.inline, classes=["small"]))
     app.add_generic_role("smaller", partial(nodes.inline, classes=["smaller"]))
-    app.add_config_value(
-        "recommonmark_config",
-        {
-            "auto_toc_tree_section": "Contents",
-            "enable_auto_toc_tree": True,
-            "enable_math": True,
-            "enable_inline_math": False,
-            "enable_eval_rst": True,
-        },
-        True,  # noqa: FBT003
-    )
 
 
 # -- Options for other output formats ------------------------------------------
@@ -280,16 +231,9 @@ texinfo_documents = [
 
 # -- Suppress link warnings ----------------------------------------------------
 
-qualname_overrides = {
-    "pathlib._local.Path": "pathlib.Path",
-    "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.metrics.DistanceMetric",
-    "pandas.core.series.Series": "pandas.Series",
-    # https://github.com/pandas-dev/pandas/issues/63810
-    "pandas.api.typing.aliases.AnyArrayLike": ("doc", "pandas:reference/aliases"),
-    **{
-        f"numpy.{prefix}typing.{name}": ("py:data", f"numpy.typing.{name}")
-        for name, prefix in product(["ArrayLike", "DTypeLike"], ["", "_"])
-    },
+xref_overrides = {
+    "numpy.typing.DTypeLike": ("py:data", "numpy.typing.DTypeLike"),
+    "numpy._typing._array_like.NDArray": ("py:data", "numpy.typing.NDArray"),
 }
 
 nitpick_ignore = [
@@ -323,4 +267,3 @@ plot_working_directory = HERE.parent  # Project root
 
 # link config
 issues_github_path = "scverse/scanpy"
-rtd_links_prefix = PurePosixPath("src")
