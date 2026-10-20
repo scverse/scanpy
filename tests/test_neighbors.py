@@ -315,17 +315,20 @@ def test_use_and_use_rep(adata_pca: AnnData) -> None:
 @pytest.mark.parametrize(
     ("use", "stored"),
     [
-        pytest.param(A.obsm["X_pca"], dict(use_rep="X_pca"), id="obsm"),
-        pytest.param(A.X, dict(use_rep="X"), id="X"),
-        pytest.param(A.layers["l"], dict(layer="l"), id="layer"),
+        pytest.param(lambda: A.obsm["X_pca"], dict(use_rep="X_pca"), id="obsm"),
+        pytest.param(lambda: A.X, dict(use_rep="X"), id="X"),
+        pytest.param(lambda: A.layers["l"], dict(layer="l"), id="layer"),
     ],
 )
 def test_use_stored(
-    adata_pca: AnnData, tmp_path: Path, use: object, stored: dict[str, str]
+    adata_pca: AnnData,
+    tmp_path: Path,
+    use: Callable[[], RepAcc],
+    stored: dict[str, str],
 ) -> None:
     """`use` is stored in `.uns` like its predecessors, and understood by readers."""
     adata_pca.layers["l"] = adata_pca.X.copy()
-    sc.pp.neighbors(adata_pca, use=use)
+    sc.pp.neighbors(adata_pca, use=use())
     params = adata_pca.uns["neighbors"]["params"]
     assert {k: params[k] for k in ("use_rep", "layer") if k in params} == stored
     adata_pca.write_h5ad(path := tmp_path / "adata.h5ad")

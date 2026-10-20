@@ -118,4 +118,8 @@ def test_filter_rank_genes_groups_out() -> None:
     with pytest.warns(FutureWarning, match=r"argument key_added is deprecated"):
         filter_rank_genes_groups(adata, key_added="k")
     for key in ("p_rank_genes_groups_filtered", "k"):
-        assert adata.uns[key]["names"].tolist() == res["names"].tolist()
+        # via `np.array(….tolist())` like above, so filtered-out NaNs compare equal
+        np.testing.assert_array_equal(
+            np.array(adata.uns[key]["names"].tolist()),
+            np.array(res["names"].tolist()),
+        )

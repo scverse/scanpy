@@ -104,6 +104,7 @@ def test_heatmap(plot_cmp, params: dict[str, Any], key: str) -> None:
     plot_cmp(key)
 
 
+@needs.anndata_acc
 @needs.leidenalg
 def test_heatmap_var_as_dict(plot_cmp) -> None:
     pbmc = pbmc68k_reduced()
@@ -1400,8 +1401,8 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
 def pbmc_68k_dpt_session() -> AnnData:
     adata = pbmc68k_reduced()
     sc.pp.neighbors(adata, n_neighbors=5, method="gauss", knn=False)
-    sc.tl.leiden(adata, resolution=0.5, out="obs.leiden_0_5", flavor="leidenalg")
-    adata.uns["iroot"] = np.flatnonzero(adata.obs["leiden_0_5"] == "0")[0]
+    sc.tl.leiden(adata, resolution=0.5, flavor="leidenalg")
+    adata.uns["iroot"] = np.flatnonzero(adata.obs["leiden"] == "0")[0]
     sc.tl.diffmap(adata, n_comps=10)
     with warnings.catch_warnings():
         warnings.filterwarnings(

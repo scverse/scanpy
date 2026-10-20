@@ -180,6 +180,7 @@ def test_leiden_objective_function(adata_neighbors):
     )
 
 
+@needs.anndata_acc
 @needs.igraph
 @pytest.mark.parametrize(
     ("clustering", "key"),
@@ -221,6 +222,7 @@ def test_clustering_subset(adata_neighbors, clustering, key):
         assert len(common_cat) == 0
 
 
+@needs.anndata_acc
 @pytest.mark.parametrize(
     ("clustering", "default_key", "default_res", "custom_resolutions"),
     [
@@ -252,6 +254,7 @@ def test_clustering_custom_key(
         assert adata_neighbors.uns[key]["params"]["resolution"] == res
 
 
+@needs.anndata_acc
 @needs.igraph
 def test_leiden_out_acc(adata_neighbors: AnnData) -> None:
     """An accessor `out` names the column, and `.uns` follows it."""
@@ -289,6 +292,7 @@ def test_leiden_out_true(adata_neighbors: AnnData) -> None:
     assert set(adata_neighbors.uns) == uns_before
 
 
+@needs.anndata_acc
 @needs.igraph
 @pytest.mark.parametrize("restrict", [False, True], ids=["plain", "restrict"])
 def test_leiden_key_added_deprecated(

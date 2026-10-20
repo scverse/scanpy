@@ -698,7 +698,7 @@ def matrixplot(
         )
 
     """
-    agg = sc.get.aggregate(adata, group_by, func, acc=data)
+    agg = sc.get.aggregate(adata, group_by, func, use=data)
     agg.var["totals"] = stats.sum(agg.layers[func], axis=0)
     heatmap = hv.HeatMap(
         agg,
