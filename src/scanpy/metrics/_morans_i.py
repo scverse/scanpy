@@ -77,8 +77,6 @@ def morans_i(
         (See ``neighbors_key`` below.)
     {neighbors_key}
     {use}
-    use_raw
-        Whether to use `adata.raw.X` for `vals`.
 
     Returns
     -------

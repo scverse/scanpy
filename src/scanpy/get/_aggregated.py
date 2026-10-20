@@ -358,7 +358,9 @@ def aggregate(
     by, dim = _normalize_by(by, axis, obsm=obsm, varm=varm)
     del axis
 
-    if isinstance(by[0], AdRef) and use is None:
+    if isinstance(use, str):
+        use = A.resolve(use, vec=False)
+    elif isinstance(by[0], AdRef) and use is None:
         use = A.X
     data = _get_arr(adata, use, dim=dim, layer=layer, obsm=obsm, varm=varm)
 
@@ -394,8 +396,11 @@ def aggregate(
     elif isinstance(use, GraphAcc):
         # Square graph: the un-grouped axis still indexes the original `dim`
         var = getattr(adata, dim)
-    else:  # layer
+    elif use is None or isinstance(use, LayerAcc):
         var = getattr(adata, "var" if dim == "obs" else "obs")
+    else:  # pragma: no cover
+        msg = f"Unexpected `use`: {use!r}"
+        raise AssertionError(msg)
 
     # It's all coming together
     result = AnnData(layers=layers, obs=new_label_df, var=var)

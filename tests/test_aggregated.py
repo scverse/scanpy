@@ -587,6 +587,7 @@ def test_aggregate_obsm_labels() -> None:
 @pytest.mark.parametrize("axis", ["obs", "var"])
 @pytest.mark.parametrize("attr", [pytest.param(None, id="x"), "layers", "obsm", "varm"])
 @pytest.mark.parametrize("by", ["blobs", ["blobs", "extra"]], ids=["single", "multi"])
+@pytest.mark.parametrize("use_str", [False, True], ids=["acc", "str"])
 @pytest.mark.filterwarnings(
     "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
 )
@@ -595,6 +596,7 @@ def test_acc_api(
     axis: Literal["obs", "var"],
     attr: Literal["obsm", "varm", "layers"] | None,
     by: str | list[str],
+    use_str: bool,
 ) -> None:
     if (attr == "obsm" and axis == "var") or (attr == "varm" and axis == "obs"):
         pytest.skip()
@@ -618,9 +620,10 @@ def test_acc_api(
         axis=axis,
         **({} if attr is None else {attr.removesuffix("s"): "test"}),
     )
+    use = A.X if attr is None else getattr(A, attr)["test"]
     new = sc.get.aggregate(
         *(adata, getattr(A, axis)[by], ["sum", "mean"]),
-        **({} if attr is None else dict(use=getattr(A, attr)["test"])),
+        use=("X" if attr is None else f"{attr}.test") if use_str else use,
     )
 
     assert_equal(old, new)

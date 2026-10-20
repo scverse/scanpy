@@ -230,8 +230,9 @@ def _out_key[D: str | Default | None](
     and otherwise the key to write to: `{prefix}_{base}` for a `Prefix`,
     or the key of the accessor.
     Keys from `out` are literal, i.e. shouldn’t be processed further like `key_added` is.
+    `key_added` is ignored for `out=True` (e.g. from `inplace=False`), as nothing is written.
     """
-    if key_added is not None:
+    if key_added is not None and out is not True:
         _check_legacy(out, "key_added")
         return key_added
     match out:
@@ -278,8 +279,9 @@ def _out_dests[D: tuple, K: tuple](
     `{prefix}_{uns}` and the prefixed `bases` for a `Prefix`,
     and the primary output’s key (or `default`) for a mapping,
     which only writes the outputs it names, and must name the primary output if there is a `uns` entry.
+    `key_added` is ignored for `out=True` (e.g. from `inplace=False`), as nothing is written.
     """
-    if key_added is not None:
+    if key_added is not None and out is not True:
         _check_legacy(out, "key_added")
         return key_added, dests(key_added)
     names: tuple[str, ...] = kinds._fields  # type: ignore[attr-defined]

@@ -79,8 +79,6 @@ def gearys_c(
         (See ``neighbors_key`` below.)
     {neighbors_key}
     {use}
-    use_raw
-        Whether to use `adata.raw.X` for `vals`.
 
     Returns
     -------

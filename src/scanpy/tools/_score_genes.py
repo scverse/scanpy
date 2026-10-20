@@ -331,6 +331,7 @@ def _nan_means(
     return np.nanmean(x, axis=axis, dtype=dtype)
 
 
+@deprecated_copy
 def score_genes_cell_cycle(
     adata: AnnData,
     *,
@@ -383,7 +384,6 @@ def score_genes_cell_cycle(
     """
     logg.info("calculating cell cycle phase")
 
-    adata = adata.copy() if copy else adata
     ctrl_size = min(len(s_genes), len(g2m_genes))
     for genes, name in [(s_genes, "S_score"), (g2m_genes, "G2M_score")]:
         adata.obs[name] = score_genes(
@@ -402,4 +402,4 @@ def score_genes_cell_cycle(
 
     adata.obs["phase"] = phase
     logg.hint("    'phase', cell cycle phase (adata.obs)")
-    return adata if copy else None
+    return None

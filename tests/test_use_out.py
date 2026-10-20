@@ -246,11 +246,16 @@ def test_score_genes_out_and_score_name(adata: AnnData) -> None:
         )
 
 
-def test_normalize_total_inplace_deprecated(adata: AnnData) -> None:
-    """`inplace=False` is the deprecated way to say `out=True`."""
+@pytest.mark.filterwarnings("ignore:.*argument key_added is deprecated:FutureWarning")
+@pytest.mark.parametrize("kw", [{}, dict(key_added="k")], ids=["plain", "key_added"])
+def test_normalize_total_inplace_deprecated(
+    adata: AnnData, kw: dict[str, object]
+) -> None:
+    """`inplace=False` is the deprecated way to say `out=True`, which ignores `key_added`."""
     with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
-        res = sc.pp.normalize_total(adata, target_sum=1, inplace=False)
+        res = sc.pp.normalize_total(adata, target_sum=1, inplace=False, **kw)
     assert set(res) == {"X", "norm_factor"}
+    assert "k" not in adata.obs
     np.testing.assert_allclose(np.asarray(res["X"]).sum(axis=1), 1, rtol=1e-6)
 
 
