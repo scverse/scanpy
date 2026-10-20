@@ -723,6 +723,40 @@ def test_subset_inplace_consistency(
         assert adatas[True].var_names.equals(dfs[True].index)
 
 
+@pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
+@pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
+def test_subset_consistency_cutoffs(
+    flavor: Literal["seurat", "cell_ranger"], batch_key: Literal["batch"] | None
+) -> None:
+    """Tests `n_top_genes=None`: `subset=True` keeps the genes `subset=False` flags."""
+    rng = np.random.default_rng(0)
+    adata = sc.datasets.blobs(n_observations=200, n_variables=80, rng=rng)
+    adata.obs["batch"] = rng.choice(["a", "b"], adata.shape[0])
+    adata.X = np.abs(adata.X).astype(int)
+    sc.pp.normalize_total(adata, target_sum=1e4)
+    sc.pp.log1p(adata)
+    # the bug only shows if the gene names are not sorted
+    assert not adata.var_names.is_monotonic_increasing
+
+    kw = dict(flavor=flavor, batch_key=batch_key, max_mean=np.inf, min_disp=0)
+    flagged = adata.copy()
+    sc.pp.highly_variable_genes(flagged, **kw)
+    expected = flagged.var_names[flagged.var["highly_variable"]]
+    assert 0 < len(expected) < adata.n_vars
+
+    subsetted = adata.copy()
+    sc.pp.highly_variable_genes(subsetted, **kw, subset=True)
+    assert subsetted.var_names.equals(expected)
+    assert subsetted.var["highly_variable"].all()
+
+    df = sc.pp.highly_variable_genes(adata.copy(), **kw, inplace=False)
+    assert df.index.equals(adata.var_names)
+    assert df.index[df["highly_variable"]].equals(expected)
+
+    df = sc.pp.highly_variable_genes(adata.copy(), **kw, inplace=False, subset=True)
+    assert df.index.equals(expected)
+
+
 @pytest.mark.parametrize(
     "flavor",
     [
