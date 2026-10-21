@@ -105,6 +105,7 @@ dev = [
     "towncrier",   # release note management
 ]
 test = [
+    "mudata",
     "scanpy[dask-ml]",
     "scanpy[dask]",
     "scanpy[illico]",

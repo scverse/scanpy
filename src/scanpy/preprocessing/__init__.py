@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ..neighbors import neighbors
 from ..neighbors._bbknn import bbknn
+from ..neighbors._wnn import wnn
 from ._combat import combat
 from ._deprecated.sampling import subsample
 from ._harmony import harmony_integrate
@@ -49,4 +50,5 @@ __all__ = [
     "scrublet_simulate_doublets",
     "sqrt",
     "subsample",
+    "wnn",
 ]
