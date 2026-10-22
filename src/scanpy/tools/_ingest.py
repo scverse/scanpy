@@ -313,8 +313,15 @@ class Ingest:
             self._n_pcs = neighbors["params"]["n_pcs"]
             self._rep = adata.obsm["X_pca"][:, : self._n_pcs]
         elif adata.n_vars > settings.N_PCS and "X_pca" in adata.obsm:
+            # Neither `use_rep` nor `n_pcs` was recorded, meaning `pp.neighbors`
+            # ran with its own `n_pcs=None` default, which uses the full stored
+            # PCA representation unsliced (see `_get_pca_or_small_x`). Slicing
+            # to `settings.N_PCS` here would silently use a different, smaller
+            # representation than the one that actually produced this
+            # neighbor graph whenever more than `settings.N_PCS` components
+            # were computed.
             self._use_rep = "X_pca"
-            self._rep = adata.obsm["X_pca"][:, : settings.N_PCS]
+            self._rep = adata.obsm["X_pca"]
             self._n_pcs = self._rep.shape[1]
 
         self._metric_kwds = neighbors["params"].get("metric_kwds", {})
