@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .. import logging as logg
+from .._compat import warn
 from .._utils import _get_basis_key, sanitize_anndata
 
 if TYPE_CHECKING:
@@ -32,7 +33,7 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
     return scaled_z
 
 
-def embedding_density(  # noqa: PLR0912
+def embedding_density(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     basis: str = "umap",
     *,
@@ -53,6 +54,8 @@ def embedding_density(  # noqa: PLR0912
 
     Beware that the KDE estimate used (`scipy.stats.gaussian_kde`) becomes
     unreliable if you don't have enough cells in a category.
+    Categories with fewer than 3 cells, or whose cells lie on a single line or point
+    in the embedding, get a density of `NaN`.
 
     This function was written by Sophie Tritschler and implemented into
     Scanpy by Malte Luecken.
@@ -165,15 +168,31 @@ def embedding_density(  # noqa: PLR0912
         categories = adata.obs[groupby].cat.categories
 
         density_values = np.zeros(adata.n_obs)
+        skipped = []
 
         for cat in categories:
             cat_mask = adata.obs[groupby] == cat
             embed_x = adata.obsm[basis_key][cat_mask, components[0]]
             embed_y = adata.obsm[basis_key][cat_mask, components[1]]
 
-            dens_embed = _calc_density(embed_x, embed_y)
+            # a 2D KDE needs at least 3 points that do not lie on a line or point
+            if cat_mask.sum() < 3:
+                dens_embed = np.nan
+                skipped.append(cat)
+            else:
+                try:
+                    dens_embed = _calc_density(embed_x, embed_y)
+                except np.linalg.LinAlgError:
+                    dens_embed = np.nan
+                    skipped.append(cat)
             density_values[cat_mask] = dens_embed
 
+        if skipped:
+            msg = (
+                f"Categories {skipped} of {groupby!r} have too few cells "
+                "or degenerate coordinates, so their density is set to NaN."
+            )
+            warn(msg, UserWarning)
         adata.obs[density_covariate] = density_values
     else:  # if groupby is None
         # Calculate the density over the whole embedding without subsetting
