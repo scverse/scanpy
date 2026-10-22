@@ -35,7 +35,11 @@ from .._utils import (
     sanitize_anndata,
     view_to_actual,
 )
-from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
+from .._utils.random import (
+    _accepts_legacy_random_state,
+    _if_legacy_apply_global,
+    _LegacyRng,
+)
 from ..get import _check_mask, _get_arr, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 
@@ -874,6 +878,14 @@ def downsample_counts(
     `adata.X` : :class:`~numpy.ndarray` | :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` (dtype `float`)
         Downsampled counts matrix.
 
+    Notes
+    -----
+    For sparse ``int64`` counts, sampling without replacement with ``rng``
+    samples discarded counts when `total_counts` exceeds half the input total.
+    This preserves the sampling distribution, but changes seeded results and
+    subsequent random draws compared with sampling retained counts directly.
+    Legacy ``random_state`` and the default random state retain their behavior.
+
     """
     raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
     # This logic is all dispatch
@@ -947,7 +959,20 @@ def _downsample_total_counts[T: (np.ndarray, CSBase)](
     with sparse_as_csr(x) as spc:
         x = spc.x  # we only mutate x, so spc.x receives the changes
         v = x.data if isinstance(x, CSBase) else x.reshape(-1)
-        _downsample_array(v, total_counts, rng=rng, replace=replace, inplace=True)
+        if (
+            isinstance(x, CSBase)
+            and x.dtype == np.int64
+            and not replace
+            and not isinstance(rng, _LegacyRng)
+            and total_counts > total // 2
+        ):
+            # Complementing a uniform sample without replacement preserves its law.
+            discarded = _downsample_array(
+                v, int(total) - total_counts, rng=rng, replace=False, inplace=False
+            )
+            v -= discarded
+        else:
+            _downsample_array(v, total_counts, rng=rng, replace=replace, inplace=True)
     return spc.x  # use x that was converted back
 
 
