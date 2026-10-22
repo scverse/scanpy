@@ -609,6 +609,21 @@ def test_cellranger_n_top_genes_warning():
         sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
 
 
+def test_cellranger_n_top_genes_inf_dispersion():
+    """Genes with infinite normalized dispersion rank highest (#4415)."""
+    rng = np.random.default_rng(0)
+    x = rng.poisson(rng.lognormal(-1, 1.2, 2000), (300, 2000)).astype(np.float32)
+    x[:, rng.random(2000) < 0.09] = 0
+    adata = AnnData(x)
+    sc.pp.normalize_total(adata, target_sum=1e4)
+
+    sc.pp.highly_variable_genes(adata, flavor="cell_ranger", n_top_genes=5)
+
+    is_inf = np.isposinf(adata.var["dispersions_norm"])
+    assert is_inf.sum() > 5
+    assert (adata.var["highly_variable"] == is_inf).all()
+
+
 def test_cutoff_info():
     adata = pbmc3k()[:200].copy()
     sc.pp.normalize_total(adata)
