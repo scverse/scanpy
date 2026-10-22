@@ -62,7 +62,7 @@ def gauss[D: (NDArray[np.float32 | np.float64], CSRBase)](  # noqa: PLR0912
     if not isinstance(distances, CSRBase):
         num = 2 * np.multiply.outer(sigmas, sigmas)
         den = np.add.outer(sigmas_sq, sigmas_sq)
-        w = np.sqrt(num / den) * np.exp(-d_sq / den)
+        w = _gauss_weights(num, den, d_sq)
         # make the weight matrix sparse
         if not knn:
             mask = w > 1e-14
@@ -87,8 +87,8 @@ def gauss[D: (NDArray[np.float32 | np.float64], CSRBase)](  # noqa: PLR0912
             row = d_sq.indices[d_sq.indptr[i] : d_sq.indptr[i + 1]]
             num = 2 * sigmas[i] * sigmas[row]
             den = sigmas_sq[i] + sigmas_sq[row]
-            w.data[d_sq.indptr[i] : d_sq.indptr[i + 1]] = np.sqrt(num / den) * np.exp(
-                -d_sq.data[d_sq.indptr[i] : d_sq.indptr[i + 1]] / den
+            w.data[d_sq.indptr[i] : d_sq.indptr[i + 1]] = _gauss_weights(
+                num, den, d_sq.data[d_sq.indptr[i] : d_sq.indptr[i + 1]]
             )
         w = w.tolil()
         for i, row in enumerate(indices):
@@ -98,6 +98,16 @@ def gauss[D: (NDArray[np.float32 | np.float64], CSRBase)](  # noqa: PLR0912
         w = w.tocsr()
 
     return w
+
+
+def _gauss_weights(
+    num: NDArray[np.float64], den: NDArray[np.float64], d_sq: NDArray[np.float64]
+) -> NDArray[np.float64]:
+    # a zero width on both ends (e.g. many duplicated cells) would give 0/0:
+    # identical cells are fully connected, all others not at all
+    with np.errstate(divide="ignore", invalid="ignore"):
+        w = np.sqrt(num / den) * np.exp(-d_sq / den)
+    return np.where(den > 0, w, d_sq == 0)
 
 
 def umap(
