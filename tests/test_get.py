@@ -523,11 +523,14 @@ def test_rank_genes_groups_df_explicit_key(adata_rgg: AnnData):
         out=sc.Prefix("different"),
         pts=True,
     )
-    dedf2 = sc.get.rank_genes_groups_df(
-        adata_rgg, "a", key="different_rank_genes_groups"
-    )
+    dedf2 = sc.get.rank_genes_groups_df(adata_rgg, "a", use=sc.Prefix("different"))
+    with pytest.warns(FutureWarning, match=r"argument key is deprecated"):
+        dedf_legacy = sc.get.rank_genes_groups_df(
+            adata_rgg, "a", key="different_rank_genes_groups"
+        )
 
     pd.testing.assert_frame_equal(dedf, dedf2)
+    pd.testing.assert_frame_equal(dedf, dedf_legacy)
     assert "pct_nz_group" in dedf2.columns
     assert "pct_nz_reference" in dedf2.columns
 

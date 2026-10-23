@@ -1769,7 +1769,7 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     )
 
     conditions = "logfoldchanges >= 1 & pct_nz_group >= .25 & pct_nz_reference < .5"
-    df = sc.get.rank_genes_groups_df(adata, group=None, key="rank_genes_groups")
+    df = sc.get.rank_genes_groups_df(adata, group=None)
     df = df.query(conditions)[["group", "names"]]
 
     var_names = {
@@ -1798,7 +1798,12 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
         pytest.param("scrublet", {}, id="scrublet"),
         pytest.param("scrublet_no_threshold", {}, id="scrublet_no_threshold"),
         pytest.param(
-            "scrublet_with_batches", dict(batch_key="batch"), id="scrublet_with_batches"
+            "scrublet_with_batches",
+            dict(batch_key="batch"),
+            marks=pytest.mark.filterwarnings(
+                "ignore:.*argument batch_key is deprecated:FutureWarning"
+            ),
+            id="scrublet_with_batches",
         ),
     ],
 )

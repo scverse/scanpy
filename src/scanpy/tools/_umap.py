@@ -7,7 +7,7 @@ from scverse_misc import deprecated_arg
 from sklearn.utils import check_array
 
 from .. import logging as logg
-from .._docs import DEPR_KEY_ADDED, doc_out_key, doc_rng
+from .._docs import DEPR_KEY_ADDED, DEPR_NEIGHBORS_KEY, doc_out_key, doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default, settings
 from .._utils import NeighborsView, _doc_params
@@ -17,17 +17,21 @@ from .._utils.random import (
     _LegacyRng,
 )
 from ..get._out import _out_key, deprecated_copy
+from ..get._types import MultiAcc
 from ..get._uns import _use_from_uns
+from ..get._use import _resolve_ref
+from ..neighbors._common import _neighbors_key
+from ._docs import doc_use_neighbors
 from ._utils import _choose_representation_compat, get_init_pos_from_paga
 
 if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
-    from anndata.acc import MultiAcc
 
     from .._utils.random import RNGLike, SeedLike
     from ..get._out import Prefix
+    from ..neighbors._common import NeighborsUse
 
 
 type _InitPos = Literal["paga", "spectral", "random"]
@@ -36,6 +40,7 @@ type _InitPos = Literal["paga", "spectral", "random"]
 @_accepts_legacy_random_state(0)
 @_doc_params(
     rng=doc_rng,
+    use=doc_use_neighbors(),
     out=doc_out_key(
         "the embedding",
         example="A.obsm['umap']",
@@ -49,6 +54,7 @@ type _InitPos = Literal["paga", "spectral", "random"]
     ),
 )
 @deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
 @deprecated_copy
 def umap(  # noqa: PLR0913
     adata: AnnData,
@@ -60,14 +66,15 @@ def umap(  # noqa: PLR0913
     alpha: float = 1.0,
     gamma: float = 1.0,
     negative_sample_rate: int = 5,
-    init_pos: _InitPos | np.ndarray | None = "spectral",
+    init_pos: _InitPos | MultiAcc | str | np.ndarray | None = "spectral",
     rng: SeedLike | RNGLike | None = None,
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap"] = "umap",
-    neighbors_key: str = "neighbors",
+    use: NeighborsUse = None,
     out: MultiAcc | str | Prefix | bool = False,
     # deprecated
+    neighbors_key: str | None = None,
     key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | np.ndarray | None:
@@ -120,7 +127,10 @@ def umap(  # noqa: PLR0913
         How to initialize the low dimensional embedding. Called `init` in the
         original UMAP. Options are:
 
-        * Any key for `adata.obsm`.
+        * An `.obsm` entry, e.g. `A.obsm['pca']`.
+          A :class:`str` is :meth:`~anndata.acc.AdAcc.resolve`\ d
+          if :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`
+          (e.g. `'obsm.pca'`), otherwise it is a key of `.obsm`.
         * 'paga': positions from :func:`~scanpy.pl.paga`.
         * 'spectral': use a spectral embedding of the graph.
         * 'random': assign initial embedding positions at random.
@@ -139,11 +149,12 @@ def umap(  # noqa: PLR0913
 
         ``'umap'``
             Umap’s simplical set embedding.
+    {use}
+    {out}
     neighbors_key
         Umap looks in
         :attr:`~anndata.AnnData.uns`\ ``[neighbors_key]`` for neighbors settings and
         :attr:`~anndata.AnnData.obsp`\ ``[.uns[neighbors_key]['connectivities_key']]`` for connectivities.
-    {out}
     copy
         Return a copy instead of writing to adata.
 
@@ -161,8 +172,7 @@ def umap(  # noqa: PLR0913
     rng = np.random.default_rng(rng)
     key = _out_key(out, key_added, kind="obsm", base="umap", default=Default())
 
-    if neighbors_key is None:  # backwards compat
-        neighbors_key = "neighbors"
+    neighbors_key = _neighbors_key(use, neighbors_key) or "neighbors"
     if neighbors_key not in adata.uns:
         msg = f"Did not find .uns[{neighbors_key!r}]. Run `sc.pp.neighbors` first."
         raise ValueError(msg)
@@ -184,7 +194,11 @@ def umap(  # noqa: PLR0913
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
     params = dict(a=a, b=b, **meta_random_state)
-    if isinstance(init_pos, str) and init_pos in adata.obsm:
+    if isinstance(init_pos, str) and init_pos not in {"paga", "spectral", "random"}:
+        init_pos = _resolve_ref(init_pos, vec=False)
+    if isinstance(init_pos, MultiAcc):
+        init_coords = adata[init_pos]
+    elif isinstance(init_pos, str) and init_pos in adata.obsm:
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == "paga":
         init_coords = get_init_pos_from_paga(

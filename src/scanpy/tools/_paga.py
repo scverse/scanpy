@@ -5,30 +5,36 @@ from typing import TYPE_CHECKING, NamedTuple
 import numpy as np
 import scipy as sp
 from scipy.sparse.csgraph import minimum_spanning_tree
-from scverse_misc import Deprecation, deprecated
+from scverse_misc import Deprecation, deprecated, deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
-from .._docs import doc_out_key
+from .._docs import DEPR_NEIGHBORS_KEY, doc_out_key
 from .._utils import _doc_params
 from ..get._out import Prefix, _out_key, deprecated_copy
 from ..neighbors import Neighbors
+from ..neighbors._common import _neighbors_key
+from ._docs import doc_use_neighbors
 
 if TYPE_CHECKING:
     from typing import Any, Literal
 
     from anndata import AnnData
 
+    from ..neighbors._common import NeighborsUse
+
 _AVAIL_MODELS = {"v1.0", "v1.2"}
 
 
 @_doc_params(
+    use=doc_use_neighbors(),
     out=doc_out_key(
         "the abstracted graph",
         default="`.uns['paga']` (and the group sizes to `.uns[f'{{groups}}_sizes']`)",
         prefixed="`.uns['p_paga']` (and `.uns[f'p_{{groups}}_sizes']`)",
-    )
+    ),
 )
+@deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
 @deprecated_copy
 def paga(
     adata: AnnData,
@@ -36,9 +42,10 @@ def paga(
     *,
     use_rna_velocity: bool = False,
     model: Literal["v1.2", "v1.0"] = "v1.2",
-    neighbors_key: str | None = None,
+    use: NeighborsUse = None,
     out: Prefix | bool = False,
     # deprecated
+    neighbors_key: str | None = None,
     copy: bool = False,
 ) -> AnnData | dict[str, Any] | None:
     """Map out the coarse-grained connectivity structures of complex manifolds :cite:p:`Wolf2019`.
@@ -81,6 +88,8 @@ def paga(
         to change in the future.
     model
         The PAGA connectivity model.
+    {use}
+    {out}
     neighbors_key
         If not specified, paga looks `.uns['neighbors']` for neighbors settings
         and `.obsp['connectivities']`, `.obsp['distances']` for connectivities and
@@ -89,7 +98,6 @@ def paga(
         `.obsp[.uns[neighbors_key]['connectivities_key']]`,
         `.obsp[.uns[neighbors_key]['distances_key']]` for connectivities and distances
         respectively.
-    {out}
     copy
         Copy `adata` before computation and return a copy. Otherwise, perform
         computation inplace and return `None`.
@@ -121,6 +129,7 @@ def paga(
     pl.paga_compare
 
     """
+    neighbors_key = _neighbors_key(use, neighbors_key)
     check_neighbors = "neighbors" if neighbors_key is None else neighbors_key
     if check_neighbors not in adata.uns:
         msg = "You need to run `pp.neighbors` first to compute a neighborhood graph."

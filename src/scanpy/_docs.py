@@ -11,8 +11,12 @@ if TYPE_CHECKING:
     from typing import Final, Literal
 
 __all__ = [
+    "DEPR_ADJACENCY",
+    "DEPR_BATCH_KEY",
     "DEPR_COPY",
     "DEPR_KEY_ADDED",
+    "DEPR_NEIGHBORS_KEY",
+    "DEPR_OBSP_GRAPH",
     "DEPR_RAW",
     "doc_mask",
     "doc_out",
@@ -21,6 +25,7 @@ __all__ = [
     "doc_ref_compat",
     "doc_rng",
     "doc_use",
+    "doc_use_rank_genes_groups",
 ]
 
 DEPR_COPY: Final = Deprecation(
@@ -36,6 +41,25 @@ DEPR_RAW: Final = Deprecation(
     ":attr:`~anndata.AnnData.raw` is deprecated. Keep the data in a layer instead.",
 )
 """For `use_raw` parameters, which have no accessor equivalent."""
+
+DEPR_BATCH_KEY: Final = Deprecation(
+    "1.13.0", "Use `batch` instead, e.g. `batch=A.obs['b']` for `batch_key='b'`."
+)
+"""For `batch_key` parameters, replaced by `batch` taking a reference."""
+
+DEPR_NEIGHBORS_KEY: Final = Deprecation(
+    "1.13.0",
+    "Use `use` instead, e.g. `use=sc.Prefix('p')` for `neighbors_key='p_neighbors'`.",
+)
+"""For `neighbors_key` parameters, replaced by a `use` mirroring `pp.neighbors`’ `out`."""
+
+DEPR_OBSP_GRAPH: Final = Deprecation("1.13.0", "Use `use=A.obsp[...]` instead.")
+"""For `obsp` parameters naming a graph, replaced by a `use` accessor."""
+
+DEPR_ADJACENCY: Final = Deprecation(
+    "1.13.0", "Store the graph in `.obsp` and pass `use=A.obsp[...]` instead."
+)
+"""For `adjacency` parameters taking a graph, replaced by a `use` accessor."""
 
 doc_ref_compat = (
     "If :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`, "
@@ -185,3 +209,10 @@ out
 
 def _doc_key_added(desc: str | None) -> str:
     return "" if desc is None else f"\nkey_added\n    {desc}"
+
+
+doc_use_rank_genes_groups = """\
+use
+    Where :func:`~scanpy.tl.rank_genes_groups` wrote its results, i.e. the `out` passed to it:
+    `None` for `.uns['rank_genes_groups']`, `sc.Prefix('p')` for `.uns['p_rank_genes_groups']`.\
+"""

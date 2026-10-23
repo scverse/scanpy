@@ -6,10 +6,11 @@ import numpy as np
 import pandas as pd
 import scipy as sp
 from natsort import natsorted
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._docs import doc_out_multi
-from .._utils import _doc_params
+from .._utils import _doc_params, own_deprecations
 from .._utils.random import _LegacyRng
 from ..get._out import _out_dests, _set_arr, deprecated_copy
 from ..neighbors import Neighbors, OnFlySymMatrix, _diffmap_keys
@@ -65,18 +66,26 @@ DPT_BASES: DptOut = DptOut(
         uns="dpt",
     )
 )
+@deprecated_arg(
+    "neighbors_key",
+    Deprecation(
+        "1.13.0",
+        "It’s only used to compute a missing diffusion map: "
+        "run `tl.diffmap(adata, use=...)` first instead.",
+    ),
+)
 @deprecated_copy
-def dpt(  # noqa: PLR0912
+def dpt(
     adata: AnnData,
     n_dcs: int = 10,
     *,
     n_branchings: int = 0,
     min_group_size: float = 0.01,
     allow_kendall_tau_shift: bool = True,
-    neighbors_key: str | None = None,
     use: MultiAcc | str | Prefix | None = None,
     out: Mapping[str, VecRef | str] | Prefix | bool = False,
     # deprecated
+    neighbors_key: str | None = None,
     copy: bool = False,
 ) -> AnnData | DptOut | None:
     """Infer progression of cells through geodesic distance along the graph :cite:p:`Haghverdi2016,Wolf2019`.
@@ -174,11 +183,6 @@ def dpt(  # noqa: PLR0912
     )
     # standard errors, warnings etc.
 
-    if neighbors_key is None:
-        neighbors_key = "neighbors"
-    if neighbors_key not in adata.uns:
-        msg = "You need to run `pp.neighbors` and `tl.diffmap` first."
-        raise ValueError(msg)
     if "iroot" not in adata.uns and "xroot" not in adata.var:
         logg.warning(
             "No root cell found. To compute pseudotime, pass the index or "
@@ -187,13 +191,17 @@ def dpt(  # noqa: PLR0912
             "    adata.var['xroot'] = adata[root_cell_name, :].X"
         )
     if use is None and not _diffmap_keys(adata, None):
+        if (neighbors_key or "neighbors") not in adata.uns:
+            msg = "You need to run `pp.neighbors` and `tl.diffmap` first."
+            raise ValueError(msg)
         logg.warning(
             "Trying to run `tl.dpt` without prior call of `tl.diffmap`. "
             "Falling back to `tl.diffmap` with default parameters."
         )
         from ._diffmap import diffmap
 
-        diffmap(adata, neighbors_key=neighbors_key, rng=_LegacyRng(0))
+        with own_deprecations():
+            diffmap(adata, neighbors_key=neighbors_key, rng=_LegacyRng(0))
     # start with the actual computation
     dpt = DPT(
         adata,

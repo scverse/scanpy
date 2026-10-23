@@ -49,9 +49,9 @@ doc_genes_batch_chunk = """\
 n_top_genes
     Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'` or
     `flavor='pearson_residuals'`.
-batch_key
-    If specified, highly-variable genes are selected within each batch separately
-    and merged. This simple process avoids the selection of batch-specific genes
+batch
+    If specified (e.g. `A.obs['batch']`),
+    highly-variable genes are selected within each batch separately and merged. This simple process avoids the selection of batch-specific genes
     and acts as a lightweight batch correction method. Genes are first sorted by
     how many batches they are a HVG. If `flavor='pearson_residuals'`, ties are
     broken by the median rank (across batches) based on within-batch residual
@@ -82,4 +82,9 @@ copy
     If `True`, the function runs on a copy of the input object and returns the
     modified copy. Otherwise, the input object is modified direcly. Not compatible
     with `inplace=False`.
+"""
+
+doc_batch_key = """\
+batch_key
+    The name of a `.obs` column, i.e. `batch_key='b'` is `batch=A.obs['b']`.\
 """

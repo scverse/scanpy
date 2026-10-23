@@ -166,6 +166,16 @@ def _prefixed(base: _SetRep, prefix: Prefix) -> _SetRep:
     return cast("_SetRep", {k: f"{prefix.prefix}_{v}" for k, v in base.items()})
 
 
+def _uns_use(use: Prefix | None, key: str | None, *, base: str) -> str:
+    """Find what a function writing only to `.uns` wrote, given its `out` (or the deprecated `key`)."""
+    if key is not None:
+        if use is not None:
+            msg = "Pass either `use` or `key`, not both."
+            raise TypeError(msg)
+        return key
+    return base if use is None else f"{use.prefix}_{base}"
+
+
 def _legacy_out[O](out: O, name: str, value: O | None, *, default: O = False) -> O:
     """Merge a deprecated parameter into `out`, e.g. `inplace=False` into `out=True`.
 

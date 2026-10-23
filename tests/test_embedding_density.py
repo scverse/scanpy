@@ -100,3 +100,28 @@ def test_embedding_density_key_added_deprecated(adata_rand: AnnData) -> None:
         sc.tl.embedding_density(adata_rand, "test", key_added="k")
     pd.testing.assert_frame_equal(adata_rand.obs, expected.obs)
     assert adata_rand.uns.keys() == expected.uns.keys() == {"k_params"}
+
+
+@needs.anndata_acc
+def test_embedding_density_basis_acc(adata_rand: AnnData) -> None:
+    """An accessor `basis` is used as-is, without the `X_` lookup."""
+    from anndata.acc import A
+
+    sc.tl.embedding_density(adata_rand, "test")
+    adata_rand.obsm["foo2"] = adata_rand.obsm["X_test"]
+    sc.tl.embedding_density(adata_rand, A.obsm["foo2"])
+    np.testing.assert_allclose(
+        adata_rand.obs["foo2_density"], adata_rand.obs["test_density"]
+    )
+
+
+@needs.scanpy2
+def test_embedding_density_basis_str_v2(adata_rand: AnnData) -> None:
+    """With the v2 preset, `basis` strings are resolved like other accessor strings."""
+    expected = adata_rand.copy()
+    sc.tl.embedding_density(expected, "test")
+    with sc.settings.override(preset=sc.Preset.ScanpyV2Preview):
+        sc.tl.embedding_density(adata_rand, "obsm.X_test")
+    np.testing.assert_allclose(
+        adata_rand.obs["test_density"], expected.obs["test_density"]
+    )

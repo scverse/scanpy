@@ -4,10 +4,17 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
+from scverse_misc import deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
-from .._docs import doc_out_key, doc_rng
+from .._docs import (
+    DEPR_ADJACENCY,
+    DEPR_NEIGHBORS_KEY,
+    DEPR_OBSP_GRAPH,
+    doc_out_key,
+    doc_rng,
+)
 from .._keys import _embedding_keys
 from .._settings import Default
 from .._utils import _choose_graph, _doc_params, get_literal_vals
@@ -18,6 +25,10 @@ from .._utils.random import (
     _set_igraph_rng,
 )
 from ..get._out import _out_key, deprecated_copy
+from ..get._types import MultiAcc
+from ..get._use import _resolve_ref
+from ..neighbors._common import _graph_args
+from ._docs import doc_use_neighbors
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
@@ -25,12 +36,13 @@ if TYPE_CHECKING:
     from typing import LiteralString
 
     from anndata import AnnData
-    from anndata.acc import MultiAcc
     from colour.hints import NDArray
 
     from .._compat import CSBase
     from .._utils.random import RNGLike, SeedLike
     from ..get._out import Prefix
+    from ..get._types import GraphAcc
+    from ..neighbors._common import NeighborsUse
 
 
 type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
@@ -38,6 +50,7 @@ type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular",
 
 @_doc_params(
     rng=doc_rng,
+    use=doc_use_neighbors(graph=True),
     out=doc_out_key(
         "the embedding",
         example="A.obsm['fa']",
@@ -50,25 +63,29 @@ type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular",
     ),
 )
 @_accepts_legacy_random_state(0)
+@deprecated_arg("adjacency", DEPR_ADJACENCY)
+@deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
+@deprecated_arg("obsp", DEPR_OBSP_GRAPH)
 @deprecated_copy
 def draw_graph(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     layout: _Layout = "fa",
     *,
-    init_pos: str | bool | None = None,
+    init_pos: MultiAcc | str | bool | None = None,
     root: int | None = None,
     rng: SeedLike | RNGLike | None = None,
     n_jobs: int | None = None,
+    use: NeighborsUse | GraphAcc | str = None,
+    out: MultiAcc | str | Prefix | bool = False,
+    # deprecated
     adjacency: CSBase | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
-    out: MultiAcc | str | Prefix | bool = False,
-    # deprecated
     copy: bool = False,
     key_added_ext: str | None = None,
     **kwds,
 ) -> AnnData | np.ndarray | None:
-    """Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
+    r"""Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
 
     An alternative to tSNE that often preserves the topology of the data
     better. This requires running :func:`~scanpy.pp.neighbors`, first.
@@ -104,12 +121,17 @@ def draw_graph(  # noqa: PLR0912, PLR0913
     {rng}
 
         Applies to layouts with random initialization like `'fr'`.
-    adjacency
-        Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
     init_pos
-        `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
+        `'paga'`/`True`, `None`/`False`, or a 2d `.obsm` entry, e.g. `A.obsm['umap']`.
+        Other :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d
+        if :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`
+        (e.g. `'obsm.umap'`), otherwise they are keys of `.obsm`.
         Use precomputed coordinates for initialization.
         If `False`/`None` (the default), initialize randomly.
+    {use}
+    {out}
+    adjacency
+        Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
     neighbors_key
         If not specified, draw_graph looks at `.obsp['connectivities']` for connectivities
         (default storage place for pp.neighbors).
@@ -118,7 +140,6 @@ def draw_graph(  # noqa: PLR0912, PLR0913
     obsp
         Use `.obsp[obsp]` as adjacency. You can't specify both
         `obsp` and `neighbors_key` at the same time.
-    {out}
     copy
         Return a copy instead of writing to adata.
     **kwds
@@ -164,9 +185,17 @@ def draw_graph(  # noqa: PLR0912, PLR0913
         msg = f"Provide a valid layout, one of {layouts}."
         raise ValueError(msg)
     if adjacency is None:
+        obsp, neighbors_key = _graph_args(use, obsp=obsp, neighbors_key=neighbors_key)
         adjacency = _choose_graph(adata, obsp, neighbors_key)
+    elif use is not None:
+        msg = "Pass either `use` or `adjacency`, not both."
+        raise TypeError(msg)
     # init coordinates
-    if init_pos in adata.obsm:
+    if isinstance(init_pos, str) and init_pos != "paga":
+        init_pos = _resolve_ref(init_pos, vec=False)
+    if isinstance(init_pos, MultiAcc):
+        init_coords = cast("NDArray[np.floating]", adata[init_pos])
+    elif init_pos in adata.obsm:
         init_coords = cast("NDArray[np.floating]", adata.obsm[init_pos])
     elif init_pos:  # "paga" or True
         init_coords = get_init_pos_from_paga(

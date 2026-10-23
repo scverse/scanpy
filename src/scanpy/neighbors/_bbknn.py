@@ -60,7 +60,7 @@ def bbknn(  # noqa: PLR0913
     rng: SeedLike | RNGLike | None = None,
     out: Mapping[str, ArrAcc | str] | Prefix | bool = False,
 ) -> NeighborsOut | None:
-    """Compute a batch balanced neighborhood graph of observations :cite:p:`Polanski2019`.
+    r"""Compute a batch balanced neighborhood graph of observations :cite:p:`Polanski2019`.
 
     Batch balanced kNN alters the kNN procedure to identify each cell’s top neighbors
     in each batch separately instead of the entire cell pool with no accounting for batch.
@@ -85,7 +85,8 @@ def bbknn(  # noqa: PLR0913
         matrix of connectivities.
     {n_pcs}
     batches
-        `adata.obs` column name discriminating between the batches.
+        The annotation discriminating between the batches, e.g. `A.obs['batch']`.
+        :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d, e.g. `'obs.batch'`.
     {use}
     transformer
         kNN search backend following the API of

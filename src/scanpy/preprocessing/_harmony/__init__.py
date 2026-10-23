@@ -10,7 +10,8 @@ from ..._docs import doc_out_key, doc_use
 from ..._keys import _embedding_keys
 from ..._utils import _doc_params
 from ...get._out import _out_key
-from ...get._use import _get_arr, _resolve_obs
+from ...get._types import AdRef
+from ...get._use import _get_arr, _obs_df, _ref_arg, _resolve_obs
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -52,7 +53,7 @@ class Stopping(_Stopping, enum.Enum):
 )
 def harmony_integrate(  # noqa: PLR0913
     adata: AnnData,
-    key: str | Sequence[str],
+    batch: AdRef | str | Sequence[AdRef | str],
     *,
     use: MultiAcc | str | None = None,
     out: MultiAcc | str | Prefix | bool = False,
@@ -73,13 +74,13 @@ def harmony_integrate(  # noqa: PLR0913
     block_proportion: float = 0.05,
     rng: SeedLike | RNGLike | None = None,
 ) -> np.ndarray | None:
-    """Integrate different experiments using the Harmony algorithm :cite:p:`Korsunsky2019,Patikas2026`.
+    r"""Integrate different experiments using the Harmony algorithm :cite:p:`Korsunsky2019,Patikas2026`.
 
     Integration adjusts a PCA embedding to reduce experiment-specific technical variation,
     allowing cells from different experiments to be compared.
     This CPU implementation is based on the rapids-singlecell and harmony-pytorch packages.
     Multiple batch variables follow the per-covariate formulation described in the Harmony papers:
-    each key is modeled separately instead of combining all keys into one joint category.
+    each batch variable is modeled separately instead of combining them all into one joint category.
     As Harmony works by adjusting the principal components,
     this function should be run after performing PCA but before computing the neighbor graph.
 
@@ -89,7 +90,7 @@ def harmony_integrate(  # noqa: PLR0913
     and automatic batch pruning.
     To revert to the original Harmony behavior::
 
-        sc.pp.harmony_integrate(adata, key, flavor="harmony1")
+        sc.pp.harmony_integrate(adata, batch, flavor="harmony1")
 
     .. array-support:: pp.harmony_integrate
 
@@ -97,8 +98,10 @@ def harmony_integrate(  # noqa: PLR0913
     ----------
     adata
         The annotated data matrix.
-    key
-        The key(s) of the column(s) in ``adata.obs`` that differentiate(s) among experiments/batches.
+    batch
+        The annotation(s) that differentiate(s) among experiments/batches,
+        e.g. `A.obs['batch']` or `[A.obs['batch'], A.obs['donor']]`.
+        :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d, e.g. `'obs.batch'`.
         Multiple keys are modeled as separate batch variables,
         with one active categorical level per variable and cell.
     {use}
@@ -143,8 +146,8 @@ def harmony_integrate(  # noqa: PLR0913
         Higher values (e.g. ``4``) produce more aggressive mixing;
         lower values (e.g. ``0.5``) allow more batch-specific clusters.
         Set to ``0`` to disable the diversity penalty for a batch variable.
-        A scalar is applied to every key. A sequence may contain one value per key,
-        expanded over that key’s categorical levels,
+        A scalar is applied to every batch variable. A sequence may contain one value per variable,
+        expanded over that variable’s categorical levels,
         or one value per categorical level across all keys.
     tau
         Discounting factor on ``theta``.
@@ -252,9 +255,18 @@ def harmony_integrate(  # noqa: PLR0913
         raise ValueError(msg)
 
     # Run Harmony
+    batch_df = _obs_df(
+        adata,
+        _ref_arg(
+            [batch] if isinstance(batch, AdRef | str) else batch,
+            None,
+            name="batch",
+            legacy_name="",
+        ),
+    )
     harmony = Harmony(
-        adata.obs,
-        key,
+        batch_df,
+        list(batch_df.columns),
         theta=theta,
         sigma=sigma,
         n_clusters=n_clusters,

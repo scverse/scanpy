@@ -12,7 +12,7 @@ from scverse_misc import Deprecation, deprecated_arg
 from .. import logging as logg
 from .._docs import DEPR_KEY_ADDED
 from .._utils._doctests import doctest_needs
-from ..get._out import _legacy_out
+from ..get._out import _legacy_out, _uns_use
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -77,19 +77,27 @@ def _calc_jaccard(markers1: dict, markers2: dict):
 @doctest_needs("leidenalg")
 @deprecated_arg("key_added", DEPR_KEY_ADDED)
 @deprecated_arg(
+    "key",
+    Deprecation(
+        "1.13.0",
+        "Use `use` instead, e.g. `use=sc.Prefix('p')` for `key='p_rank_genes_groups'`.",
+    ),
+)
+@deprecated_arg(
     "inplace", Deprecation("1.13.0", "Use `out=False` instead of `inplace=True`.")
 )
-def marker_gene_overlap(  # noqa: PLR0912, PLR0915
+def marker_gene_overlap(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     reference_markers: dict[str, set] | dict[str, list],
     *,
-    key: str = "rank_genes_groups",
+    use: Prefix | None = None,
     method: _Method = "overlap_count",
     normalize: Literal["reference", "data"] | None = None,
     top_n_markers: int | None = None,
     adj_pval_threshold: float | None = None,
     out: Prefix | bool = True,
     # deprecated
+    key: str | None = None,
     key_added: str | None = None,
     inplace: bool | None = None,
 ) -> pd.DataFrame:
@@ -109,9 +117,9 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
         A marker gene dictionary object. Keys should be strings with the
         cell identity name and values are sets or lists of strings which match
         format of `adata.var_name`.
-    key
-        The key in `adata.uns` where the rank_genes_groups output is stored.
-        By default this is `'rank_genes_groups'`.
+    use
+        Where :func:`~scanpy.tl.rank_genes_groups` wrote its results, i.e. the `out` passed to it:
+        `None` for `.uns['rank_genes_groups']`, `sc.Prefix('p')` for `.uns['p_rank_genes_groups']`.
     method
         (default: `overlap_count`)
         Method to calculate marker gene overlap. `'overlap_count'` uses the
@@ -135,6 +143,8 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
     out
         Must be :data:`True` (the default): the marker gene overlap scores are returned.
         Writing them to :attr:`~anndata.AnnData.uns` is not implemented.
+    key
+        The key in `adata.uns` where the rank_genes_groups output is stored.
     key_added
         Unused, since writing to :attr:`~anndata.AnnData.uns` is not implemented.
     inplace
@@ -176,6 +186,7 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
         )
         raise NotImplementedError(msg)
 
+    key = _uns_use(use, key, base="rank_genes_groups")
     if key not in adata.uns:
         msg = (
             "Could not find marker gene data. "

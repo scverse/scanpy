@@ -222,10 +222,30 @@ def _resolve_ref[R: AdRef](ref: R | str) -> R | str: ...
 def _resolve_ref[R: AdRef](ref: Collection[R | str]) -> list[R] | list[str]: ...
 
 
+@overload
+def _resolve_ref(
+    ref: str, *, vec: Literal[False]
+) -> LayerAcc | MultiAcc | GraphAcc | str: ...
+
+
 def _resolve_ref(
     ref: AdRef | str | Collection[AdRef | str],
-) -> AdRef | str | list[AdRef] | list[str]:
-    """Resolve a plain string `ref` into an `AdRef` under the `v2` preset, else leave it as-is."""
+    *,
+    vec: bool = True,
+) -> AdRef | LayerAcc | MultiAcc | GraphAcc | str | list[AdRef] | list[str]:
+    """Resolve a plain string `ref` into an `AdRef` under the `v2` preset, else leave it as-is.
+
+    With `vec=False`, resolve into a whole array’s accessor (e.g. `A.obsm['x']`) instead,
+    for parameters whose strings used to be keys, e.g. of `.obsm`.
+    """
+    if not vec:
+        from scanpy import settings
+
+        if settings.preset is not Preset.ScanpyV2Preview:
+            return ref
+        from anndata.acc import A
+
+        return A.resolve(ref, vec=False)
     if not isinstance(ref, AdRef | str):
         refs = [_resolve_ref(r) for r in ref]
         if sum(isinstance(r, str) for r in refs) not in {0, len(refs)}:
@@ -240,6 +260,33 @@ def _resolve_ref(
     from anndata.acc import A
 
     return A.resolve(ref, vec=True)
+
+
+def _ref_arg[R: AdRef | str | Collection[AdRef | str] | None](
+    ref: R, legacy: R, *, name: str, legacy_name: str, compat: bool = False
+) -> R:
+    """Merge a reference parameter `name` with the deprecated one it replaces.
+
+    The deprecated parameter’s strings keep naming `.obs` columns (except with the `v2` preset).
+    The new one’s are always resolved, unless it was renamed from a positional parameter
+    that took column names (`compat`), so positional calls keep working.
+    """
+    if legacy is not None:
+        if ref is not None:
+            msg = f"Pass either `{name}` or `{legacy_name}`, not both."
+            raise TypeError(msg)
+        return _resolve_ref(legacy)
+    if ref is None or compat:
+        return ref if ref is None else _resolve_ref(ref)
+    if isinstance(ref, str) or (
+        isinstance(ref, Collection) and any(isinstance(r, str) for r in ref)
+    ):
+        from anndata.acc import A
+
+        if isinstance(ref, str):
+            return A.resolve(ref, vec=True)
+        return [A.resolve(r, vec=True) if isinstance(r, str) else r for r in ref]
+    return ref
 
 
 def _ref_dim(
@@ -312,6 +359,21 @@ def _get_vec_compat(
 
     dim = _ref_dim(ref, dim=dim)
     return _fetch_vec(adata, ref, dim=dim)
+
+
+def _obs_df(
+    adata: AnnData, refs: AdRef | str | Collection[AdRef | str]
+) -> pd.DataFrame:
+    """Gather `.obs`-aligned vectors (column names or refs) into a frame.
+
+    Its columns are labelled for display (e.g. `A.obs['batch']`), so only use them as labels.
+    """
+    refs = [refs] if isinstance(refs, AdRef | str) else list(refs)
+    vals = _get_vec_compat(adata, refs, dim="obs")
+    return pd.DataFrame(
+        {str(_resolve_ref(r)): v for r, v in zip(refs, vals, strict=True)},
+        index=adata.obs_names,
+    )
 
 
 @overload

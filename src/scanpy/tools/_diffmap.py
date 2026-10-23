@@ -3,14 +3,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+from scverse_misc import deprecated_arg
 
 from .. import logging
-from .._docs import doc_out_key, doc_rng
+from .._docs import DEPR_NEIGHBORS_KEY, doc_out_key, doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default, settings
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state
 from ..get._out import _out_key, deprecated_copy
+from ..neighbors._common import _neighbors_key
+from ._docs import doc_use_neighbors
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -20,6 +23,7 @@ if TYPE_CHECKING:
 
     from .._utils.random import RNGLike, SeedLike
     from ..get._out import Prefix
+    from ..neighbors._common import NeighborsUse
 
 
 __all__ = ["diffmap"]
@@ -27,6 +31,7 @@ __all__ = ["diffmap"]
 
 @_doc_params(
     rng=doc_rng,
+    use=doc_use_neighbors(),
     out=doc_out_key(
         "the embedding",
         example="A.obsm['diffmap']",
@@ -39,15 +44,17 @@ __all__ = ["diffmap"]
     ),
 )
 @_accepts_legacy_random_state(0)
+@deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
 @deprecated_copy
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,
     *,
-    neighbors_key: str | None = None,
     rng: SeedLike | RNGLike | None = None,
+    use: NeighborsUse = None,
     out: MultiAcc | str | Prefix | bool = False,
     # deprecated
+    neighbors_key: str | None = None,
     copy: bool = False,
 ) -> AnnData | np.ndarray | None:
     """Diffusion Maps :cite:p:`Coifman2005,Haghverdi2015,Wolf2018`.
@@ -72,6 +79,9 @@ def diffmap(
         Annotated data matrix.
     n_comps
         The number of dimensions of the representation.
+    {rng}
+    {use}
+    {out}
     neighbors_key
         If not specified, diffmap looks in .uns['neighbors'] for neighbors settings
         and .obsp['connectivities'] and .obsp['distances'] for connectivities and
@@ -80,8 +90,6 @@ def diffmap(
         .obsp[.uns[neighbors_key]['connectivities_key']] and
         .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances,
         respectively.
-    {rng}
-    {out}
     copy
         Return a copy instead of writing to adata.
 
@@ -107,8 +115,7 @@ def diffmap(
 
     """
     rng = np.random.default_rng(rng)
-    if neighbors_key is None:
-        neighbors_key = "neighbors"
+    neighbors_key = _neighbors_key(use, neighbors_key) or "neighbors"
 
     if neighbors_key not in adata.uns:
         msg = "You need to run `pp.neighbors` first to compute a neighborhood graph."

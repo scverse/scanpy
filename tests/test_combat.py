@@ -35,14 +35,14 @@ def test_covariates():
     adata = sc.datasets.blobs()
     key = "blobs"
 
-    x1 = sc.pp.combat(adata, key=key, out=True)
+    x1 = sc.pp.combat(adata, key, out=True)
 
     adata.obs["cat1"] = rng.binomial(3, 0.5, size=adata.n_obs)
     adata.obs["cat2"] = rng.binomial(2, 0.1, size=adata.n_obs)
     adata.obs["num1"] = rng.standard_normal(adata.n_obs)
 
-    x2 = sc.pp.combat(adata, key=key, covariates=["cat1", "cat2", "num1"], out=True)
-    sc.pp.combat(adata, key=key, covariates=["cat1", "cat2", "num1"])
+    x2 = sc.pp.combat(adata, key, covariates=["cat1", "cat2", "num1"], out=True)
+    sc.pp.combat(adata, key, covariates=["cat1", "cat2", "num1"])
 
     assert x1.shape == x2.shape
 
@@ -117,7 +117,7 @@ def test_combat_single_cell_batch():
     adata.obs["batch"] = batch
 
     with pytest.raises(ValueError, match="fewer than 2 cells"):
-        sc.pp.combat(adata, key="batch")
+        sc.pp.combat(adata, batch="batch")
 
 
 def test_silhouette():
@@ -158,3 +158,23 @@ def test_inplace_deprecated() -> None:
     with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
         x = sc.pp.combat(adata, "blobs", inplace=False)
     np.testing.assert_allclose(x, sc.pp.combat(adata, "blobs", out=True))
+
+
+@needs.anndata_acc
+def test_key_ref() -> None:
+    """`key` and `covariates` can also be references."""
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    adata.obs["cov"] = np.random.default_rng(0).normal(size=adata.n_obs)
+    expected = sc.pp.combat(adata, "blobs", covariates=["cov"], out=True)
+    res = sc.pp.combat(adata, A.obs["blobs"], covariates=[A.obs["cov"]], out=True)
+    np.testing.assert_allclose(res, expected)
+
+
+def test_key_deprecated() -> None:
+    adata = sc.datasets.blobs()
+    expected = sc.pp.combat(adata, "blobs", out=True)
+    with pytest.warns(FutureWarning, match=r"argument key is deprecated"):
+        res = sc.pp.combat(adata, key="blobs", out=True)
+    np.testing.assert_allclose(res, expected)

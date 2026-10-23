@@ -12,7 +12,7 @@ from sklearn.utils import check_random_state
 
 from .. import logging as logg
 from .._compat import CSBase
-from .._docs import doc_rng
+from .._docs import DEPR_NEIGHBORS_KEY, doc_rng
 from .._keys import _existing_preset_keys
 from .._settings import Default, settings
 from .._utils import (
@@ -25,6 +25,7 @@ from .._utils.random import _legacy_random_state, _LegacyRng
 from ..get._types import MultiAcc
 from ..get._uns import _use_from_uns
 from ..get._use import _check_mask, _mask_arg
+from ..neighbors._common import _neighbors_key
 from ._utils import _choose_representation_compat
 
 if TYPE_CHECKING:
@@ -36,9 +37,11 @@ if TYPE_CHECKING:
 
     from .._keys import _EmbeddingKeys
     from ..get._types import RepAcc
+    from ..neighbors._common import NeighborsUse
 
 
 @doctest_skipif(reason="illustrative short example but not runnable")
+@deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
 @deprecated_arg(
     "inplace",
     Deprecation("1.13.0", "Copy `adata` before calling this function instead."),
@@ -50,8 +53,9 @@ def ingest(
     obs: str | Iterable[str] | None = None,
     embedding_method: str | Iterable[str] = ("umap", "pca"),
     labeling_method: str = "knn",
-    neighbors_key: str | None = None,
+    use: NeighborsUse = None,
     # deprecated
+    neighbors_key: str | None = None,
     inplace: bool = True,
     **kwargs,
 ):
@@ -100,6 +104,10 @@ def ingest(
     labeling_method
         The method to map labels in `adata_ref.obs` to `adata.obs`.
         The only supported value is 'knn'.
+    use
+        Where :func:`~scanpy.pp.neighbors` wrote its results in `adata_ref`, i.e. the `out` passed to it:
+        `None` for the default places, `sc.Prefix('p')` for the `p_`-prefixed ones,
+        or a mapping like `{'connectivities': A.obsp['conns'], 'distances': A.obsp['dists']}`.
     neighbors_key
         If not specified, ingest looks at adata_ref.uns['neighbors']
         for neighbors settings and adata_ref.obsp['distances'] for
@@ -143,7 +151,7 @@ def ingest(
     if len(labeling_method) == 1 and len(obs or []) > 1:
         labeling_method = labeling_method * len(obs)
 
-    ing = Ingest(adata_ref, neighbors_key)
+    ing = Ingest(adata_ref, _neighbors_key(use, neighbors_key))
     ing.fit(adata)
 
     for method in embedding_method:

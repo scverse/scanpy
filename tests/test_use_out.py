@@ -315,7 +315,7 @@ def test_out_multi_mapping(adata: AnnData) -> None:
     assert set(adata.obsp) == {"c"}
     assert adata.uns["c"]["connectivities_key"] == "c"
     assert "distances_key" not in adata.uns["c"]
-    sc.tl.umap(adata, neighbors_key="c")  # readers find it
+    sc.tl.umap(adata, use=dict(connectivities=A.obsp["c"]))  # readers find it
 
 
 def test_out_multi_prefix(adata: AnnData) -> None:

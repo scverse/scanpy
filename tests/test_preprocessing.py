@@ -395,13 +395,9 @@ def test_regress_out_ordinal():
     adata.obs["n_counts"] = adata.X.sum(axis=1)
 
     # results using only one processor
-    single = sc.pp.regress_out(
-        adata, keys=["n_counts", "percent_mito"], n_jobs=1, out=True
-    )
+    single = sc.pp.regress_out(adata, ["n_counts", "percent_mito"], n_jobs=1, out=True)
     # results using 8 processors
-    multi = sc.pp.regress_out(
-        adata, keys=["n_counts", "percent_mito"], n_jobs=8, out=True
-    )
+    multi = sc.pp.regress_out(adata, ["n_counts", "percent_mito"], n_jobs=8, out=True)
 
     assert adata.X.shape == single.shape
     np.testing.assert_array_equal(single, multi)
@@ -418,8 +414,8 @@ def test_regress_out_int(data_dir: Path, dtype: type[np.generic]):
     adata_other = adata.copy()
     adata_other.X = adata_other.X.astype(dtype)
     # results using only one processor
-    sc.pp.regress_out(adata, keys=["labels"])
-    sc.pp.regress_out(adata_other, keys=["labels"])
+    sc.pp.regress_out(adata, ["labels"])
+    sc.pp.regress_out(adata_other, ["labels"])
     assert_equal(adata_other, adata)
     # This file was generated under scanpy 1.10.3
     ground_truth = np.load(data_dir / "cat_regressor_for_int_input.npy")
@@ -445,13 +441,11 @@ def test_regress_out_layer(dtype):
         dtype_cast = np.float32
     adata.layers["counts"] = adata.X.copy().astype(dtype_cast)
 
-    single = sc.pp.regress_out(
-        adata, keys=["n_counts", "percent_mito"], n_jobs=1, out=True
-    )
+    single = sc.pp.regress_out(adata, ["n_counts", "percent_mito"], n_jobs=1, out=True)
     layer = sc.pp.regress_out(
         adata,
         use="layers.counts",
-        keys=["n_counts", "percent_mito"],
+        covariates=["n_counts", "percent_mito"],
         n_jobs=1,
         out=True,
     )
@@ -471,8 +465,8 @@ def test_regress_out_view():
     subset_adata_copy = subset_adata.copy()
 
     with pytest.warns(UserWarning, match=r"Received a view"):
-        sc.pp.regress_out(subset_adata, keys=["n_counts", "percent_mito"])
-    sc.pp.regress_out(subset_adata_copy, keys=["n_counts", "percent_mito"])
+        sc.pp.regress_out(subset_adata, ["n_counts", "percent_mito"])
+    sc.pp.regress_out(subset_adata_copy, ["n_counts", "percent_mito"])
 
     assert_equal(subset_adata, subset_adata_copy)
     assert not subset_adata.is_view
@@ -486,7 +480,7 @@ def test_regress_out_categorical():
     # create a categorical column
     adata.obs["batch"] = pd.Categorical(rng.integers(1, 4, size=adata.X.shape[0]))
 
-    multi = sc.pp.regress_out(adata, keys="batch", n_jobs=8, out=True)
+    multi = sc.pp.regress_out(adata, "batch", n_jobs=8, out=True)
 
     assert adata.X.shape == multi.shape
 
@@ -498,7 +492,7 @@ def test_regress_out_constants():
     adata.obs["n_counts"] = adata.X.sum(axis=1)
     adata_copy = adata.copy()
 
-    sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
+    sc.pp.regress_out(adata, ["n_counts", "percent_mito"])
 
     assert_equal(adata, adata_copy)
 
@@ -515,7 +509,7 @@ def test_regress_out_reproducible(
 ) -> None:
     adata = sc.datasets.pbmc68k_reduced()
     adata = adata.raw.to_adata()[:200, :200].copy()
-    sc.pp.regress_out(adata, keys=keys)
+    sc.pp.regress_out(adata, keys)
     # This file was generated from the original implementation in version 1.10.3
     # Now we compare new implementation with the old one
     tester = np.load(data_dir / test_file)
@@ -769,3 +763,26 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
     adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
     adata.X = conv.to_dense(adata.X)
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
+
+
+@needs.anndata_acc
+def test_regress_out_keys_ref() -> None:
+    """`keys` can also be references."""
+    from anndata.acc import A
+
+    adata = pbmc68k_reduced()
+    expected = sc.pp.regress_out(adata, ["n_counts", "percent_mito"], out=True)
+    res = sc.pp.regress_out(adata, [A.obs["n_counts"], A.obs["percent_mito"]], out=True)
+    np.testing.assert_allclose(res, expected)
+    expected = sc.pp.regress_out(adata, "bulk_labels", out=True)
+    np.testing.assert_allclose(
+        sc.pp.regress_out(adata, A.obs["bulk_labels"], out=True), expected
+    )
+
+
+def test_regress_out_keys_deprecated() -> None:
+    adata = pbmc68k_reduced()
+    expected = sc.pp.regress_out(adata, ["n_counts", "percent_mito"], out=True)
+    with pytest.warns(FutureWarning, match=r"argument keys is deprecated"):
+        res = sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"], out=True)
+    np.testing.assert_allclose(res, expected)

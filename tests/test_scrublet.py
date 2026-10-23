@@ -19,7 +19,13 @@ if TYPE_CHECKING:
 
     from scanpy._compat import CSBase
 
-pytestmark = [needs.skimage]
+pytestmark = [
+    needs.skimage,
+    # most tests use the deprecated `batch_key`, so they also run without `anndata.acc`
+    pytest.mark.filterwarnings(
+        "ignore:.*argument batch_key is deprecated:FutureWarning"
+    ),
+]
 
 
 def pbmc200() -> AnnData:
@@ -308,3 +314,17 @@ def test_scrublet_out() -> None:
         adata.obs["p_predicted_doublet"], res.predicted_doublet
     )
     assert "threshold" in adata.uns["p_scrublet"]
+
+
+@needs.anndata_acc
+def test_scrublet_batch() -> None:
+    """`batch` takes references (or resolvable strings) instead of `batch_key`’s column names."""
+    from anndata.acc import A
+
+    adata = pbmc200()
+    adata.obs["batch"] = 100 * ["a"] + 100 * ["b"]
+    kw = dict(use_approx_neighbors=False, rng=0, out=True)
+    expected = sc.pp.scrublet(adata, batch_key="batch", **kw)
+    for batch in [A.obs["batch"], "obs.batch"]:
+        res = sc.pp.scrublet(adata, batch=batch, **kw)
+        np.testing.assert_allclose(res.doublet_score, expected.doublet_score)

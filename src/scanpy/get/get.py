@@ -7,8 +7,12 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from scverse_misc import Deprecation, deprecated_arg
 
 from .._compat import CSBase
+from .._docs import doc_use_rank_genes_groups
+from .._utils import _doc_params
+from ._out import _uns_use
 from ._use import _get_arr
 
 if TYPE_CHECKING:
@@ -24,15 +28,25 @@ if TYPE_CHECKING:
 
 
 # TODO: implement diffxpy method, make singledispatch
+@_doc_params(use=doc_use_rank_genes_groups)
+@deprecated_arg(
+    "key",
+    Deprecation(
+        "1.13.0",
+        "Use `use` instead, e.g. `use=sc.Prefix('p')` for `key='p_rank_genes_groups'`.",
+    ),
+)
 def rank_genes_groups_df(
     adata: AnnData,
     group: str | Iterable[str] | None,
     *,
-    key: str = "rank_genes_groups",
+    use: Prefix | None = None,
     pval_cutoff: float | None = None,
     log2fc_min: float | None = None,
     log2fc_max: float | None = None,
     gene_symbols: str | None = None,
+    # deprecated
+    key: str | None = None,
 ) -> pd.DataFrame:
     """Get :func:`scanpy.tl.rank_genes_groups` results in the form of a :class:`~pandas.DataFrame`.
 
@@ -44,8 +58,7 @@ def rank_genes_groups_df(
         Which group (as in :func:`scanpy.tl.rank_genes_groups`'s `groupby`
         argument) to return results from. Can be a list. All groups are
         returned if groups is `None`.
-    key
-        Key differential expression groups were stored under.
+    {use}
     pval_cutoff
         Return only adjusted p-values below the  cutoff.
     log2fc_min
@@ -55,6 +68,8 @@ def rank_genes_groups_df(
     gene_symbols
         Column name in `.var` DataFrame that stores gene symbols. Specifying
         this will add that column to the returned dataframe.
+    key
+        Key differential expression groups were stored under.
 
     Example
     -------
@@ -64,6 +79,7 @@ def rank_genes_groups_df(
     >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")
 
     """
+    key = _uns_use(use, key, base="rank_genes_groups")
     if isinstance(group, str):
         group = [group]
     if group is None:

@@ -47,7 +47,8 @@ from ..get._out import (
     _write_out,
     deprecated_copy,
 )
-from ..get._use import _check_mask, _get_arr, _resolve_obs
+from ..get._types import AdRef
+from ..get._use import _check_mask, _get_arr, _obs_df, _ref_arg, _resolve_obs
 from ._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
@@ -606,12 +607,14 @@ def numpy_regress_out(
 @_doc_params(
     use=doc_use("Which matrix to regress on.", legacy=("layer",)),
     out=doc_out("regressed"),
+    ref=doc_ref_compat,
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
+@deprecated_arg("keys", Deprecation("1.13.0", "Use `covariates` instead."))
 @deprecated_copy
-def regress_out(  # noqa: PLR0915
+def regress_out(  # noqa: PLR0912, PLR0915
     adata: AnnData,
-    keys: str | Sequence[str],
+    covariates: AdRef | str | Sequence[AdRef | str] | None = None,
     *,
     use: RepAcc | str | None = None,
     out: RepAcc | str | Prefix | bool = False,
@@ -619,6 +622,7 @@ def regress_out(  # noqa: PLR0915
     # deprecated
     copy: bool = False,
     layer: str | None = None,
+    keys: str | Sequence[str] | None = None,
 ) -> AnnData | np.ndarray | CSBase | None:
     """Regress out (mostly) unwanted sources of variation.
 
@@ -632,8 +636,9 @@ def regress_out(  # noqa: PLR0915
     ----------
     adata
         The annotated data matrix.
-    keys
-        Keys for observation annotation on which to regress on.
+    covariates
+        Observation annotation(s) to regress on, e.g. `A.obs['n_counts']`. {ref}
+        If empty, all of `.obs` is used.
     {use}
     {out}
     n_jobs
@@ -641,6 +646,8 @@ def regress_out(  # noqa: PLR0915
         `None` means using :attr:`scanpy.settings.n_jobs`.
     copy
         Whether to return a modified copy instead of modifying `adata` in place.
+    keys
+        Names of `.obs` columns, i.e. `keys=['k']` is `covariates=[A.obs['k']]`.
 
     Returns
     -------
@@ -653,6 +660,13 @@ def regress_out(  # noqa: PLR0915
     """
     from joblib import Parallel, delayed
 
+    # `covariates` was positional before being renamed from `keys`, so keep its strings’ meaning
+    keys = _ref_arg(
+        covariates, keys, name="covariates", legacy_name="keys", compat=True
+    )
+    if keys is None:
+        msg = "regress_out() missing required argument: 'covariates'"
+        raise TypeError(msg)
     start = logg.info(f"regressing out {keys}")
     use = _resolve_obs(use)
 
@@ -660,8 +674,10 @@ def regress_out(  # noqa: PLR0915
 
     view_to_actual(adata)
 
-    if isinstance(keys, str):
+    if isinstance(keys, str | AdRef):
         keys = [keys]
+    # selected keys (if given), else all of `.obs`
+    covariates = _obs_df(adata, keys) if keys else adata.obs.copy()
 
     x = _get_arr(adata, use, layer=layer)
     raise_not_implemented_error_if_backed_type(x, "regress_out")
@@ -677,7 +693,7 @@ def regress_out(  # noqa: PLR0915
 
     # regress on a single categorical variable
     variable_is_categorical = False
-    if keys[0] in adata.obs and isinstance(adata.obs[keys[0]].dtype, CategoricalDtype):
+    if keys and isinstance((first := covariates.iloc[:, 0]).dtype, CategoricalDtype):
         if len(keys) > 1:
             msg = (
                 "If providing categorical variable, "
@@ -687,8 +703,8 @@ def regress_out(  # noqa: PLR0915
             raise ValueError(msg)
         logg.debug("... regressing on per-gene means within categories")
         # set number of categories to the same dtype as the categories
-        cat_array = adata.obs[keys[0]].cat.codes.to_numpy()
-        number_categories = cat_array.dtype.type(len(adata.obs[keys[0]].cat.categories))
+        cat_array = first.cat.codes.to_numpy()
+        number_categories = cat_array.dtype.type(len(first.cat.categories))
 
         x = to_dense(x, order="F") if isinstance(x, CSBase) else x
         if np.issubdtype(x.dtype, np.integer):
@@ -698,12 +714,9 @@ def regress_out(  # noqa: PLR0915
         variable_is_categorical = True
     # regress on one or several ordinal variables
     else:
-        # create data frame with selected keys (if given)
-        regressors = adata.obs[keys] if keys else adata.obs.copy()
-
         # add column of ones at index 0 (first column)
-        regressors.insert(0, "ones", 1.0)
-        regressors = regressors.to_numpy()
+        covariates.insert(0, "ones", 1.0)
+        regressors = covariates.to_numpy()
 
     # if the regressors are not categorical and the matrix is not singular
     # use the shortcut numpy_regress_out

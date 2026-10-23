@@ -14,11 +14,12 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
 from ..._compat import CSBase, warn
-from ..._docs import doc_out_key
+from ..._docs import DEPR_BATCH_KEY, doc_out_key
 from ..._settings import Verbosity, settings
 from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from ...experimental._docs import (
     doc_adata,
+    doc_batch_key,
     doc_check_values,
     doc_dist_params,
     doc_genes_batch_chunk,
@@ -26,7 +27,7 @@ from ...experimental._docs import (
     doc_layer,
 )
 from ...get._out import _legacy_out
-from ...get._use import _get_arr, _resolve_obs
+from ...get._use import _get_arr, _get_vec_compat, _ref_arg, _resolve_obs
 from ...preprocessing._distributed import materialize_as_ndarray
 from ...preprocessing._highly_variable_genes import _write_hvg
 
@@ -36,7 +37,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from ...get._out import Prefix
-    from ...get._types import MultiAcc, RepAcc
+    from ...get._types import AdRef, MultiAcc, RepAcc
 
 
 @njit
@@ -139,7 +140,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     theta: float,
     clip: float | None,
     n_top_genes: int,
-    batch_key: str | None,
+    batch_key: AdRef | str | None,
     check_values: bool,
     use: RepAcc | str | None,
     layer: str | None,
@@ -166,7 +167,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     if batch_key is None:
         batch_info = np.zeros(adata.shape[0], dtype=int)
     else:
-        batch_info = adata.obs[batch_key].to_numpy()
+        batch_info = np.asarray(_get_vec_compat(adata, batch_key, dim="obs"))
     n_batches = len(np.unique(batch_info))
 
     # Get pearson residuals for each batch separately
@@ -306,18 +307,20 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
         prefixed="`.var['p_highly_variable']`, `.var['p_means']`, … and `.uns['p_hvg']`",
     ),
     inplace=doc_inplace,
+    batch_key=doc_batch_key,
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg(
     "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
 )
+@deprecated_arg("batch_key", DEPR_BATCH_KEY)
 def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
     theta: float = 100,
     clip: float | None = None,
     n_top_genes: int | None = None,
-    batch_key: str | None = None,
+    batch: AdRef | str | None = None,
     chunksize: int = 1000,
     flavor: Literal["pearson_residuals"] = "pearson_residuals",
     check_values: bool = True,
@@ -326,6 +329,7 @@ def highly_variable_genes(  # noqa: PLR0913
     out: MultiAcc | str | Prefix | bool = False,
     # deprecated
     inplace: bool = True,
+    batch_key: str | None = None,
     layer: str | None = None,
 ) -> pd.DataFrame | None:
     """Select highly variable genes using analytic Pearson residuals :cite:p:`Lause2021`.
@@ -354,6 +358,7 @@ def highly_variable_genes(  # noqa: PLR0913
         Otherwise merely indicate highly variable genes in `adata.var` (see below).
     {out}
     {inplace}
+    {batch_key}
 
     Returns
     -------
@@ -373,9 +378,9 @@ def highly_variable_genes(  # noqa: PLR0913
         For `flavor='pearson_residuals'`, rank of the gene according to residual.
         variance, median rank in the case of multiple batches.
     highly_variable_nbatches : :class:`int`
-        If `batch_key` given, denotes in how many batches genes are detected as HVG.
+        If `batch` given, denotes in how many batches genes are detected as HVG.
     highly_variable_intersection : :class:`bool`
-        If `batch_key` given, denotes the genes that are highly variable in all batches.
+        If `batch` given, denotes the genes that are highly variable in all batches.
 
     Notes
     -----
@@ -383,6 +388,7 @@ def highly_variable_genes(  # noqa: PLR0913
 
     """
     out = _legacy_out(out, "inplace", None if inplace else True)
+    batch = _ref_arg(batch, batch_key, name="batch", legacy_name="batch_key")
     logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):
@@ -404,7 +410,7 @@ def highly_variable_genes(  # noqa: PLR0913
             use=use,
             layer=layer,
             n_top_genes=n_top_genes,
-            batch_key=batch_key,
+            batch_key=batch,
             theta=theta,
             clip=clip,
             subset=subset,

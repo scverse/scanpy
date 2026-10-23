@@ -10,8 +10,11 @@ from scverse_misc import deprecated_arg
 
 from .. import logging as logg
 from .._docs import DEPR_KEY_ADDED, doc_out_key
+from .._settings import Default
 from .._utils import _doc_params, _get_basis_key, sanitize_anndata
 from ..get._out import _out_key
+from ..get._types import MultiAcc
+from ..get._use import _resolve_ref
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -49,9 +52,9 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
     ).replace("are stored under the same key", "are named after its key")
 )
 @deprecated_arg("key_added", DEPR_KEY_ADDED)
-def embedding_density(  # noqa: PLR0912
+def embedding_density(  # noqa: PLR0912, PLR0915
     adata: AnnData,
-    basis: str = "umap",
+    basis: MultiAcc | str | Default = Default("'umap'"),
     *,
     groupby: str | None = None,
     components: str | Sequence[str] | None = None,
@@ -59,7 +62,7 @@ def embedding_density(  # noqa: PLR0912
     # deprecated
     key_added: str | None = None,
 ) -> np.ndarray | None:
-    """Calculate the density of cells in an embedding (per condition).
+    r"""Calculate the density of cells in an embedding (per condition).
 
     Gaussian kernel density estimation is used to calculate the density of
     cells in an embedded space. This can be performed per category over a
@@ -83,8 +86,13 @@ def embedding_density(  # noqa: PLR0912
     adata
         The annotated data matrix.
     basis
-        The embedding over which the density will be calculated. This embedded
-        representation is found in `adata.obsm['X_[basis]']``.
+        The embedding over which the density will be calculated,
+        e.g. `A.obsm['umap']`.
+        If :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`,
+        :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d (e.g. `'obsm.umap'`),
+        otherwise they name an embedding found in `adata.obsm['X_[basis]']`
+        (or `adata.obsm['[basis]']`).
+        By default, the UMAP embedding.
     groupby
         Key for categorical observation/cell annotation for which densities
         are calculated per category.
@@ -129,9 +137,17 @@ def embedding_density(  # noqa: PLR0912
     pl.embedding_density
 
     """
-    basis = basis.lower()
-    if basis == "fa":
-        basis = "draw_graph_fa"
+    if isinstance(basis, Default):
+        basis = "umap"  # found in `X_umap` or `umap`
+    elif isinstance(basis, str):
+        basis = _resolve_ref(basis, vec=False)
+    if isinstance(basis, MultiAcc):
+        basis_key, basis = basis.k, basis.k.removeprefix("X_")
+    else:
+        basis = basis.lower()
+        if basis == "fa":
+            basis = "draw_graph_fa"
+        basis_key = _get_basis_key(adata, basis)
     default = f"{basis}_density" + ("" if groupby is None else f"_{groupby}")
     key = _out_key(out, key_added, kind="obs", base=default, default=default)
     # to ensure that newly created covariates are categorical
@@ -142,7 +158,7 @@ def embedding_density(  # noqa: PLR0912
     logg.info(f"computing density on {basis!r}")
 
     # Test user inputs
-    if (basis_key := _get_basis_key(adata, basis)) is None:
+    if basis_key is None:
         msg = (
             "Cannot find the embedded representation "
             f"`adata.obsm[{basis!r} | 'X_{basis}']`. Compute the embedding first."

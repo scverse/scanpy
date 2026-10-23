@@ -30,6 +30,13 @@ FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
 FILE_V3_BATCH = Path(__file__).parent / Path("_scripts/seurat_hvg_v3_batch.csv")
 FILE_CELL_RANGER = Path(__file__).parent / "_scripts/cell_ranger_hvg.csv"
 
+# most tests use the deprecated `batch_key`, so they also run without `anndata.acc`
+pytestmark = [
+    pytest.mark.filterwarnings(
+        "ignore:.*argument batch_key is deprecated:FutureWarning"
+    )
+]
+
 
 @pytest.fixture(scope="session")
 def adata_sess() -> AnnData:
@@ -797,3 +804,21 @@ def test_hvg_out(flavor: str) -> None:
     )
     np.testing.assert_array_equal(adata.var["p_highly_variable"], df["highly_variable"])
     assert "p_hvg" in adata.uns
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize("flavor", ["seurat", "seurat_v3"])
+def test_hvg_batch(flavor: str) -> None:
+    """`batch` takes references (or resolvable strings) instead of `batch_key`’s column names."""
+    from anndata.acc import A
+
+    adata = pbmc3k()
+    sc.pp.filter_genes(adata, min_cells=3)
+    adata.obs["batch"] = np.tile(["a", "b"], adata.n_obs // 2 + 1)[: adata.n_obs]
+    if flavor == "seurat":
+        sc.pp.log1p(adata)
+    kw = dict(flavor=flavor, n_top_genes=100, out=True)
+    expected = sc.pp.highly_variable_genes(adata, batch_key="batch", **kw)
+    for batch in [A.obs["batch"], "obs.batch"]:
+        res = sc.pp.highly_variable_genes(adata, batch=batch, **kw)
+        pd.testing.assert_frame_equal(res, expected)

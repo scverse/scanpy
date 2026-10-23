@@ -12,7 +12,7 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
 from ..._compat import CSBase, warn
-from ..._docs import doc_out
+from ..._docs import doc_out, doc_use
 from ..._keys import _embedding_keys
 from ..._settings import Default
 from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 
     from ..._utils.random import RNGLike, SeedLike
     from ...get._out import Prefix
-    from ...get._types import Mask, RepAcc, _SetRep
+    from ...get._types import LayerAcc, Mask, RepAcc, _SetRep
 
 
 def _pearson_residuals(
@@ -228,6 +228,7 @@ def _write_pca_from(
     pca_chunk=doc_pca_chunk,
     mask=doc_mask_var,
     check_values=doc_check_values,
+    use=doc_use("Which count matrix to use as input.", legacy=()),
     inplace=doc_inplace,
 )
 @_accepts_legacy_random_state(0)
@@ -236,7 +237,7 @@ def _write_pca_from(
     "inplace",
     Deprecation("1.13.0", "Copy `adata` before calling this function instead."),
 )
-def normalize_pearson_residuals_pca(
+def normalize_pearson_residuals_pca(  # noqa: PLR0913
     adata: AnnData,
     *,
     theta: float = 100,
@@ -246,6 +247,7 @@ def normalize_pearson_residuals_pca(
     kwargs_pca: Mapping[str, Any] = frozendict({}),
     mask: Mask | Default | None = Default("adata.var.get('highly_variable')"),
     check_values: bool = True,
+    use: LayerAcc | str | None = None,
     # deprecated
     inplace: bool = True,
     mask_var: Mask | None = None,
@@ -266,6 +268,7 @@ def normalize_pearson_residuals_pca(
     {pca_chunk}
     {mask}
     {check_values}
+    {use}
     {inplace}
 
     Returns
@@ -301,13 +304,10 @@ def normalize_pearson_residuals_pca(
     mask = _mask_hvg(adata, _mask_arg(mask, mask_var, dim="var"))
     mask_var = _check_mask(adata, mask, "var")
 
+    x, var = _get_arr(adata, _resolve_obs(use)), adata.var[[]]
     if mask_var is not None:
-        adata_sub = adata[:, mask_var].copy()
-        adata_pca = AnnData(
-            adata_sub.X.copy(), obs=adata_sub.obs[[]], var=adata_sub.var[[]]
-        )
-    else:
-        adata_pca = AnnData(adata.X.copy(), obs=adata.obs[[]], var=adata.var[[]])
+        x, var = x[:, mask_var], var[mask_var]
+    adata_pca = AnnData(x.copy(), obs=adata.obs[[]], var=var)
 
     normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
