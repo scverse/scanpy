@@ -123,18 +123,14 @@ docs = [
     "plotly",
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[dask-ml,leiden,paga,plotting,scanpy2,scrublet]",
-    "scanpydoc>=0.17.4",
-    "scverse-misc[sphinx]",
+    "scverse-doc[full]>=0.2.3",
+    "scverse-misc[sphinx]>=0.1.7",
     "sphinx>=9.1",
     "sphinx-autodoc-typehints>=3.13.5",
-    "sphinx-book-theme>=1.1",
-    "sphinx-copybutton",
-    "sphinx-design",
     "sphinx-exec-jupyter[holoviews]>=0.4.2",
     "sphinx-issues>=5.0.1",
     "sphinxcontrib-bibtex",
     "sphinxcontrib-katex",
-    "sphinxext-opengraph",                                   # for nice cards when sharing on social
 ]
 test-min = [
     "dependency-groups",    # for CI scripts doctests
