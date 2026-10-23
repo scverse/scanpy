@@ -250,6 +250,24 @@ def test_gauss_noknn_connectivities_euclidean(neigh):
     np.testing.assert_allclose(neigh.transitions, transitions_gauss_noknn, rtol=1e-5)
 
 
+@pytest.mark.parametrize("transformer", ["sklearn", "pynndescent"])
+def test_gauss_knn_sparse_symmetric(transformer: str) -> None:
+    # pynndescent stores the cell itself and is not sorted by distance (see #4416)
+    x = np.random.default_rng(0).normal(size=(300, 10)).astype(np.float32)
+    adata = AnnData(x)
+    sc.pp.neighbors(
+        adata,
+        n_neighbors=10,
+        method="gauss",
+        use_rep="X",
+        transformer=transformer,
+        random_state=0,
+    )
+    w = adata.obsp["connectivities"]
+    assert abs(w - w.T).max() == 0
+    assert not w.diagonal().any()
+
+
 def test_metrics_argument():
     no_knn_euclidean = get_neighbors()
     no_knn_euclidean.compute_neighbors(
