@@ -676,6 +676,33 @@ def test_filter_out_true(filter_func: Callable, attr: str, arg: str, col: str) -
     np.testing.assert_array_equal(number[mask], getattr(adata, attr)[col])
 
 
+@needs.anndata_acc
+@pytest.mark.parametrize(
+    ("filter_func", "attr", "arg", "col"),
+    [
+        pytest.param(sc.pp.filter_cells, "obs", "min_genes", "n_genes", id="cells"),
+        pytest.param(sc.pp.filter_genes, "var", "min_cells", "n_cells", id="genes"),
+    ],
+)
+def test_filter_out_acc(filter_func: Callable, attr: str, arg: str, col: str) -> None:
+    """An accessor `out` names the counts column, and subsetting still happens."""
+    from anndata.acc import A
+
+    adata = pbmc68k_reduced().raw.to_adata()
+    if col in (annot := getattr(adata, attr)):
+        del annot[col]
+    expected = adata.copy()
+    filter_func(expected, **{arg: 3})
+    filter_func(adata, **{arg: 3}, out=getattr(A, attr)["custom"])
+    assert col not in getattr(adata, attr)
+    assert getattr(adata, attr).index.equals(getattr(expected, attr).index)
+    np.testing.assert_array_equal(
+        getattr(adata, attr)["custom"], getattr(expected, attr)[col]
+    )
+    with pytest.raises(TypeError, match=rf"must point to `\.{attr}`"):
+        filter_func(adata, **{arg: 3}, out=A.obsm["x"])
+
+
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
     ("max_cells", "max_counts", "min_cells", "min_counts"),

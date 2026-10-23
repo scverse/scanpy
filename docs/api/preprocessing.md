@@ -112,5 +112,6 @@ Functions with several outputs return these if passed `out=True`.
    pp.NeighborsOut
    pp.NormalizeTotalOut
    pp.PcaOut
+   pp.QcMetricsOut
    pp.ScaleOut
 ```

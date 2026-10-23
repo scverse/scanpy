@@ -42,6 +42,7 @@ from ..get._out import (
     Prefix,
     _dest,
     _legacy_out,
+    _out_key,
     _use_dest,
     _write_out,
     deprecated_copy,
@@ -58,7 +59,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._utils.random import RNGLike, SeedLike
-    from ..get._types import Mask, RepAcc
+    from ..get._types import Mask, RepAcc, VecRef
 
 
 @deprecated_arg(
@@ -71,7 +72,7 @@ def filter_cells(
     min_genes: int | None = None,
     max_counts: int | None = None,
     max_genes: int | None = None,
-    out: bool = False,
+    out: VecRef | bool = False,
     copy: bool = False,
     # deprecated
     inplace: bool = True,
@@ -99,8 +100,10 @@ def filter_cells(
     max_genes
         Maximum number of genes expressed required for a cell to pass filtering.
     out
-        If :data:`True`, return the mask and counts (see below)
-        instead of subsetting `data` and annotating its `.obs`.
+        Where to write the counts per cell (see below), e.g. `A.obs['n_genes']`.
+        If :data:`True`, return the mask and counts instead of subsetting `data` and writing them.
+        If :data:`False`, they are written to `.obs['n_counts']` or `.obs['n_genes']`,
+        depending on what was thresholded.
     copy
         Return a filtered copy instead of subsetting `data` in place.
     inplace
@@ -176,12 +179,11 @@ def filter_cells(
                 max_genes=max_genes,
             ),
         )
-        if out:
+        col = "n_counts" if min_genes is None and max_genes is None else "n_genes"
+        key = _out_key(out, None, kind="obs", base=col, default=col)
+        if key is True:
             return cell_subset, number
-        if min_genes is None and max_genes is None:
-            adata.obs["n_counts"] = number
-        else:
-            adata.obs["n_genes"] = number
+        adata.obs[key] = number
         adata._inplace_subset_obs(cell_subset)
         return adata if copy else None
 
@@ -226,7 +228,7 @@ def filter_genes(
     min_cells: int | None = None,
     max_counts: int | None = None,
     max_cells: int | None = None,
-    out: bool = False,
+    out: VecRef | bool = False,
     copy: bool = False,
     # deprecated
     inplace: bool = True,
@@ -256,8 +258,10 @@ def filter_genes(
     max_cells
         Maximum number of cells expressed required for a gene to pass filtering.
     out
-        If :data:`True`, return the mask and counts (see below)
-        instead of subsetting `data` and annotating its `.var`.
+        Where to write the counts per gene (see below), e.g. `A.var['n_cells']`.
+        If :data:`True`, return the mask and counts instead of subsetting `data` and writing them.
+        If :data:`False`, they are written to `.var['n_counts']` or `.var['n_cells']`,
+        depending on what was thresholded.
     copy
         Return a filtered copy instead of subsetting `data` in place.
     inplace
@@ -299,12 +303,11 @@ def filter_genes(
                 max_counts=max_counts,
             )
         )
-        if out:
+        col = "n_counts" if min_cells is None and max_cells is None else "n_cells"
+        key = _out_key(out, None, kind="var", base=col, default=col)
+        if key is True:
             return gene_subset, number
-        if min_cells is None and max_cells is None:
-            adata.var["n_counts"] = number
-        else:
-            adata.var["n_cells"] = number
+        adata.var[key] = number
         adata._inplace_subset_var(gene_subset)
         return adata if copy else None
 

@@ -12,7 +12,7 @@ from ._hashsolo import HashsoloOut, hashsolo
 from ._highly_variable_genes import highly_variable_genes
 from ._normalization import NormalizeTotalOut, normalize_shifted_clr, normalize_total
 from ._pca import PcaOut, pca
-from ._qc import calculate_qc_metrics
+from ._qc import QcMetricsOut, calculate_qc_metrics
 from ._recipes import recipe_seurat, recipe_weinreb17, recipe_zheng17
 from ._scale import ScaleOut, scale
 from ._scrublet import scrublet, scrublet_simulate_doublets
@@ -31,6 +31,7 @@ __all__ = [
     "NeighborsOut",
     "NormalizeTotalOut",
     "PcaOut",
+    "QcMetricsOut",
     "ScaleOut",
     "bbknn",
     "calculate_qc_metrics",

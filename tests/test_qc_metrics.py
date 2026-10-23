@@ -311,3 +311,38 @@ def test_inner_methods(adata: AnnData):
     assert np.all(full_inplace.var == partial_inplace.var)
     assert np.all(partial_inplace.obs[obs_orig.columns] == obs_orig)
     assert np.all(partial_inplace.var[var_orig.columns] == var_orig)
+
+
+def test_qc_metrics_out_prefix(adata: AnnData) -> None:
+    """`sc.Prefix` prefixes every column, keeping their dtypes."""
+    adata = prepare_adata(adata)
+    obs, var = sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], out=True)
+    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], out=sc.Prefix("p"))
+    pd.testing.assert_frame_equal(
+        adata.obs[[f"p_{c}" for c in obs.columns]], obs.add_prefix("p_")
+    )
+    pd.testing.assert_frame_equal(
+        adata.var[[f"p_{c}" for c in var.columns]], var.add_prefix("p_")
+    )
+
+
+@needs.anndata_acc
+def test_qc_metrics_out_mapping(adata: AnnData) -> None:
+    """A mapping writes only the tables it names, as whole `.obsm`/`.varm` DataFrames."""
+    from anndata.acc import A
+
+    adata = prepare_adata(adata)
+    obs_before, var_before = adata.obs.copy(), adata.var.copy()
+    obs, var = sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], out=True)
+    sc.pp.calculate_qc_metrics(
+        adata, qc_vars=["mito"], out={"obs": A.obsm["qc"], "var": "varm.qc"}
+    )
+    pd.testing.assert_frame_equal(adata.obsm["qc"], obs)
+    pd.testing.assert_frame_equal(adata.varm["qc"], var)
+    pd.testing.assert_frame_equal(adata.obs, obs_before)
+    pd.testing.assert_frame_equal(adata.var, var_before)
+
+    sc.pp.calculate_qc_metrics(adata, out={"obs": A.obsm["only_obs"]})
+    assert "only_obs" not in adata.varm
+    with pytest.raises(TypeError, match=r"must be written to one of \['obsm'\]"):
+        sc.pp.calculate_qc_metrics(adata, out={"obs": A.obs["x"]})
