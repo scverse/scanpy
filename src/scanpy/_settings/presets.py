@@ -30,9 +30,11 @@ __all__ = [
     "HVGPreset",
     "LeidenFlavor",
     "LeidenPreset",
+    "MarkersPreset",
     "PcaPreset",
     "Preset",
     "RankGenesGroupsPreset",
+    "WilcoxonBackend",
 ]
 
 
@@ -41,6 +43,7 @@ type DETest = Literal[
 ]
 type HVGFlavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
 type LeidenFlavor = Literal["leidenalg", "igraph"]
+type WilcoxonBackend = Literal["numba", "illico"]
 
 
 @dataclass
@@ -94,6 +97,11 @@ PcaPreset = UmapPreset = TsnePreset = DiffmapPreset = DrawGraphPreset = (
 class RankGenesGroupsPreset(NamedTuple):
     method: DETest
     mean_in_log_space: bool
+
+
+class MarkersPreset(NamedTuple):
+    mean_in_log_space: bool
+    wilcoxon_backend: WilcoxonBackend
 
 
 class ScalePreset(NamedTuple):
@@ -248,6 +256,18 @@ class Preset(enum.StrEnum):
             ),
             Preset.ScanpyV2Preview: RankGenesGroupsPreset(
                 method="wilcoxon", mean_in_log_space=False
+            ),
+        }
+
+    @preset_property
+    def markers() -> Mapping[Preset, MarkersPreset]:
+        """Settings for :mod:`scanpy.tl.markers`."""  # noqa: D401
+        return {
+            Preset.ScanpyV1: MarkersPreset(
+                mean_in_log_space=True, wilcoxon_backend="numba"
+            ),
+            Preset.ScanpyV2Preview: MarkersPreset(
+                mean_in_log_space=False, wilcoxon_backend="illico"
             ),
         }
 

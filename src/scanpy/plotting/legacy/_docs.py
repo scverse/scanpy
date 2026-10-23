@@ -272,7 +272,10 @@ min_logfoldchange
     Value to filter genes in groups if their logfoldchange is less than the
     min_logfoldchange
 key
-    Key used to store the ranking results in `adata.uns`.\
+    Key used to store the ranking results in `adata.uns`.
+results
+    Results table returned by a :mod:`scanpy.tl.markers` function,
+    to plot instead of `adata.uns[key]`. Requires `groupby`.\
 """
 
 doc_rank_genes_groups_values_to_plot = """\

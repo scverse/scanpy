@@ -7,6 +7,10 @@ import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
+pytestmark = pytest.mark.filterwarnings(
+    r"ignore:The function (rank_genes_groups|filter_rank_genes_groups|rank_genes_groups_df) is deprecated:FutureWarning"
+)
+
 
 @pytest.mark.internet
 @needs.gprofiler
