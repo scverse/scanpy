@@ -276,16 +276,19 @@ def normalize_pearson_residuals_pca(
     `.uns['pearson_residuals_normalization']['clip']`
         The used value of the clipping parameter.
 
-    `.obsm['X_pca' | prefix]`
+    By default, the PCA results are stored in these fields
+    (see `out` of :func:`~scanpy.pp.pca`, which can be passed via `kwargs_pca`):
+
+    `.obsm['X_pca']`
         PCA representation of data after gene selection (if applicable) and Pearson
         residual normalization.
-    `.varm['PCs' | prefix]`
+    `.varm['PCs']`
         The principal components containing the loadings. When `inplace=True` and
         `mask_var is not None`, this will contain empty rows for the genes not
         selected.
-    `.uns['pca' | prefix]['variance_ratio']`
+    `.uns['pca']['variance_ratio']`
         Ratio of explained variance.
-    `.uns['pca' | prefix]['variance']`
+    `.uns['pca']['variance']`
         Explained variance, equivalent to the eigenvalues of the covariance matrix.
 
     """

@@ -223,16 +223,13 @@ def test_embedding_out_true(pbmc_small: AnnData, func: Callable[..., object]) ->
 
 
 @needs.anndata_acc
-@pytest.mark.parametrize("func", EMBEDDINGS)
-def test_embedding_key_added_deprecated(
-    pbmc_small: AnnData, func: Callable[..., object]
-) -> None:
+def test_tsne_key_added_deprecated(pbmc_small: AnnData) -> None:
     """`key_added='k'` works like `out=A.obsm['k']`, but warns."""
     from anndata.acc import A
 
     expected = pbmc_small.copy()
-    func(expected, out=A.obsm["k"])
+    sc.tl.tsne(expected, out=A.obsm["k"])
     with pytest.warns(FutureWarning, match=r"argument key_added is deprecated"):
-        func(pbmc_small, key_added="k")
+        sc.tl.tsne(pbmc_small, key_added="k")
     assert pbmc_small.obsm.keys() == expected.obsm.keys()
     assert pbmc_small.uns.keys() == expected.uns.keys()

@@ -257,17 +257,17 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     the PCA representation, components, variance ratio and variance.
 
     Otherwise, it returns the outputs as a :class:`~scanpy.pp.PcaOut` if `out=True`, else `None`.
-    Sets the following fields:
+    By default sets the following fields (see `out` for others):
 
-    `.obsm['X_pca' | prefix]` : :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
+    `.obsm['X_pca']` : :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
         PCA representation of data.
-    `.varm['PCs' | prefix]` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
+    `.varm['PCs']` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
         The principal components containing the loadings *unless `use` points to `.obsm`*.
-    `.uns['pca' | prefix]['components']` : :class:`~numpy.ndarray` (shape `(adata.obsm[...].shape[1], n_comps)`)
+    `.uns['pca']['components']` : :class:`~numpy.ndarray` (shape `(adata.obsm[...].shape[1], n_comps)`)
         The principal components containing the loadings *when `use` points to `.obsm`*.
-    `.uns['pca' | prefix]['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+    `.uns['pca']['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
         Ratio of explained variance.
-    `.uns['pca' | prefix]['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+    `.uns['pca']['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
         Explained variance, equivalent to the eigenvalues of the
         covariance matrix.
 

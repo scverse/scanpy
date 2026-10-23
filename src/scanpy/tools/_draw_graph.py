@@ -4,11 +4,10 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
-from scverse_misc import deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
-from .._docs import DEPR_KEY_ADDED, doc_out_key, doc_rng
+from .._docs import doc_out_key, doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default
 from .._utils import _choose_graph, _doc_params, get_literal_vals
@@ -43,10 +42,6 @@ type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular",
         "the embedding",
         example="A.obsm['fa']",
         prefixed="`.obsm['p_graph_{layout}']` and `.uns['p_graph_{layout}']`",
-        key_added=(
-            "`key_added='k'` is `out=A.obsm['k']`, "
-            "except that `'{layout}'` in it is replaced by the layout."
-        ),
         default=(
             "`.obsm['X_draw_graph_{layout}']` and `.uns['draw_graph']` "
             "(`.obsm['graph_{layout}']` if :attr:`scanpy.settings.preset` is "
@@ -55,7 +50,6 @@ type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular",
     ),
 )
 @_accepts_legacy_random_state(0)
-@deprecated_arg("key_added", DEPR_KEY_ADDED)
 @deprecated_copy
 def draw_graph(  # noqa: PLR0912, PLR0913
     adata: AnnData,
@@ -70,7 +64,6 @@ def draw_graph(  # noqa: PLR0912, PLR0913
     obsp: str | None = None,
     out: MultiAcc | str | Prefix | bool = False,
     # deprecated
-    key_added: str | None = None,
     copy: bool = False,
     key_added_ext: str | None = None,
     **kwds,
@@ -135,9 +128,10 @@ def draw_graph(  # noqa: PLR0912, PLR0913
 
     Returns
     -------
-    Returns the embedding if `out=True`, else `None`. Sets the following fields:
+    Returns the embedding if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.obsm[(f'X_draw_graph_{{layout}}' | key_added).format(layout=layout)]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm['X_draw_graph_{{layout}}']` : :class:`numpy.ndarray` (dtype `float`)
         Coordinates of graph layout. E.g. for `layout='fa'` (the default),
         the field is called `'X_draw_graph_fa'`. `key_added_ext` overwrites `layout`.
     `adata.uns['draw_graph']`: :class:`dict`
@@ -148,12 +142,12 @@ def draw_graph(  # noqa: PLR0912, PLR0913
     layout = coerce_fa2_layout(layout)
     key = _out_key(
         out,
-        key_added,
+        None,
         kind="obsm",
         base=f"graph_{layout}",
         default=Default(),
     )
-    if isinstance(key, str) and out is not False:
+    if isinstance(key, str):
         key = key.replace("{", "{{").replace("}", "}}")  # keys from `out` are literal
     keys = (
         None

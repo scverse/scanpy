@@ -1088,7 +1088,6 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
         key_added="`key_added='k'` wrote to `.uns['k']`.",
     )
 )
-@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("use_raw", DEPR_RAW)
 @deprecated_arg("key_added", DEPR_KEY_ADDED)
 def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
@@ -1097,7 +1096,6 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     key: str | None = None,
     groupby: str | None = None,
     use: RepAcc | str | None = None,
-    layer: str | None = None,
     use_raw: bool | None = None,
     min_in_group_fraction: float = 0.25,
     min_fold_change: float = 1,
@@ -1126,7 +1124,6 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     key
     groupby
     use
-    layer
     use_raw
     min_in_group_fraction
     min_fold_change
@@ -1167,13 +1164,9 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
 
     use = _resolve_obs(use)
     if use_raw is None:
-        use_raw = (
-            adata.uns[key]["params"]["use_raw"]
-            if layer is None and use is None
-            else False
-        )
+        use_raw = adata.uns[key]["params"]["use_raw"] if use is None else False
 
-    x = _get_arr(adata, use, use_raw=use_raw, layer=layer)
+    x = _get_arr(adata, use, use_raw=use_raw)
 
     same_params = (
         adata.uns[key]["params"]["groupby"] == groupby

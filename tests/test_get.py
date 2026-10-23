@@ -566,3 +566,15 @@ def test_get_arr_errors(kw: sc.get._Rep, cls: type[Exception], msg: str) -> None
     )
     with pytest.raises(cls, match=msg):
         sc.get._get_arr(adata, **kw)
+
+
+@pytest.mark.parametrize("prefix", [None, sc.Prefix("p")], ids=["default", "prefix"])
+def test_pca(prefix: sc.Prefix | None) -> None:
+    """`get.pca`’s `use` finds what `pp.pca` wrote with the same `out`."""
+    adata = pbmc68k_reduced()
+    sc.pp.pca(adata, n_comps=5, out=prefix or False)
+    pca_adata = sc.get.pca(adata, use=prefix)
+
+    assert pca_adata.shape == (adata.n_obs, 5)
+    assert list(pca_adata.var_names) == [f"PC{i}" for i in range(1, 6)]
+    assert np.all(np.diff(pca_adata.var["variance"]) <= 0)

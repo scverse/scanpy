@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
     from typing import Literal
 
+    from ._out import Prefix
+
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -395,7 +397,7 @@ def var_df(
     return df
 
 
-def pca(adata: AnnData, *, key_added: str = "pca") -> AnnData:
+def pca(adata: AnnData, *, use: Prefix | None = None) -> AnnData:
     """Return PCA results as an :class:`~anndata.AnnData` indexed by component.
 
     The principal components (not the genes) become the variables,
@@ -407,21 +409,22 @@ def pca(adata: AnnData, *, key_added: str = "pca") -> AnnData:
     ----------
     adata
         Annotated data matrix with PCA computed, e.g. via :func:`~scanpy.pp.pca`.
-    key_added
-        `.obsm`, `.varm`, and `.uns` key used when running PCA.
+    use
+        Where :func:`~scanpy.pp.pca` wrote its results:
+        `None` for the default places, `sc.Prefix('p')` for `A.obsm['p_pca']` and `.uns['p_pca']`.
 
     Returns
     -------
     An :class:`~anndata.AnnData` with:
 
     `.X`
-        the PCA embedding (`adata.obsm[key_added]`), observations × components.
+        the PCA embedding (e.g. `adata.obsm['X_pca']`), observations × components.
     `.obs`
         `adata.obs`, unchanged.
     `.var`
         one row per principal component (named `PC1`, `PC2`, …),
         with `variance` and `variance_ratio` columns
-        taken from `adata.uns[key_added]`.
+        taken from the `.uns` entry (e.g. `adata.uns['pca']`).
 
     Examples
     --------
@@ -434,10 +437,15 @@ def pca(adata: AnnData, *, key_added: str = "pca") -> AnnData:
         sc.get.pca(adata)
 
     """
-    info = adata.uns[key_added]
-    n_comps = adata.obsm[key_added].shape[1]
+    from .._keys import _embedding_keys
+    from .._settings import Default
+
+    keys = _embedding_keys("pca", Default() if use is None else f"{use.prefix}_pca")
+    info = adata.uns[keys.uns]
+    x = adata.obsm[keys.obsm]
+    n_comps = x.shape[1]
     var = pd.DataFrame(
         {"variance": info["variance"], "variance_ratio": info["variance_ratio"]},
         index=[f"PC{i + 1}" for i in range(n_comps)],
     )
-    return AnnData(X=adata.obsm[key_added], obs=adata.obs, var=var)
+    return AnnData(X=x, obs=adata.obs, var=var)

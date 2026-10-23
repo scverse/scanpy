@@ -3,10 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from scverse_misc import deprecated_arg
 
 from .. import logging
-from .._docs import DEPR_KEY_ADDED, doc_out_key, doc_rng
+from .._docs import doc_out_key, doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default, settings
 from .._utils import _doc_params
@@ -32,7 +31,6 @@ __all__ = ["diffmap"]
         "the embedding",
         example="A.obsm['diffmap']",
         prefixed="`.obsm['p_diffmap']` and `.uns['p_diffmap']`",
-        key_added="`key_added='k'` is `out=A.obsm['k']`.",
         default=(
             "`.obsm['X_diffmap']` and the eigenvalues to `.uns['diffmap_evals']` "
             "(`.obsm['diffmap']` and `.uns['diffmap']['evals']` if :attr:`scanpy.settings.preset` is "
@@ -41,7 +39,6 @@ __all__ = ["diffmap"]
     ),
 )
 @_accepts_legacy_random_state(0)
-@deprecated_arg("key_added", DEPR_KEY_ADDED)
 @deprecated_copy
 def diffmap(
     adata: AnnData,
@@ -51,7 +48,6 @@ def diffmap(
     rng: SeedLike | RNGLike | None = None,
     out: MultiAcc | str | Prefix | bool = False,
     # deprecated
-    key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | np.ndarray | None:
     """Diffusion Maps :cite:p:`Coifman2005,Haghverdi2015,Wolf2018`.
@@ -91,13 +87,14 @@ def diffmap(
 
     Returns
     -------
-    Returns the embedding if `out=True`, else `None`. Sets the following fields:
+    Returns the embedding if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.obsm['X_diffmap' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm['X_diffmap']` : :class:`numpy.ndarray` (dtype `float`)
         Diffusion map representation of data, which is the right eigen basis of
         the transition matrix with eigenvectors as columns.
 
-    `adata.uns['diffmap_evals'] | adata.uns[key_added]["evals"]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.uns['diffmap_evals']` : :class:`numpy.ndarray` (dtype `float`)
         Array of size (number of eigen vectors).
         Eigenvalues of transition matrix.
 
@@ -119,7 +116,7 @@ def diffmap(
     if n_comps <= 2:
         msg = "Provide any value greater than 2 for `n_comps`. "
         raise ValueError(msg)
-    key = _out_key(out, key_added, kind="obsm", base="diffmap", default=Default())
+    key = _out_key(out, None, kind="obsm", base="diffmap", default=Default())
     emb = _diffmap(
         adata, n_comps=n_comps, neighbors_key=neighbors_key, key_added=key, rng=rng
     )

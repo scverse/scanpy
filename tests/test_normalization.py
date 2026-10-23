@@ -521,6 +521,7 @@ def test_normalize_shifted_clr_out_true():
     np.testing.assert_array_equal(to_ndarray(adata.X), x_before)
 
 
+@needs.anndata_acc
 def test_normalize_shifted_clr_use_out():
     """`use` selects the input, `out` the destination, leaving `X` untouched."""
     from anndata.acc import A

@@ -318,12 +318,12 @@ def hashsolo(
     Returns
     -------
     Returns the outputs as a :class:`~scanpy.pp.HashsoloOut` if `out=True`, else `None`.
-    Sets the following fields:
+    By default sets the following fields (see `out` for others):
 
-    `adata.obs['hashsolo' | prefix]` : :class:`~pandas.Categorical` (shape `(n_obs,)`)
+    `adata.obs['hashsolo']` : :class:`~pandas.Categorical` (shape `(n_obs,)`)
         Classification of each cell: the name of one of the `hashes`,
         `"Negative"`, or `"Doublet"`.
-    `adata.obsm['hashsolo' | prefix]` : :class:`~pandas.DataFrame` (shape `(n_obs, 3)`)
+    `adata.obsm['hashsolo']` : :class:`~pandas.DataFrame` (shape `(n_obs, 3)`)
         Probability of the `negative`, `singlet`, and `doublet` hypothesis.
 
     Examples

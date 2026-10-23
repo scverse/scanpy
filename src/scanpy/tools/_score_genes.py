@@ -168,9 +168,10 @@ def score_genes(  # noqa: PLR0913
     Returns
     -------
     Returns `None` if the result was written, else the scores as a
-    :class:`~pandas.Series`. Sets the following field:
+    :class:`~pandas.Series`.
+    By default sets the following field (see `out` for others):
 
-    `adata.obs['score' | out]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obs['score']` : :class:`numpy.ndarray` (dtype `float`)
         Scores of each cell.
 
     Examples
