@@ -1,34 +1,74 @@
 from __future__ import annotations
 
 from importlib.util import find_spec
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 from scipy import sparse
+from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
 from ... import preprocessing as pp
-from ..._docs import doc_rng
-from ..._utils import _doc_params
+from ..._docs import DEPR_BATCH_KEY, doc_out_multi, doc_rng, doc_use
+from ..._utils import _doc_params, own_deprecations
 from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
-from ...get import _get_arr
+from ...get._out import _out_dests, _write_dests, deprecated_copy
+from ...get._uns import _ref_to_uns
+from ...get._use import _get_arr, _get_vec_compat, _ref_arg, _resolve_obs
 from . import pipeline
 from .core import Scrublet
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from numpy.typing import NDArray
+
     from ..._utils.random import RNGLike, SeedLike
+    from ...get._out import OutKind, Prefix
+    from ...get._types import AdRef, LayerAcc, RepAcc, VecRef, _SetRep
     from ...neighbors import _Metric, _MetricFn
 
 
+class ScrubletOut[S = NDArray[np.float64], P = NDArray[np.bool]](NamedTuple):
+    """Outputs of :func:`~scanpy.pp.scrublet`."""
+
+    doublet_score: S
+    """Doublet scores for each observed transcriptome."""
+    predicted_doublet: P
+    """Boolean indicating predicted doublet status."""
+
+
+SCRUBLET_KINDS: ScrubletOut[set[OutKind], set[OutKind]] = ScrubletOut({"obs"}, {"obs"})
+"""Where `out` can write the outputs of `pp.scrublet`."""
+
+SCRUBLET_BASES: ScrubletOut[_SetRep, _SetRep] = ScrubletOut(
+    dict(obs="doublet_score"), dict(obs="predicted_doublet")
+)
+
+
 @_accepts_legacy_random_state(0)
-@_doc_params(rng=doc_rng)
-def scrublet(  # noqa: PLR0913
+@_doc_params(
+    rng=doc_rng,
+    use=doc_use("Which matrix holds the raw counts.", legacy=()),
+    out=doc_out_multi(
+        dict(
+            doublet_score="By default written to `A.obs['doublet_score']`.",
+            predicted_doublet="By default written to `A.obs['predicted_doublet']`.",
+        ),
+        example="{'doublet_score': A.obs['scrublet_score']}",
+        returns=":class:`~scanpy.pp.ScrubletOut`",
+        uns="scrublet",
+    ),
+)
+@deprecated_arg("batch_key", DEPR_BATCH_KEY)
+@deprecated_copy
+def scrublet(  # noqa: PLR0913, PLR0915
     adata: AnnData,
     adata_sim: AnnData | None = None,
     *,
-    batch_key: str | None = None,
+    batch: AdRef | str | None = None,
     sim_doublet_ratio: float = 2.0,
     expected_doublet_rate: float = 0.05,
     stdev_doublet_rate: float = 0.02,
@@ -43,9 +83,13 @@ def scrublet(  # noqa: PLR0913
     n_neighbors: int | None = None,
     threshold: float | None = None,
     verbose: bool = True,
-    copy: bool = False,
     rng: SeedLike | RNGLike | None = None,
-) -> AnnData | None:
+    use: LayerAcc | str | None = None,
+    out: Mapping[str, VecRef | str] | Prefix | bool = False,
+    # deprecated
+    copy: bool = False,
+    batch_key: str | None = None,
+) -> AnnData | ScrubletOut | None:
     """Predict doublets using Scrublet :cite:p:`Wolock2019`.
 
     Predict cell doublets using a nearest-neighbor classifier of observed
@@ -74,8 +118,8 @@ def scrublet(  # noqa: PLR0913
         :func:`~scanpy.pp.scrublet_simulate_doublets`, with same number of vars
         as adata. This should have been built from adata_obs after
         filtering genes and cells and selcting highly-variable genes.
-    batch_key
-        Optional :attr:`~anndata.AnnData.obs` column name discriminating between batches.
+    batch
+        Optional annotation discriminating between batches, e.g. `A.obs['batch']`.
     sim_doublet_ratio
         Number of doublets to simulate relative to the number of observed
         transcriptomes.
@@ -129,14 +173,20 @@ def scrublet(  # noqa: PLR0913
         predicted doublets in a 2-D embedding.
     verbose
         If :data:`True`, log progress updates.
+    {rng}
+    {use}
+    {out}
     copy
         If :data:`True`, return a copy of the input ``adata`` with Scrublet results
         added. Otherwise, Scrublet results are added in place.
-    {rng}
+    batch_key
+        The name of a `.obs` column, i.e. `batch_key='b'` is `batch=A.obs['b']`.
 
     Returns
     -------
-    if ``copy=True`` it returns or else adds fields to ``adata``. Those fields:
+    Returns the outputs as a :class:`~scanpy.pp.ScrubletOut` if `out=True`
+    (without the `.uns` entry), else `None`.
+    By default sets the following fields (see `out` for others):
 
     ``.obs['doublet_score']``
         Doublet scores for each observed transcriptome
@@ -172,12 +222,20 @@ def scrublet(  # noqa: PLR0913
         )
         raise ValueError(msg)
 
-    if copy:
-        adata = adata.copy()
-
+    dests = _out_dests(
+        out,
+        None,
+        dests=lambda _: SCRUBLET_BASES,
+        kinds=SCRUBLET_KINDS,
+        bases=SCRUBLET_BASES,
+        uns="scrublet",
+        default="scrublet",
+    )
     start = logg.info("Running Scrublet")
 
     adata_obs = adata.copy()
+    if (use := _resolve_obs(use)) is not None:
+        adata_obs.X = _get_arr(adata, use)
     # `adata.obs_names` may contain duplicates, and cells may get filtered out below,
     # so use unique positional labels to map results back onto `adata` unambiguously.
     positions = pd.RangeIndex(adata.n_obs).astype(str)
@@ -201,21 +259,22 @@ def scrublet(  # noqa: PLR0913
 
             # HVG process needs log'd data.
             ad_obs.layers["log1p"] = ad_obs.X.copy()
-            pp.log1p(ad_obs, layer="log1p")
-            pp.highly_variable_genes(ad_obs, layer="log1p")
-            del ad_obs.layers["log1p"]
-            ad_obs = ad_obs[:, ad_obs.var["highly_variable"]].copy()
+            with own_deprecations():
+                pp.log1p(ad_obs, layer="log1p")
+                pp.highly_variable_genes(ad_obs, layer="log1p")
+                del ad_obs.layers["log1p"]
+                ad_obs = ad_obs[:, ad_obs.var["highly_variable"]].copy()
 
-            # Simulate the doublets based on the raw expressions from the normalised
-            # and filtered object.
+                # Simulate the doublets based on the raw expressions from the
+                # normalised and filtered object.
 
-            ad_sim = scrublet_simulate_doublets(
-                ad_obs,
-                layer="raw",
-                sim_doublet_ratio=sim_doublet_ratio,
-                synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
-                rng=rng,
-            )
+                ad_sim = scrublet_simulate_doublets(
+                    ad_obs,
+                    layer="raw",
+                    sim_doublet_ratio=sim_doublet_ratio,
+                    synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
+                    rng=rng,
+                )
             del ad_obs.layers["raw"]
             if log_transform:
                 pp.log1p(ad_obs)
@@ -245,56 +304,53 @@ def scrublet(  # noqa: PLR0913
 
         return {"obs": ad_obs.obs, "uns": ad_obs.uns["scrublet"]}
 
-    if batch_key is not None:
-        if batch_key not in adata.obs.columns:
-            msg = (
-                "`batch_key` must be a column of .obs in the input AnnData object,"
-                f"but {batch_key!r} is not in {adata.obs.keys()!r}."
-            )
-            raise ValueError(msg)
+    batch = _ref_arg(batch, batch_key, name="batch", legacy_name="batch_key")
+    if batch is not None:
+        try:
+            batch_info = np.asarray(_get_vec_compat(adata, batch, dim="obs"))
+        except KeyError as e:
+            msg = f"Could not find `batch` ({batch!r}) in the input AnnData object."
+            raise ValueError(msg) from e
 
         # Run Scrublet independently on batches and return just the
         # scrublet-relevant parts of the objects to add to the input object
-        batches = np.unique(adata.obs[batch_key])
+        batches = np.unique(batch_info)
         # spawn sub-rngs so this can maybe be parallelized without changing random number generation
         sub_rngs = rng.spawn(len(batches))
         scrubbed = [
             _run_scrublet(
-                adata_obs[adata_obs.obs[batch_key] == batch].copy(),
+                adata_obs[batch_info == batch].copy(),
                 adata_sim,
                 rng=sub_rng,
             )
             for batch, sub_rng in zip(batches, sub_rngs, strict=True)
         ]
-        scrubbed_obs = pd.concat([scrub["obs"] for scrub in scrubbed]).astype(
-            adata.obs.dtypes
+        scrubbed_obs = pd.concat([scrub["obs"] for scrub in scrubbed])
+        # Save the .uns from each batch separately, and record that we’ve done
+        # batched analysis, so e.g. the plotting function knows what to do.
+        uns = dict(
+            batches=dict(
+                zip(batches, [scrub["uns"] for scrub in scrubbed], strict=True)
+            ),
+            batched_by=_ref_to_uns(batch, batch_info),
         )
-
-        # Now reset the obs to get the scrublet scores
-        adata.obs = scrubbed_obs.reindex(positions).set_axis(adata.obs_names)
-
-        # Save the .uns from each batch separately
-        adata.uns["scrublet"] = {}
-        adata.uns["scrublet"]["batches"] = dict(
-            zip(batches, [scrub["uns"] for scrub in scrubbed], strict=True)
-        )
-
-        # Record that we've done batched analysis, so e.g. the plotting
-        # function knows what to do.
-        adata.uns["scrublet"]["batched_by"] = batch_key
 
     else:
         scrubbed = _run_scrublet(adata_obs, adata_sim, rng=rng)
-        scrubbed_obs = scrubbed["obs"].reindex(positions)
+        scrubbed_obs = scrubbed["obs"]
+        uns = scrubbed["uns"]
 
-        # Copy outcomes to input object from our processed version
-        adata.obs["doublet_score"] = scrubbed_obs["doublet_score"].to_numpy()
-        adata.obs["predicted_doublet"] = scrubbed_obs["predicted_doublet"].to_numpy()
-        adata.uns["scrublet"] = scrubbed["uns"]
-
+    # Copy outcomes to input object from our processed version
+    scrubbed_obs = scrubbed_obs.reindex(positions)
+    vals = ScrubletOut(*(scrubbed_obs[name].to_numpy() for name in ScrubletOut._fields))
     logg.info("    Scrublet finished", time=start)
 
-    return adata if copy else None
+    if dests is True:
+        return vals
+    uns_key, dests = dests
+    _write_dests(adata, vals, dests)
+    adata.uns[uns_key] = uns
+    return None
 
 
 @_accepts_legacy_random_state(0)
@@ -501,10 +557,13 @@ def _scrublet_call_doublets(  # noqa: PLR0913
     return adata_obs
 
 
+@_doc_params(use=doc_use("Which matrix holds the raw counts.", legacy=("layer",)))
 @_accepts_legacy_random_state(0)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 def scrublet_simulate_doublets(
     adata: AnnData,
     *,
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     sim_doublet_ratio: float = 2.0,
     synthetic_doublet_umi_subsampling: float = 1.0,
@@ -521,8 +580,7 @@ def scrublet_simulate_doublets(
         correspond to cells and columns to genes. Genes should have been
         filtered for expression and variability, and the object should contain
         raw expression of the same dimensions.
-    layer
-        Layer of adata where raw values are stored, or 'X' if values are in .X.
+    {use}
     sim_doublet_ratio
         Number of doublets to simulate relative to the number of observed
         transcriptomes. If `None`, self.sim_doublet_ratio is used.
@@ -552,7 +610,7 @@ def scrublet_simulate_doublets(
         scores for observed transcriptomes and simulated doublets.
 
     """
-    x = _get_arr(adata, layer=layer)
+    x = _get_arr(adata, _resolve_obs(use), layer=layer)
     scrub = Scrublet(x, rng=rng)
 
     scrub.simulate_doublets(

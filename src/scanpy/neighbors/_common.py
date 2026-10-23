@@ -10,14 +10,22 @@ from .._compat import warn
 from .._settings import settings
 from .._utils import get_literal_vals
 from .._utils.random import _rng_kwds
-from ._types import NeighborsDict, _KnownTransformer
+from ..get._out import Prefix, _dest_key, _out_dests
+from ..get._types import GraphAcc
+from ..get._use import _resolve_obs
+from ._types import NeighborsDict, NeighborsOut, _KnownTransformer
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from typing import Unpack
 
+    from anndata import AnnData
     from numpy.typing import NDArray
 
-    from .._compat import CSRBase
+    from .._compat import CSBase, CSRBase
+    from .._settings import Default
+    from ..get._out import OutKind
+    from ..get._types import _SetRep
     from ._types import (
         BbknnParams,
         KnnTransformerLike,
@@ -78,32 +86,46 @@ def _make_transformer(
     return transformer  # `transformer` is probably an instance
 
 
+NEIGHBORS_KINDS: NeighborsOut[set[OutKind]] = NeighborsOut({"obsp"}, {"obsp"})
+"""Where `out` can write the outputs of `pp.neighbors` and `pp.bbknn`."""
+
+
+def _neighbors_dests(key_added: str | Default | None) -> NeighborsOut[_SetRep | None]:
+    """Where `key_added` put the outputs of `pp.neighbors` and `pp.bbknn`."""
+    prefix = "" if key_added is None else f"{key_added}_"
+    return NeighborsOut(
+        connectivities=dict(obsp=f"{prefix}connectivities"),
+        distances=dict(obsp=f"{prefix}distances"),
+    )
+
+
 def _get_metadata(
-    key_added: str | None, /, **params: Unpack[NeighborsParams]
+    key: str | None,
+    dests: NeighborsOut[_SetRep | None],
+    /,
+    **params: Unpack[NeighborsParams],
 ) -> tuple[str, NeighborsDict[NeighborsParams]]:
-    return _metadata(key_added, params)
+    return _metadata(key, dests, params)
 
 
 def _get_bbknn_metadata(
-    key_added: str | None, /, **params: Unpack[BbknnParams]
+    key: str | None,
+    dests: NeighborsOut[_SetRep | None],
+    /,
+    **params: Unpack[BbknnParams],
 ) -> tuple[str, NeighborsDict[BbknnParams]]:
-    return _metadata(key_added, params)
+    return _metadata(key, dests, params)
 
 
 def _metadata[P: NeighborsParams](
-    key_added: str | None, params: P
+    key: str | None, dests: NeighborsOut[_SetRep | None], params: P
 ) -> tuple[str, NeighborsDict[P]]:
-    if key_added is None:
-        return "neighbors", NeighborsDict(
-            connectivities_key="connectivities",
-            distances_key="distances",
-            params=params,
-        )
-    return key_added, NeighborsDict(
-        connectivities_key=f"{key_added}_connectivities",
-        distances_key=f"{key_added}_distances",
-        params=params,
-    )
+    """Get the `.uns` key and entry, which names where the matrices were written."""
+    neighbors_dict = NeighborsDict(params=params)
+    for name, dest in zip(NeighborsOut._fields, dests, strict=True):
+        if (dest_key := _dest_key(dest)) is not None:
+            neighbors_dict[f"{name}_key"] = dest_key
+    return key or "neighbors", neighbors_dict
 
 
 def _has_self_column(
@@ -268,3 +290,72 @@ def _get_indices_distances_from_rect_matrix(
         np.take_along_axis(indices, order, axis=1),
         np.take_along_axis(distances, order, axis=1),
     )
+
+
+type NeighborsUse = Mapping[str, GraphAcc | str] | Prefix | None
+"""What `pp.neighbors`’ `out` was, to find its outputs (`None` for the default)."""
+
+
+def _neighbors_key(use: NeighborsUse, neighbors_key: str | None = None) -> str | None:
+    """Find the `.uns` key `pp.neighbors(out=use)` wrote, or pass through the deprecated `neighbors_key`."""
+    if neighbors_key is not None:
+        if use is not None:
+            msg = "Pass either `use` or `neighbors_key`, not both."
+            raise TypeError(msg)
+        return neighbors_key
+    if use is None:
+        return None
+    key, _ = _out_dests(
+        use,
+        None,
+        dests=_neighbors_dests,
+        kinds=NEIGHBORS_KINDS,
+        bases=_neighbors_dests(None),
+        uns="neighbors",
+    )
+    return key
+
+
+def _graph_args(
+    use: NeighborsUse | GraphAcc | str,
+    *,
+    obsp: str | None,
+    neighbors_key: str | None,
+) -> tuple[str | None, str | None]:
+    """Translate the `use` of a function only using connectivities into `(obsp, neighbors_key)`.
+
+    Such functions also accept a single `A.obsp[...]`, replacing the deprecated `obsp`.
+    """
+    if isinstance(use, str | GraphAcc):
+        if obsp is not None or neighbors_key is not None:
+            msg = "Pass either `use` or `obsp`/`neighbors_key`, not both."
+            raise TypeError(msg)
+        graph = _resolve_obs(use)
+        if not isinstance(graph, GraphAcc):
+            msg = f"`use` must point to `.obsp`, was {use!r}"
+            raise TypeError(msg)
+        return graph.k, None
+    if use is not None and obsp is not None:
+        msg = "Pass either `use` or `obsp`, not both."
+        raise TypeError(msg)
+    return obsp, _neighbors_key(use, neighbors_key)
+
+
+def _use_graph(
+    adata: AnnData,
+    use: NeighborsUse | GraphAcc | str,
+    *,
+    adjacency: CSBase | None = None,
+    obsp: str | None = None,
+    neighbors_key: str | None = None,
+) -> CSBase:
+    """Choose the connectivities from `use`, or the deprecated `adjacency`/`obsp`/`neighbors_key`."""
+    from .._utils import _choose_graph
+
+    if adjacency is None:
+        obsp, neighbors_key = _graph_args(use, obsp=obsp, neighbors_key=neighbors_key)
+        return _choose_graph(adata, obsp, neighbors_key)
+    if use is not None:
+        msg = "Pass either `use` or `adjacency`, not both."
+        raise TypeError(msg)
+    return adjacency

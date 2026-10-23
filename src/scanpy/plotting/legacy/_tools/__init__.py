@@ -13,7 +13,13 @@ from scverse_misc import Deprecation, deprecated
 
 from .... import logging as logg
 from ...._settings import Default, settings
-from ...._utils import _doc_params, _get_basis_key, sanitize_anndata, with_cat_dtype
+from ...._utils import (
+    _doc_params,
+    _get_basis_key,
+    own_deprecations,
+    sanitize_anndata,
+    with_cat_dtype,
+)
 from ...._utils.random import _LegacyRng
 from ....get import obs_df, rank_genes_groups_df
 from .._anndata import ranking
@@ -569,13 +575,14 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
         var_names = {}
         var_names_list = []
         for group in group_names:
-            df = rank_genes_groups_df(
-                adata,
-                group,
-                key=key,
-                gene_symbols=gene_symbols,
-                log2fc_min=min_logfoldchange,
-            )
+            with own_deprecations():
+                df = rank_genes_groups_df(
+                    adata,
+                    group,
+                    key=key,
+                    gene_symbols=gene_symbols,
+                    log2fc_min=min_logfoldchange,
+                )
 
             if gene_symbols is not None:
                 df["names"] = df[gene_symbols]
@@ -1698,7 +1705,10 @@ def _get_values_to_plot(
     if values_to_plot is not None:
         df_list = []
         for group in groups:
-            df = rank_genes_groups_df(adata, group, key=key, gene_symbols=gene_symbols)
+            with own_deprecations():
+                df = rank_genes_groups_df(
+                    adata, group, key=key, gene_symbols=gene_symbols
+                )
             if gene_symbols is not None:
                 df["names"] = df[gene_symbols]
             # check that all genes are present in the df as sc.tl.rank_genes_groups

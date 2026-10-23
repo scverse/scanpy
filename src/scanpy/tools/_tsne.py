@@ -2,32 +2,57 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from scverse_misc import Deprecation, deprecated_arg
+
 from .. import logging as logg
 from .._compat import warn
-from .._docs import doc_rng
+from .._docs import DEPR_KEY_ADDED, doc_out_key, doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default, settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
-from ..get.get import _rep_to_json
+from ..get._out import _out_key, deprecated_copy
+from ..get._uns import _use_to_uns
+from ..get._use import _resolve_obs
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation_compat
 
 if TYPE_CHECKING:
+    import numpy as np
     from anndata import AnnData
+    from anndata.acc import MultiAcc
 
     from .._utils.random import RNGLike, SeedLike
-    from ..get.get import RepAcc
+    from ..get._out import Prefix
+    from ..get._types import RepAcc
 
 
 @_accepts_legacy_random_state(0)
-@_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
+@_doc_params(
+    doc_n_pcs=doc_n_pcs,
+    use_rep=doc_use_rep,
+    rng=doc_rng,
+    out=doc_out_key(
+        "the embedding",
+        example="A.obsm['tsne']",
+        prefixed="`.obsm['p_tsne']` and `.uns['p_tsne']`",
+        key_added="`key_added='k'` is `out=A.obsm['k']`.",
+        default=(
+            "`.obsm['X_tsne']` and `.uns['tsne']` "
+            "(`.obsm['tsne']` if :attr:`scanpy.settings.preset` is "
+            ":attr:`~scanpy.Preset.ScanpyV2Preview`)"
+        ),
+    ),
+)
+@deprecated_arg("use_rep", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_copy
 def tsne(  # noqa: PLR0913
     adata: AnnData,
     n_pcs: int | None = None,
     *,
     n_components: int = 2,
-    use_rep: RepAcc | str | None = None,
+    use: RepAcc | str | None = None,
     perplexity: float = 30,
     metric: str = "euclidean",
     early_exaggeration: float = 12,
@@ -35,9 +60,12 @@ def tsne(  # noqa: PLR0913
     rng: SeedLike | RNGLike | None = None,
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
-    key_added: str | Default | None = Default(preset=("tsne", "key_added")),
+    out: MultiAcc | str | Prefix | bool = False,
+    # deprecated
+    key_added: str | None = None,
     copy: bool = False,
-) -> AnnData | None:
+    use_rep: str | None = None,
+) -> AnnData | np.ndarray | None:
     r"""t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
 
     t-distributed stochastic neighborhood embedding (tSNE, :cite:t:`vanDerMaaten2008`) was
@@ -84,19 +112,13 @@ def tsne(  # noqa: PLR0913
     n_jobs
         Number of jobs for parallel computation.
         `None` means using :attr:`scanpy.settings.n_jobs`.
-    key_added
-        If not specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\ `['X_tsne']` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\ `['tsne']`.
-        If specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\ ``[key_added]`` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\ ``[key_added]``.
+    {out}
     copy
         Return a copy instead of writing to `adata`.
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the embedding if `out=True`, else `None`. Sets the following fields:
 
     `adata.obsm['X_tsne' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
         tSNE coordinates of data.
@@ -105,9 +127,10 @@ def tsne(  # noqa: PLR0913
 
     """
     start = logg.info("computing tSNE")
-    keys = _embedding_keys("tsne", key_added)
-    adata = adata.copy() if copy else adata
-    x = _choose_representation_compat(adata, use_rep=use_rep, n_pcs=n_pcs)
+    if use is not None:
+        use = _resolve_obs(use, rep=True)
+    key = _out_key(out, key_added, kind="obsm", base="tsne", default=Default())
+    x = _choose_representation_compat(adata, use=use, use_rep=use_rep, n_pcs=n_pcs)
     raise_not_implemented_error_if_backed_type(x, "tsne")
     # params for sklearn
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
@@ -158,9 +181,13 @@ def tsne(  # noqa: PLR0913
         learning_rate=learning_rate,
         n_jobs=n_jobs,
         metric=metric,
-        use_rep=_rep_to_json(use_rep),
+        **_use_to_uns(use, use_rep, rep=True),
         n_components=n_components,
     )
+    if key is True:
+        logg.info("    finished", time=start)
+        return x_tsne
+    keys = _embedding_keys("tsne", key)
     adata.obsm[keys.obsm] = x_tsne  # annotate samples with tSNE coordinates
     adata.uns[keys.uns] = dict(
         params={k: v for k, v in params.items() if v is not None}
@@ -176,4 +203,4 @@ def tsne(  # noqa: PLR0913
         ),
     )
 
-    return adata if copy else None
+    return None

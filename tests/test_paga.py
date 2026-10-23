@@ -37,3 +37,17 @@ def test_paga_positions_reproducible(
         np.testing.assert_array_equal(a.uns["paga"]["pos"], b.uns["paga"]["pos"])
     with subtests.test("different positions"):
         assert a.uns["paga"]["pos"].tolist() != c.uns["paga"]["pos"].tolist()
+
+
+def test_paga_out() -> None:
+    """`out=True` returns what’d be written, `sc.Prefix` names both outputs."""
+    pbmc = pbmc68k_reduced()
+    pbmc.uns.pop("paga", None)
+    res = sc.tl.paga(pbmc, groups="bulk_labels", out=True)
+    assert "paga" not in pbmc.uns
+    assert res.keys() == {"connectivities", "connectivities_tree", "sizes", "groups"}
+    sc.tl.paga(pbmc, groups="bulk_labels", out=sc.Prefix("p"))
+    np.testing.assert_array_equal(pbmc.uns["p_bulk_labels_sizes"], res["sizes"])
+    np.testing.assert_array_equal(
+        pbmc.uns["p_paga"]["connectivities"].toarray(), res["connectivities"].toarray()
+    )

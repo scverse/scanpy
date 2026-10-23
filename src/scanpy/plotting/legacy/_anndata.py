@@ -2336,6 +2336,7 @@ def _get_dendrogram_key(
             raise AssertionError(msg)
 
     if dendrogram_key not in adata.uns:
+        from ..._utils import own_deprecations
         from ...tools._dendrogram import dendrogram
 
         logg.warning(
@@ -2343,7 +2344,8 @@ def _get_dendrogram_key(
             "Running `sc.tl.dendrogram` with default parameters. For fine "
             "tuning it is recommended to run `sc.tl.dendrogram` independently."
         )
-        dendrogram(adata, groupby, key_added=dendrogram_key)
+        with own_deprecations():  # `anndata.acc` is optional, so no `out`
+            dendrogram(adata, groupby, key_added=dendrogram_key)
 
     if "dendrogram_info" not in adata.uns[dendrogram_key]:
         msg = (

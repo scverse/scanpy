@@ -10,6 +10,7 @@ import pytest
 from anndata import AnnData, read_h5ad
 from scipy.stats import pearsonr
 
+from scanpy import Prefix
 from scanpy.preprocessing import harmony_integrate
 from scanpy.preprocessing._harmony.core import (
     _SUPPRESS_PENALTY,
@@ -19,6 +20,7 @@ from scanpy.preprocessing._harmony.core import (
     _get_theta_array,
 )
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -133,6 +135,7 @@ def adata_ircolitis_harmonypy2() -> AnnData:
 
 @pytest.mark.parametrize("dtype", [np.float32, np.float64])
 @pytest.mark.parametrize("flavor", ["harmony1", "harmony2"])
+@needs.anndata_acc
 def test_harmony_integrate(
     dtype: DTypeLike,
     flavor: Literal["harmony1", "harmony2"],
@@ -141,21 +144,23 @@ def test_harmony_integrate(
     adata = pbmc68k_reduced()
     harmony_integrate(
         adata,
-        "bulk_labels",
+        "obs.bulk_labels",
         correction_method="fast",
         dtype=dtype,
         flavor=flavor,
     )
-    assert adata.obsm["X_pca_harmony"].shape == adata.obsm["X_pca"].shape
+    assert adata.obsm["pca_harmony"].shape == adata.obsm["X_pca"].shape
 
 
+@needs.anndata_acc
 def test_harmony_original_correction_rejected() -> None:
     adata = pbmc68k_reduced()
     with pytest.raises(ValueError, match="correction_method must be 'fast'"):
-        harmony_integrate(adata, "bulk_labels", correction_method="original")
+        harmony_integrate(adata, "obs.bulk_labels", correction_method="original")
 
 
 @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+@needs.anndata_acc
 def test_harmony_integrate_reference(
     *,
     subtests: pytest.Subtests,
@@ -165,12 +170,12 @@ def test_harmony_integrate_reference(
     """Test that Harmony1 produces results similar to the reference implementation."""
     harmony_integrate(
         adata_reference,
-        "donor",
+        "obs.donor",
         dtype=dtype,
         max_iter_harmony=20,
         flavor="harmony1",
     )
-    x, base = adata_reference.obsm["harmony_org"], adata_reference.obsm["X_pca_harmony"]
+    x, base = adata_reference.obsm["harmony_org"], adata_reference.obsm["pca_harmony"]
 
     with subtests.test("r"):
         assert _get_measure(x, base, "r").min() > 0.95
@@ -178,6 +183,7 @@ def test_harmony_integrate_reference(
         assert _get_measure(x, base, "L2").max() < 0.1
 
 
+@needs.anndata_acc
 def test_harmony_multiple_keys() -> None:
     """Test Harmony models multiple batch keys separately."""
     adata = pbmc68k_reduced()
@@ -187,13 +193,13 @@ def test_harmony_multiple_keys() -> None:
 
     harmony_integrate(
         adata,
-        ["bulk_labels", "batch2"],
+        ["obs.bulk_labels", "obs.batch2"],
         theta=[2.0, 0.1],
         max_iter_harmony=1,
         rng=0,
     )
 
-    assert adata.obsm["X_pca_harmony"].shape == adata.obsm["X_pca"].shape
+    assert adata.obsm["pca_harmony"].shape == adata.obsm["X_pca"].shape
 
 
 def test_harmony_multikey_marginal_codes_and_theta() -> None:
@@ -331,6 +337,7 @@ def test_harmony_multikey_correction_singular_fallback(
 
 @pytest.mark.parametrize("ridge_lambda", [0.0, -0.1, float("inf"), float("nan")])
 @pytest.mark.parametrize("multikey", [False, True])
+@needs.anndata_acc
 def test_harmony1_rejects_bad_ridge_lambda(
     ridge_lambda: float, *, multikey: bool
 ) -> None:
@@ -344,7 +351,7 @@ def test_harmony1_rejects_bad_ridge_lambda(
         ),
         obsm={"X_pca": rng.normal(size=(60, 6)).astype(np.float32)},
     )
-    key = ["batch", "duplicate_batch"] if multikey else "batch"
+    key = ["obs.batch", "obs.duplicate_batch"] if multikey else "obs.batch"
 
     with pytest.raises(ValueError, match="ridge_lambda must be a finite positive"):
         harmony_integrate(
@@ -369,6 +376,7 @@ def test_harmony1_rejects_bad_ridge_lambda(
         ("nclust4_sex_only", [0.0, 2.0], 4, 10),
     ],
 )
+@needs.anndata_acc
 def test_harmony2_multikey_reference(
     adata_harmonypy2_multikey: AnnData,
     case: str,
@@ -381,24 +389,25 @@ def test_harmony2_multikey_reference(
 
     _integrate_harmony2_reference(
         adata,
-        ["batch", "sex"],
+        ["obs.batch", "obs.sex"],
         theta=theta,
         dtype=np.float64,
         n_clusters=n_clusters,
         max_iter_harmony=max_iter_harmony,
     )
 
-    result = adata.obsm["X_pca_harmony"]
+    result = adata.obsm["pca_harmony"]
     assert _get_measure(reference, result, "r").min() > 0.95
     assert _get_measure(reference, result, "L2").max() < 0.1
 
 
+@needs.anndata_acc
 def test_harmony_custom_parameters() -> None:
     """Test Harmony with custom parameters."""
     adata = pbmc68k_reduced()
     harmony_integrate(
         adata,
-        "bulk_labels",
+        "obs.bulk_labels",
         theta=1.5,
         sigma=0.15,
         n_clusters=50,
@@ -406,49 +415,55 @@ def test_harmony_custom_parameters() -> None:
         ridge_lambda=0.5,
         flavor="harmony1",
     )
-    assert adata.obsm["X_pca_harmony"].shape == adata.obsm["X_pca"].shape
+    assert adata.obsm["pca_harmony"].shape == adata.obsm["X_pca"].shape
 
 
+@needs.anndata_acc
 def test_harmony_no_nan_output() -> None:
     """Test that Harmony output contains no NaN values."""
     adata = pbmc68k_reduced()
-    harmony_integrate(adata, "bulk_labels")
-    assert not np.isnan(adata.obsm["X_pca_harmony"]).any()
+    harmony_integrate(adata, "obs.bulk_labels")
+    assert not np.isnan(adata.obsm["pca_harmony"]).any()
 
 
+@needs.anndata_acc
 def test_harmony_input_validation(subtests) -> None:
     """Test that Harmony raises errors for invalid inputs."""
     adata = pbmc68k_reduced()
 
-    with subtests.test("no basis"), pytest.raises(ValueError, match="not available"):
-        harmony_integrate(adata, "bulk_labels", basis="nonexistent")
+    with subtests.test("no pca"), pytest.raises(KeyError, match="X_pca"):
+        harmony_integrate(AnnData(adata.X, obs=adata.obs), "obs.bulk_labels")
     with subtests.test("no key"), pytest.raises(KeyError):
-        harmony_integrate(adata, "nonexistent_key")
+        harmony_integrate(adata, "obs.nonexistent_key")
 
 
+@needs.anndata_acc
 def test_harmony_invalid_flavor() -> None:
     """Test that invalid flavor raises ValueError."""
     adata = pbmc68k_reduced()
     with pytest.raises(ValueError, match="flavor must be"):
-        harmony_integrate(adata, "bulk_labels", flavor="harmony3")
+        harmony_integrate(adata, "obs.bulk_labels", flavor="harmony3")
 
 
 @pytest.mark.parametrize("bad_alpha", [-0.1, 0.0, float("inf"), float("nan")])
+@needs.anndata_acc
 def test_harmony_integrate_bad_alpha(bad_alpha: float) -> None:
     """Non-positive or non-finite alpha with flavor='harmony2' raises ValueError."""
     adata = pbmc68k_reduced()
     with pytest.raises(ValueError, match="alpha must be a finite positive"):
-        harmony_integrate(adata, "bulk_labels", alpha=bad_alpha)
+        harmony_integrate(adata, "obs.bulk_labels", alpha=bad_alpha)
 
 
 @pytest.mark.parametrize("bad_threshold", [-0.1, 1.5, 2.0])
+@needs.anndata_acc
 def test_harmony_integrate_bad_prune_threshold(bad_threshold: float) -> None:
     """batch_prune_threshold outside [0, 1] raises ValueError."""
     adata = pbmc68k_reduced()
     with pytest.raises(ValueError, match="batch_prune_threshold must be in"):
-        harmony_integrate(adata, "bulk_labels", batch_prune_threshold=bad_threshold)
+        harmony_integrate(adata, "obs.bulk_labels", batch_prune_threshold=bad_threshold)
 
 
+@needs.anndata_acc
 def test_harmony_flavor_warnings() -> None:
     """Test that flavor-incompatible parameter warnings are raised."""
     adata = pbmc68k_reduced()
@@ -457,7 +472,7 @@ def test_harmony_flavor_warnings() -> None:
     with pytest.warns(UserWarning, match="ridge_lambda is ignored"):
         harmony_integrate(
             adata,
-            "bulk_labels",
+            "obs.bulk_labels",
             flavor="harmony2",
             ridge_lambda=2.0,
             max_iter_harmony=1,
@@ -466,14 +481,14 @@ def test_harmony_flavor_warnings() -> None:
     # harmony1 with alpha should warn
     with pytest.warns(UserWarning, match="alpha is ignored"):
         harmony_integrate(
-            adata, "bulk_labels", flavor="harmony1", alpha=0.5, max_iter_harmony=1
+            adata, "obs.bulk_labels", flavor="harmony1", alpha=0.5, max_iter_harmony=1
         )
 
     # harmony1 with batch_prune_threshold should warn
     with pytest.warns(UserWarning, match="batch_prune_threshold is ignored"):
         harmony_integrate(
             adata,
-            "bulk_labels",
+            "obs.bulk_labels",
             flavor="harmony1",
             batch_prune_threshold=0.01,
             max_iter_harmony=1,
@@ -562,6 +577,7 @@ def test_compute_lambda_kb_zero_denom(dtype: type[np.floating]) -> None:
 
 
 @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+@needs.anndata_acc
 def test_harmony2_ircolitis_reference(
     adata_ircolitis_harmonypy2: AnnData,
     dtype: type[np.floating],
@@ -570,7 +586,7 @@ def test_harmony2_ircolitis_reference(
     adata = adata_ircolitis_harmonypy2.copy()
     _integrate_harmony2_reference(
         adata,
-        "batch",
+        "obs.batch",
         theta=2.0,
         dtype=dtype,
         n_clusters=2,
@@ -578,6 +594,42 @@ def test_harmony2_ircolitis_reference(
     )
 
     reference = adata.obsm["harmony2_ref"]
-    result = adata.obsm["X_pca_harmony"]
+    result = adata.obsm["pca_harmony"]
     assert _get_measure(reference, result, "r").min() > 0.95
     assert _get_measure(reference, result, "L2").max() < 0.1
+
+
+@needs.anndata_acc
+def test_harmony_out() -> None:
+    """`out=True` returns the embedding, `sc.Prefix` names it `p_pca_harmony`."""
+    adata = pbmc68k_reduced()
+    res = harmony_integrate(adata, "obs.bulk_labels", out=True, rng=0)
+    assert "pca_harmony" not in adata.obsm
+    harmony_integrate(adata, "obs.bulk_labels", out=Prefix("p"), rng=0)
+    np.testing.assert_allclose(adata.obsm["p_pca_harmony"], res)
+
+
+@needs.anndata_acc
+@needs.anndata_acc
+def test_harmony_key_ref() -> None:
+    """`key` can also be a reference."""
+    from anndata.acc import A
+
+    adata = pbmc68k_reduced()
+    expected = harmony_integrate(adata, "obs.bulk_labels", out=True, rng=0)
+    res = harmony_integrate(adata, A.obs["bulk_labels"], out=True, rng=0)
+    np.testing.assert_allclose(res, expected)
+
+
+@needs.anndata_acc
+def test_external_harmony_compat() -> None:
+    """The deprecated `sc.external.pp.harmony_integrate` keeps its 1.12 parameters."""
+    import scanpy.external as sce
+
+    adata = pbmc68k_reduced()
+    expected = harmony_integrate(adata, "obs.bulk_labels", out=True, rng=0)
+    with pytest.warns(FutureWarning, match=r"harmony_integrate is deprecated"):
+        sce.pp.harmony_integrate(
+            adata, "bulk_labels", basis="X_pca", adjusted_basis="h", rng=0
+        )
+    np.testing.assert_allclose(adata.obsm["h"], expected)

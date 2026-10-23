@@ -14,15 +14,20 @@ from .. import logging as logg
 from .._docs import doc_rng
 from .._utils import _doc_params
 from .._utils._doctests import doctest_needs
-from ..get.get import _rep_to_json, _resolve_rep
+from ..get._out import _out_dests, _write_dests
+from ..get._uns import _ref_to_uns, _use_to_uns
+from ..get._use import _resolve_obs
 from ._common import (
+    NEIGHBORS_KINDS,
     _get_bbknn_metadata,
     _get_indices_distances_from_rect_matrix,
     _get_sparse_matrix_from_indices_distances,
     _make_transformer,
+    _neighbors_dests,
 )
 from ._connectivity import umap
-from ._doc import doc_n_pcs, doc_use_rep
+from ._doc import doc_n_pcs, doc_out, doc_use
+from ._types import NeighborsOut
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -34,28 +39,28 @@ if TYPE_CHECKING:
 
     from .._compat import CSRBase
     from .._utils.random import RNGLike, SeedLike
-    from ..get.get import RepAcc
+    from ..get._out import Prefix
+    from ..get._types import ArrAcc, RepAcc
     from ._types import KnnTransformerLike, _KnownTransformer, _Metric, _MetricFn
 
 
 @doctest_needs("anndata_acc")
-@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
+@_doc_params(n_pcs=doc_n_pcs, use=doc_use, rng=doc_rng, out=doc_out)
 def bbknn(  # noqa: PLR0913
     adata: AnnData,
     neighbors_within_batch: int = 3,
     n_pcs: int | None = None,
     *,
     batches: AdRef | str = "obs.batch",
-    use_rep: RepAcc | str | None = None,
+    use: RepAcc | str | None = None,
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: _Metric | _MetricFn = "euclidean",
     metric_kwds: Mapping[str, Any] = frozendict({}),
     trim: int | None = None,
     rng: SeedLike | RNGLike | None = None,
-    key_added: str | None = None,
-    copy: bool = False,
-) -> AnnData | None:
-    """Compute a batch balanced neighborhood graph of observations :cite:p:`Polanski2019`.
+    out: Mapping[str, ArrAcc | str] | Prefix | bool = False,
+) -> NeighborsOut | None:
+    r"""Compute a batch balanced neighborhood graph of observations :cite:p:`Polanski2019`.
 
     Batch balanced kNN alters the kNN procedure to identify each cell’s top neighbors
     in each batch separately instead of the entire cell pool with no accounting for batch.
@@ -80,8 +85,9 @@ def bbknn(  # noqa: PLR0913
         matrix of connectivities.
     {n_pcs}
     batches
-        `adata.obs` column name discriminating between the batches.
-    {use_rep}
+        The annotation discriminating between the batches, e.g. `A.obs['batch']`.
+        :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d, e.g. `'obs.batch'`.
+    {use}
     transformer
         kNN search backend following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
@@ -114,29 +120,21 @@ def bbknn(  # noqa: PLR0913
     {rng}
 
         *ignored if* ``transformer`` *is an instance.*
-    key_added
-        If not specified, the neighbors data is stored in `.uns['neighbors']`,
-        distances and connectivities are stored in `.obsp['distances']` and
-        `.obsp['connectivities']` respectively.
-        If specified, the neighbors data is added to .uns[key_added],
-        distances are stored in `.obsp[f'{{key_added}}_distances']` and
-        connectivities in `.obsp[f'{{key_added}}_connectivities']`.
-    copy
-        Return a copy instead of writing to adata.
+    {out}
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the outputs if `out=True`, else `None`. Sets the following fields:
 
-    `adata.obsp['distances' | f'{{key_added}}_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+    `adata.obsp['connectivities' | f'{{prefix}}_connectivities']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+        Weighted adjacency matrix of the neighborhood graph of data
+        points. Weights should be interpreted as connectivities.
+    `adata.obsp['distances' | f'{{prefix}}_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Distance matrix of the batch balanced nearest neighbors search.
         Each row (cell) has ``neighbors_within_batch`` × ``n_batches`` - 1 non-zero entries:
         its nearest neighbors in each batch, excluding the cell itself.
-    `adata.obsp['connectivities' | f'{{key_added}}_connectivities']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
-        Weighted adjacency matrix of the neighborhood graph of data
-        points. Weights should be interpreted as connectivities.
-    `adata.uns['neighbors' | key_added]` : :class:`dict`
-        neighbors parameters.
+    `adata.uns['neighbors' | f'{{prefix}}_neighbors']` : :class:`dict`
+        neighbors parameters, and the `.obsp` keys the matrices were written to.
 
     Examples
     --------
@@ -158,14 +156,21 @@ def bbknn(  # noqa: PLR0913
 
     start = logg.info("computing batch balanced neighbors")
 
-    adata = adata.copy() if copy else adata
+    dests = _out_dests(
+        out,
+        None,
+        dests=_neighbors_dests,
+        kinds=NEIGHBORS_KINDS,
+        bases=_neighbors_dests(None),
+        uns="neighbors",
+    )
     if adata.is_view:  # we shouldn’t need this here...
         adata._init_as_actual(adata.copy())
 
     if not isinstance(batches, AdRef):
         batches = A.resolve(batches, vec=True)
-    if use_rep is not None:
-        use_rep = _resolve_rep(use_rep)
+    if use is not None:
+        use = _resolve_obs(use, rep=True)
 
     if neighbors_within_batch < 1:
         msg = "`neighbors_within_batch` needs to be greater than 0."
@@ -184,7 +189,7 @@ def bbknn(  # noqa: PLR0913
         )
         raise ValueError(msg)
 
-    x = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+    x = _choose_representation(adata, use_rep=use, n_pcs=n_pcs)
     knn_indices, knn_distances = _compute_batch_balanced_knn(
         x,
         batches=batch_arr,
@@ -211,32 +216,37 @@ def bbknn(  # noqa: PLR0913
         connectivities = _trim(connectivities, trim)
     logg.debug("computed connectivities", time=start_connect)
 
-    key_added, neighbors_dict = _get_bbknn_metadata(
-        key_added,
+    vals = NeighborsOut(connectivities, distances)
+    if dests is True:
+        logg.info("    finished", time=start)
+        return vals
+    key, dests = dests
+    key, neighbors_dict = _get_bbknn_metadata(
+        key,
+        dests,
         n_neighbors=n_neighbors,
         method="umap",
         metric=metric,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
-        **({} if use_rep is None else dict(use_rep=_rep_to_json(use_rep))),
+        **_use_to_uns(use, rep=True),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
-        batches=A.to_json(batches),
+        batches=_ref_to_uns(batches, np.asarray(adata[batches])),
         neighbors_within_batch=neighbors_within_batch,
         trim=trim,
     )
-    adata.uns[key_added] = neighbors_dict
-    adata.obsp[neighbors_dict["distances_key"]] = distances
-    adata.obsp[neighbors_dict["connectivities_key"]] = connectivities
+    adata.uns[key] = neighbors_dict
+    _write_dests(adata, vals, dests)
 
     logg.info(
         "    finished",
         time=start,
         deep=(
-            f"added to `.uns[{key_added!r}]`\n"
-            f"    `.obsp[{neighbors_dict['distances_key']!r}]`, distances for each pair of neighbors\n"
-            f"    `.obsp[{neighbors_dict['connectivities_key']!r}]`, weighted adjacency matrix"
+            f"added to `.uns[{key!r}]`\n"
+            f"    `.obsp[{neighbors_dict.get('distances_key')!r}]`, distances for each pair of neighbors\n"
+            f"    `.obsp[{neighbors_dict.get('connectivities_key')!r}]`, weighted adjacency matrix"
         ),
     )
-    return adata if copy else None
+    return None
 
 
 def _compute_batch_balanced_knn(

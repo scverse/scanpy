@@ -70,10 +70,13 @@ def test_normalize_matrix_types(
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
-    sc.pp.normalize_total(adata, key_added="n_counts")
+    sc.pp.normalize_total(adata)
     assert np.allclose(to_ndarray(stats.sum(adata.X, axis=1)), [3.0, 3.0, 3.0])
-    sc.pp.normalize_total(adata, target_sum=1, key_added="n_counts2")
-    assert np.allclose(to_ndarray(stats.sum(adata.X, axis=1)), [1.0, 1.0, 1.0])
+    sc.pp.normalize_total(adata, target_sum=1, out=sc.Prefix("p"))
+    assert np.allclose(
+        to_ndarray(stats.sum(adata.layers["p_normalized"], axis=1)), [1.0, 1.0, 1.0]
+    )
+    assert np.allclose(adata.obs["p_norm_factor"], 3.0)
 
     adata = AnnData(array_type(X_frac).astype(dtype))
     sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.7)
@@ -170,13 +173,11 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
 
     # compute output to test
     adata = AnnData(sparsity_func(x).astype(dtype))
-    output = sc.experimental.pp.normalize_pearson_residuals(
-        adata, theta=theta, clip=clip, inplace=False
+    output_x = sc.experimental.pp.normalize_pearson_residuals(
+        adata, theta=theta, clip=clip, out=True
     )
-    output_x = output["X"]
-    sc.experimental.pp.normalize_pearson_residuals(
-        adata, theta=theta, clip=clip, inplace=True
-    )
+    assert not adata.uns
+    sc.experimental.pp.normalize_pearson_residuals(adata, theta=theta, clip=clip)
 
     # check for correct new `adata.uns` keys
     assert {"pearson_residuals_normalization"} <= adata.uns.keys()
@@ -258,13 +259,12 @@ def test_normalize_pearson_residuals_pca(
         )
 
     # inplace=False
-    adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata.copy(), inplace=False, n_comps=n_comps, **params
-    )
-    # inplace=True modifies the input adata object
-    sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata, inplace=True, n_comps=n_comps, **params
-    )
+    with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
+        adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
+            adata.copy(), inplace=False, n_comps=n_comps, **params
+        )
+    # by default, modifies the input adata object
+    sc.experimental.pp.normalize_pearson_residuals_pca(adata, n_comps=n_comps, **params)
 
     for ad, n_var_ret in (
         (adata_pca, n_var_copy),
@@ -299,9 +299,10 @@ def test_normalize_pearson_residuals_recipe(
     ### inplace = False ###
     # outputs the (potentially hvg-restricted) adata_pca object
     # PCA on all genes
-    adata_pca, hvg = sc.experimental.pp.recipe_pearson_residuals(
-        adata.copy(), inplace=False, n_comps=n_comps, n_top_genes=n_hvgs
-    )
+    with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
+        adata_pca, hvg = sc.experimental.pp.recipe_pearson_residuals(
+            adata.copy(), inplace=False, n_comps=n_comps, n_top_genes=n_hvgs
+        )
 
     # check PCA fields
     _check_pearson_pca_fields(adata_pca, n_cells, n_comps)
@@ -325,7 +326,7 @@ def test_normalize_pearson_residuals_recipe(
     # modifies the input adata object
     # PCA on all genes
     sc.experimental.pp.recipe_pearson_residuals(
-        adata, inplace=True, n_comps=n_comps, n_top_genes=n_hvgs
+        adata, n_comps=n_comps, n_top_genes=n_hvgs
     )
 
     # check PCA fields and output shape
@@ -507,56 +508,37 @@ def test_normalize_shifted_clr_zero_cell(array_type):
     np.testing.assert_allclose(result[1], 0.0, atol=1e-6)
 
 
-def test_normalize_shifted_clr_inplace_false():
+def test_normalize_shifted_clr_out_true():
     adata = AnnData(sparse.csr_matrix(X_clr_estimated))  # noqa: TID251
     x_before = to_ndarray(adata.X).copy()
-    out = sc.pp.normalize_shifted_clr(adata, inplace=False)
+    res = sc.pp.normalize_shifted_clr(adata, out=True)
 
-    assert isinstance(out, dict)
     np.testing.assert_allclose(
-        to_ndarray(out["X"]), X_clr_estimated_expected, rtol=1e-5, atol=1e-6
+        to_ndarray(res), X_clr_estimated_expected, rtol=1e-5, atol=1e-6
     )
-    assert set(out) == {"X"}
     # input is left untouched
     assert isinstance(adata.X, CSBase)
     np.testing.assert_array_equal(to_ndarray(adata.X), x_before)
 
 
-def test_normalize_shifted_clr_copy():
-    adata = AnnData(sparse.csr_matrix(X_clr_estimated))  # noqa: TID251
-    returned = sc.pp.normalize_shifted_clr(adata, copy=True)
+@needs.anndata_acc
+def test_normalize_shifted_clr_use_out():
+    """`use` selects the input, `out` the destination, leaving `X` untouched."""
+    from anndata.acc import A
 
-    assert isinstance(returned, AnnData)
-    assert returned is not adata
-    np.testing.assert_allclose(
-        returned.X, X_clr_estimated_expected, rtol=1e-5, atol=1e-6
-    )
-    # original is left untouched
-    assert isinstance(adata.X, CSBase)
-
-
-def test_normalize_shifted_clr_copy_inplace_error():
-    adata = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
-    with pytest.raises(
-        ValueError, match="`copy=True` cannot be used with `inplace=False`"
-    ):
-        sc.pp.normalize_shifted_clr(adata, copy=True, inplace=False)
-
-
-def test_normalize_shifted_clr_layer():
-    """`layer` selects the input layer and leaves `X` untouched."""
     adata = AnnData(
         sparse.csr_matrix(X_clr_estimated),  # noqa: TID251
         layers={"counts": sparse.csr_matrix(X_clr_estimated)},  # noqa: TID251
     )
     x_before = to_ndarray(adata.X).copy()
-    sc.pp.normalize_shifted_clr(adata, layer="counts")
+    sc.pp.normalize_shifted_clr(adata, use=A.layers["counts"], out=sc.Prefix("p"))
 
     np.testing.assert_array_equal(to_ndarray(adata.X), x_before)
+    np.testing.assert_array_equal(to_ndarray(adata.layers["counts"]), x_before)
     np.testing.assert_allclose(
-        adata.layers["counts"], X_clr_estimated_expected, rtol=1e-5, atol=1e-6
+        adata.layers["p_pflog"], X_clr_estimated_expected, rtol=1e-5, atol=1e-6
     )
-    assert isinstance(adata.layers["counts"], np.ndarray)
+    assert isinstance(adata.layers["p_pflog"], np.ndarray)
 
 
 def test_normalize_shifted_clr_densifies_sparse_input():

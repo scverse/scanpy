@@ -39,16 +39,22 @@ from fast_array_utils.conv import to_dense
 from scipy.stats import norm
 
 from .._compat import CSBase
-from .._utils import check_nonnegative_integers
+from .._docs import doc_out_multi
+from .._utils import _doc_params, check_nonnegative_integers
 from .._utils._doctests import doctest_needs
-from ..get.get import MultiAcc, _get_arr, _get_vec
+from ..get._out import _out_dests, _write_dests
+from ..get._types import MultiAcc
+from ..get._use import _get_arr, _get_vec
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
+    from collections.abc import Collection, Mapping
 
     from anndata import AnnData
     from anndata.acc import AdRef
     from numpy.typing import ArrayLike, NDArray
+
+    from ..get._out import OutKind, Prefix
+    from ..get._types import ArrAcc, VecRef, _SetRep
 
 
 # smaller than what log-counts can resolve
@@ -231,7 +237,42 @@ def _get_hashes(
     return data, np.arange(data.shape[1]).astype(str)
 
 
+class HashsoloOut[C = pd.Series, P = pd.DataFrame](NamedTuple):
+    """Outputs of :func:`~scanpy.pp.hashsolo`."""
+
+    classification: C
+    """Classification of each cell as the name of one of the `hashes`, `"Negative"`, or `"Doublet"`."""
+    probabilities: P
+    """Probability of the `negative`, `singlet`, and `doublet` hypothesis."""
+
+
+HASHSOLO_KINDS: HashsoloOut[set[OutKind], set[OutKind]] = HashsoloOut({"obs"}, {"obsm"})
+"""Where `out` can write the outputs of `pp.hashsolo`."""
+
+
+def _hashsolo_dests(prefix: str) -> HashsoloOut[_SetRep, _SetRep]:
+    return HashsoloOut(dict(obs=prefix), dict(obsm=prefix))
+
+
 @doctest_needs("anndata_acc")
+@_doc_params(
+    out=doc_out_multi(
+        dict(
+            classification=(
+                "Classification of each cell. "
+                "By default written to `A.obs['hashsolo']`, "
+                "with `sc.Prefix('p')` to `A.obs['p_hashsolo']`."
+            ),
+            probabilities=(
+                "Probabilities of each hypothesis. "
+                "By default written to `A.obsm['hashsolo']`, "
+                "with `sc.Prefix('p')` to `A.obsm['p_hashsolo']`."
+            ),
+        ),
+        example="{'classification': A.obs['hto']}",
+        returns=":class:`~scanpy.pp.HashsoloOut`",
+    ),
+)
 def hashsolo(
     adata: AnnData,
     hashes: MultiAcc | Collection[AdRef] | Collection[str],
@@ -239,9 +280,8 @@ def hashsolo(
     priors: tuple[float, float, float] = (0.01, 0.8, 0.19),
     pre_existing_clusters: AdRef | str | None = None,
     n_noise_barcodes: int | None = None,
-    key_added: str = "hashsolo",
-    copy: bool = False,
-) -> AnnData | None:
+    out: Mapping[str, ArrAcc | VecRef | str] | Prefix | bool = False,
+) -> HashsoloOut | None:
     r"""Probabilistic demultiplexing of cell hashing data using HashSolo :cite:p:`Bernstein2020`.
 
     .. array-support:: pp.hashsolo
@@ -273,20 +313,17 @@ def hashsolo(
     n_noise_barcodes
         The number of barcodes used to create the noise distribution.
         Defaults to `len(hashes) - 2`.
-    key_added
-        Key under which to add the demultiplexing results.
-    copy
-        Whether to modify a copy of `adata` instead of `adata` itself.
+    {out}
 
     Returns
     -------
-    Returns `None` if `copy=False`, else the modified `adata`.
-    Sets the following fields:
+    Returns the outputs as a :class:`~scanpy.pp.HashsoloOut` if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.obs[key_added]` : :class:`~pandas.Categorical` (shape `(n_obs,)`)
+    `adata.obs['hashsolo']` : :class:`~pandas.Categorical` (shape `(n_obs,)`)
         Classification of each cell: the name of one of the `hashes`,
         `"Negative"`, or `"Doublet"`.
-    `adata.obsm[key_added]` : :class:`~pandas.DataFrame` (shape `(n_obs, 3)`)
+    `adata.obsm['hashsolo']` : :class:`~pandas.DataFrame` (shape `(n_obs, 3)`)
         Probability of the `negative`, `singlet`, and `doublet` hypothesis.
 
     Examples
@@ -317,12 +354,19 @@ def hashsolo(
     referenced one by one:
 
     >>> adata.obs[["Hash1", "Hash2", "Hash3"]] = hto
-    >>> sc.pp.hashsolo(adata, A.obs[["Hash1", "Hash2", "Hash3"]], key_added="hs2")
-    >>> adata.obs["hs2"].cat.categories.astype("string")
+    >>> sc.pp.hashsolo(adata, A.obs[["Hash1", "Hash2", "Hash3"]], out=sc.Prefix("hs2"))
+    >>> adata.obs["hs2_hashsolo"].cat.categories.astype("string")
     Index(['Hash1', 'Hash2', 'Hash3'], dtype='string')
 
     """
-    adata = adata.copy() if copy else adata
+    dests = _out_dests(
+        out,
+        None,
+        dests=_hashsolo_dests,
+        kinds=HASHSOLO_KINDS,
+        bases=_hashsolo_dests("hashsolo"),
+        default="hashsolo",
+    )
     data, names = _get_hashes(adata, hashes)
     clusters = (
         None
@@ -340,8 +384,13 @@ def hashsolo(
     classification[most_likely_hypothesis == 0] = "Negative"
     classification[most_likely_hypothesis == 2] = "Doublet"
 
-    adata.obs[key_added] = classification.astype("category")
-    adata.obsm[key_added] = pd.DataFrame(
-        probs, columns=["negative", "singlet", "doublet"], index=adata.obs_names
+    vals = HashsoloOut(
+        classification.astype("category"),
+        pd.DataFrame(
+            probs, columns=["negative", "singlet", "doublet"], index=adata.obs_names
+        ),
     )
-    return adata if copy else None
+    if dests is True:
+        return vals
+    _write_dests(adata, vals, dests[1])
+    return None

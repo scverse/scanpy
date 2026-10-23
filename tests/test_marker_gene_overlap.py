@@ -60,3 +60,20 @@ def test_marker_overlap_subsetting():
 
     assert t6["c0"]["type 1"] == 2.0
     assert t7["c0"]["type 1"] == 1.0
+
+
+def test_marker_overlap_out():
+    """Results are returned by default, writing isn’t implemented."""
+    import pytest
+
+    test_data, marker_genes = generate_test_data()
+    with pytest.raises(NotImplementedError):
+        sc.tl.marker_gene_overlap(test_data, marker_genes, out=sc.Prefix("x"))
+    with (
+        pytest.warns(FutureWarning, match=r"argument inplace is deprecated"),
+        pytest.raises(NotImplementedError),
+    ):
+        sc.tl.marker_gene_overlap(test_data, marker_genes, inplace=True)
+    with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
+        df = sc.tl.marker_gene_overlap(test_data, marker_genes, inplace=False)
+    assert df.equals(sc.tl.marker_gene_overlap(test_data, marker_genes))

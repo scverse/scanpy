@@ -2,39 +2,25 @@
 
 from __future__ import annotations
 
-import json
-from collections.abc import Collection, Sequence
-from importlib.util import find_spec
-from typing import TYPE_CHECKING, TypedDict, overload
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from numpy.typing import NDArray
+from scverse_misc import Deprecation, deprecated_arg
 
 from .._compat import CSBase
-from .._settings import Default, Preset
-from .._utils import dim_acc
+from .._docs import doc_use_rank_genes_groups
+from .._utils import _doc_params
+from ._out import _uns_use
+from ._use import _get_arr
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-    from typing import Any, Literal, TypeIs, Unpack
+    from collections.abc import Collection, Iterable
+    from typing import Literal
 
-    from anndata.acc import Idx2D, RefAcc
+    from ._out import Prefix
 
-    from .._compat import DaskArray
-
-
-if TYPE_CHECKING or find_spec("anndata.acc"):
-    from anndata.acc import AdRef, GraphAcc, LayerAcc, MultiAcc
-else:
-    AdRef = type("AdRef", (), dict(__module__="anndata.acc"))
-    GraphAcc = type("GraphAcc", (), dict(__module__="anndata.acc"))
-    LayerAcc = type("LayerAcc", (), dict(__module__="anndata.acc"))
-    MultiAcc = type("MultiAcc", (), dict(__module__="anndata.acc"))
-
-type Mask = NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str
-"""A boolean array, or a reference to one (see `_check_mask`)."""
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -42,15 +28,25 @@ type Mask = NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str
 
 
 # TODO: implement diffxpy method, make singledispatch
+@_doc_params(use=doc_use_rank_genes_groups)
+@deprecated_arg(
+    "key",
+    Deprecation(
+        "1.13.0",
+        "Use `use` instead, e.g. `use=sc.Prefix('p')` for `key='p_rank_genes_groups'`.",
+    ),
+)
 def rank_genes_groups_df(
     adata: AnnData,
     group: str | Iterable[str] | None,
     *,
-    key: str = "rank_genes_groups",
+    use: Prefix | None = None,
     pval_cutoff: float | None = None,
     log2fc_min: float | None = None,
     log2fc_max: float | None = None,
     gene_symbols: str | None = None,
+    # deprecated
+    key: str | None = None,
 ) -> pd.DataFrame:
     """Get :func:`scanpy.tl.rank_genes_groups` results in the form of a :class:`~pandas.DataFrame`.
 
@@ -62,8 +58,7 @@ def rank_genes_groups_df(
         Which group (as in :func:`scanpy.tl.rank_genes_groups`'s `groupby`
         argument) to return results from. Can be a list. All groups are
         returned if groups is `None`.
-    key
-        Key differential expression groups were stored under.
+    {use}
     pval_cutoff
         Return only adjusted p-values below the  cutoff.
     log2fc_min
@@ -73,15 +68,18 @@ def rank_genes_groups_df(
     gene_symbols
         Column name in `.var` DataFrame that stores gene symbols. Specifying
         this will add that column to the returned dataframe.
+    key
+        Key differential expression groups were stored under.
 
     Example
     -------
     >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True)
+    >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain")
     >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")
 
     """
+    key = _uns_use(use, key, base="rank_genes_groups")
     if isinstance(group, str):
         group = [group]
     if group is None:
@@ -415,7 +413,7 @@ def var_df(
     return df
 
 
-def pca(adata: AnnData, *, key_added: str = "pca") -> AnnData:
+def pca(adata: AnnData, *, use: Prefix | None = None) -> AnnData:
     """Return PCA results as an :class:`~anndata.AnnData` indexed by component.
 
     The principal components (not the genes) become the variables,
@@ -427,21 +425,22 @@ def pca(adata: AnnData, *, key_added: str = "pca") -> AnnData:
     ----------
     adata
         Annotated data matrix with PCA computed, e.g. via :func:`~scanpy.pp.pca`.
-    key_added
-        `.obsm`, `.varm`, and `.uns` key used when running PCA.
+    use
+        Where :func:`~scanpy.pp.pca` wrote its results:
+        `None` for the default places, `sc.Prefix('p')` for `A.obsm['p_pca']` and `.uns['p_pca']`.
 
     Returns
     -------
     An :class:`~anndata.AnnData` with:
 
     `.X`
-        the PCA embedding (`adata.obsm[key_added]`), observations × components.
+        the PCA embedding (e.g. `adata.obsm['X_pca']`), observations × components.
     `.obs`
         `adata.obs`, unchanged.
     `.var`
         one row per principal component (named `PC1`, `PC2`, …),
         with `variance` and `variance_ratio` columns
-        taken from `adata.uns[key_added]`.
+        taken from the `.uns` entry (e.g. `adata.uns['pca']`).
 
     Examples
     --------
@@ -454,470 +453,15 @@ def pca(adata: AnnData, *, key_added: str = "pca") -> AnnData:
         sc.get.pca(adata)
 
     """
-    info = adata.uns[key_added]
-    n_comps = adata.obsm[key_added].shape[1]
+    from .._keys import _embedding_keys
+    from .._settings import Default
+
+    keys = _embedding_keys("pca", Default() if use is None else f"{use.prefix}_pca")
+    info = adata.uns[keys.uns]
+    x = adata.obsm[keys.obsm]
+    n_comps = x.shape[1]
     var = pd.DataFrame(
         {"variance": info["variance"], "variance_ratio": info["variance_ratio"]},
         index=[f"PC{i + 1}" for i in range(n_comps)],
     )
-    return AnnData(X=adata.obsm[key_added], obs=adata.obs, var=var)
-
-
-def _collection_of[T](
-    thing: object, typ: type[T] | tuple[type[T], ...]
-) -> TypeIs[Collection[T]]:
-    return (
-        isinstance(thing, Collection)
-        and not isinstance(thing, typ)
-        and len(thing) > 0
-        and all(isinstance(e, typ) for e in thing)
-    )
-
-
-class _Rep(TypedDict, total=False):
-    use_raw: bool
-    layer: str | None
-    obsm: str | None
-    obsp: str | None
-    varm: str | None
-    varp: str | None
-
-
-type ArrAcc = GraphAcc | LayerAcc | MultiAcc
-type RepAcc = LayerAcc | MultiAcc
-"""Accessor usable as a representation (`use_rep`), i.e. a non-graph 2D array."""
-
-
-@overload
-def _get_arr(
-    adata: AnnData,
-    acc: Collection[ArrAcc | str],
-    *,
-    dim: Literal["obs", "var"] | None = None,
-) -> list[Any]: ...
-@overload
-def _get_arr(
-    adata: AnnData,
-    acc: ArrAcc | str | None = None,
-    *,
-    dim: Literal["obs", "var"] | None = None,
-    **choices: Unpack[_Rep],
-) -> Any: ...
-def _get_arr(  # noqa: PLR0911, PLR0912
-    adata: AnnData,
-    acc: ArrAcc | str | Collection[ArrAcc | str] | None = None,
-    *,
-    dim: Literal["obs", "var"] | None = None,
-    **choices: Unpack[_Rep],
-) -> Any:
-    """Get a 2D array aligned with `dim`, via an `anndata.acc` accessor or old-style choices."""
-    if _collection_of(acc, (GraphAcc, LayerAcc, MultiAcc, str)):
-        return [_get_arr(adata, a, dim=dim, **choices) for a in acc]
-
-    if acc is not None:
-        if isinstance(acc, str):
-            from anndata.acc import A
-
-            acc = A.resolve(acc, vec=False)
-
-        if any(v not in (None, False) for v in choices.values()):
-            msg = "`acc` cannot be combined with `layer`/`use_raw`/`obsm`/`obsp`/`varm`/`varp`"
-            raise TypeError(msg)
-        if not isinstance(acc, GraphAcc | LayerAcc | MultiAcc):
-            msg = (
-                "`acc` must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`), "
-                "`GraphAcc` (e.g. `A.obsp[...]`, `A.varp[...]`), or "
-                f"`MultiAcc` (e.g. `A.obsm[...]`, `A.varm[...]`), was {acc!r}"
-            )
-            raise TypeError(msg)
-        if isinstance(acc, MultiAcc | GraphAcc) and dim is not None and dim != acc.dim:
-            msg = f"`dim` ({dim!r}) does not match `acc`'s ({acc.dim!r})"
-            raise ValueError(msg)
-        data = adata[acc]
-        if isinstance(acc, LayerAcc) and dim == "var":
-            data = data.T
-        return data
-
-    # https://github.com/scverse/scanpy/issues/1546
-    if not isinstance(use_raw := choices.get("use_raw", False), bool):
-        msg = f"use_raw expected to be bool, was {type(use_raw)}."
-        raise TypeError(msg)
-    assert choices.keys() <= {"layer", "use_raw", "obsm", "obsp", "varm", "varp"}
-    if dim is None:
-        dim = "var" if (choices.get("varm") or choices.get("varp")) else "obs"
-
-    match [(k, v) for k, v in choices.items() if v not in {None, False}]:
-        case []:
-            return adata.X.T if dim == "var" else adata.X
-        # can’t use {"key": v} as match expression, since they allow additional entries
-        case [("layer", layer)]:
-            return adata.layers[layer].T if dim == "var" else adata.layers[layer]
-        case [("use_raw", True)]:
-            return adata.raw.X
-        case [(("obsm" | "obsp") as k, v)]:
-            if dim == "var":
-                msg = f"`{k}` cannot be used when `dim` is `var`"
-                raise ValueError(msg)
-            return adata.obsm[v] if k == "obsm" else adata.obsp[v]
-        case [(("varm" | "varp") as k, v)]:
-            if dim == "obs":
-                msg = f"`{k}` cannot be used when `dim` is `obs`"
-                raise ValueError(msg)
-            return adata.varm[v] if k == "varm" else adata.varp[v]
-        case picked:
-            valid = [f"`{k}`" for k, _ in picked]
-            valid[-1] = f"or {valid[-1]}"
-            msg = f"Only one of {', '.join(valid)} can be specified."
-            raise ValueError(msg)
-
-
-def _set_obs_rep(
-    adata: AnnData,
-    val: Any,
-    *,
-    use_raw: bool = False,
-    layer: str | None = None,
-    obsm: str | None = None,
-    obsp: str | None = None,
-):
-    """Set value for observation rep."""
-    is_layer = layer is not None
-    is_raw = use_raw is not False
-    is_obsm = obsm is not None
-    is_obsp = obsp is not None
-    choices_made = sum((is_layer, is_raw, is_obsm, is_obsp))
-    assert choices_made <= 1
-    if choices_made == 0:
-        adata.X = val
-    elif is_layer:
-        adata.layers[layer] = val
-    elif use_raw:
-        adata.raw.X = val
-    elif is_obsm:
-        adata.obsm[obsm] = val
-    elif is_obsp:
-        adata.obsp[obsp] = val
-    else:
-        msg = (
-            "That was unexpected. Please report this bug at:\n\n"
-            "\thttps://github.com/scverse/scanpy/issues"
-        )
-        raise AssertionError(msg)
-
-
-def _mask_arg[M](
-    mask: M | Default, legacy: M | None, *, dim: Literal["obs", "var"]
-) -> M | Default:
-    """Merge the `mask` argument with its deprecated `mask_{dim}` predecessor."""
-    if legacy is not None:
-        if mask is not None and not isinstance(mask, Default):
-            msg = f"Pass either `mask` or `mask_{dim}`, not both."
-            raise TypeError(msg)
-        return dim_acc(legacy, dim=dim) if isinstance(legacy, str) else legacy
-    if isinstance(mask, str):
-        if not find_spec("anndata.acc"):
-            msg = (
-                f"`mask={mask!r}` requires `anndata>=0.13.3`. "
-                f"Pass a boolean array instead, or a column name via the deprecated `mask_{dim}`."
-            )
-            raise ImportError(msg)
-        from anndata.acc import A
-
-        return A.resolve(mask, vec=True)
-    return mask
-
-
-def _mask_hvg[M](adata: AnnData, mask: M | Default) -> M | None:
-    """Resolve a `Default` `mask` to `.var['highly_variable']` if there is one."""
-    if not isinstance(mask, Default):
-        return mask
-    if "highly_variable" not in adata.var:
-        return None
-    return dim_acc("highly_variable", dim="var")
-
-
-def _check_mask[M: NDArray[np.bool] | NDArray[np.floating] | pd.Series | None](
-    data: AnnData | np.ndarray | CSBase | DaskArray,
-    mask: str | AdRef[Idx2D | int, AnnData] | M,
-    dim: Literal["obs", "var"],
-    *,
-    allow_probabilities: bool = False,
-) -> M:  # Could also be a series, but should be one or the other
-    """Validate mask argument.
-
-    Params
-    ------
-    data
-        Annotated data matrix or numpy array.
-    mask
-        Mask (or probabilities if `allow_probabilities=True`).
-        Either an appropriatley sized array, or a reference to one.
-    dim
-        The dimension being masked.
-    allow_probabilities
-        Whether to allow probabilities as `mask`
-    """
-    if mask is None:
-        return mask
-    desc = "mask/probabilities" if allow_probabilities else "mask"
-
-    if isinstance(mask, str | AdRef):
-        mask = _resolve_ref(mask)
-        if not isinstance(data, AnnData):
-            msg = f"Cannot use refererence for {desc} without providing anndata object as argument"
-            raise ValueError(msg)
-        try:
-            mask_array = np.asarray(_get_vec_compat(data, mask, dim=dim))
-        except KeyError:
-            if isinstance(mask, AdRef):
-                msg = (
-                    f"Did not find `{mask}` in `adata`. "
-                    f"Either add the {desc} first to `adata.{dim}`"
-                    f"or consider using the {desc} argument with an array."
-                )
-            else:
-                msg = f"Did not find `adata.{dim}[{mask!r}]`. "
-            raise ValueError(msg) from None
-    else:
-        if len(mask) != data.shape[0 if dim == "obs" else 1]:
-            msg = f"The shape of the {desc} do not match the data."
-            raise ValueError(msg)
-        mask_array = mask
-
-    is_bool = pd.api.types.is_bool_dtype(mask_array.dtype)
-    if not allow_probabilities and not is_bool:
-        msg = "Mask array must be boolean."
-        raise ValueError(msg)
-    elif allow_probabilities and not (
-        is_bool or pd.api.types.is_float_dtype(mask_array.dtype)
-    ):
-        msg = f"{desc} array must be boolean or floating point."
-        raise ValueError(msg)
-
-    return mask_array
-
-
-@overload
-def _resolve_ref[R: AdRef](ref: R | str) -> R | str: ...
-@overload
-def _resolve_ref[R: AdRef](ref: Collection[R | str]) -> list[R] | list[str]: ...
-def _resolve_ref(
-    ref: AdRef | str | Collection[AdRef | str],
-) -> AdRef | str | list[AdRef] | list[str]:
-    """Resolve a plain string `ref` into an `AdRef` under the `v2` preset, else leave it as-is."""
-    if not isinstance(ref, AdRef | str):
-        refs = [_resolve_ref(r) for r in ref]
-        if sum(isinstance(r, str) for r in refs) not in {0, len(refs)}:
-            msg = "All elements of `refs` must be either `AdRef` or strings, not a mix, if `preset` is not `ScanpyV2Preview`."
-            raise TypeError(msg)
-        return refs
-
-    from scanpy import settings
-
-    if isinstance(ref, AdRef) or settings.preset is not Preset.ScanpyV2Preview:
-        return ref
-    from anndata.acc import A
-
-    return A.resolve(ref, vec=True)
-
-
-def _ref_dim(
-    ref: AdRef | str, *, dim: Literal["obs", "var"] | None
-) -> Literal["obs", "var"]:
-    """Derive the dim a single `ref` refers to, validating it against `dim` if given."""
-    ref = _resolve_ref(ref)
-    if isinstance(ref, str):
-        return dim or "obs"
-    ref_dim = next(iter(ref.dims))
-    if dim is not None and dim != ref_dim:
-        msg = f"Dimension of `{ref}` ({ref_dim}) does not match `{dim}`."
-        raise ValueError(msg)
-    return ref_dim
-
-
-def _refs_dim(
-    refs: Collection[AdRef | str], *, dim: Literal["obs", "var"] | None = None
-) -> Literal["obs", "var"]:
-    """Derive the single dim a collection of `refs` all refer to."""
-    dims = {_ref_dim(r, dim=dim) for r in refs}
-    if len(dims) != 1:
-        msg = (
-            f"All refs must refer to the same single axis (`obs` or `var`), got {dims}"
-        )
-        raise ValueError(msg)
-    return next(iter(dims))
-
-
-def _fetch_vec(adata: AnnData, ref: AdRef | str, *, dim: Literal["obs", "var"]) -> Any:
-    """Retrieve the 1D array a single, already dim-resolved `ref` points to."""
-    ref = _resolve_ref(ref)
-    if isinstance(ref, str):
-        return getattr(adata, dim)[ref]
-    return adata[ref]
-
-
-@overload
-def _get_vec_compat(
-    adata: AnnData,
-    ref: Collection[AdRef] | Collection[str],
-    *,
-    dim: Literal["obs", "var"] | None = None,
-) -> list[Any]: ...
-@overload
-def _get_vec_compat(
-    adata: AnnData, ref: AdRef | str, *, dim: Literal["obs", "var"] | None = None
-) -> Any: ...
-def _get_vec_compat(
-    adata: AnnData,
-    ref: AdRef | str | Collection[AdRef] | Collection[str],
-    *,
-    dim: Literal["obs", "var"] | None = None,
-) -> Any:
-    """Get the 1D array(s) one or more `ref`erences point to.
-
-    Treats strings as `obs` columns instead of `anndata.acc` specs when the preset is v1.
-    """
-    if _collection_of(ref, (AdRef, str)):
-        dim = _refs_dim(ref, dim=dim)
-        return [_fetch_vec(adata, r, dim=dim) for r in ref]
-
-    if isinstance(ref, Collection) and not isinstance(ref, str):
-        msg = f"Expected a single ref or collection of refs, got {ref!r}"
-        raise TypeError(msg)
-
-    dim = _ref_dim(ref, dim=dim)
-    return _fetch_vec(adata, ref, dim=dim)
-
-
-@overload
-def _get_vec(
-    adata: AnnData,
-    ref: Collection[AdRef] | Collection[str],
-    *,
-    dim: Literal["obs", "var"] | None = None,
-) -> list[Any]: ...
-@overload
-def _get_vec(
-    adata: AnnData, ref: AdRef | str, *, dim: Literal["obs", "var"] | None = None
-) -> Any: ...
-def _get_vec(
-    adata: AnnData,
-    ref: AdRef | str | Collection[AdRef] | Collection[str],
-    *,
-    dim: Literal["obs", "var"] | None = None,
-) -> Any:
-    """Get the 1D array(s) one or more `ref`erences point to, using `anndata.acc`."""
-    from anndata.acc import A, AdRef
-
-    if _collection_of(ref, (AdRef, str)):
-        refs = [A.resolve(r, vec=True) if isinstance(r, str) else r for r in ref]
-        _refs_dim(refs, dim=dim)
-        return [adata[r] for r in refs]
-
-    if isinstance(ref, Collection) and not isinstance(ref, str):
-        msg = f"Expected a single ref or collection of refs, got {ref!r}"
-        raise TypeError(msg)
-
-    if isinstance(ref, str):
-        ref = A.resolve(ref, vec=True)
-    _ref_dim(ref, dim=dim)
-    return adata[ref]
-
-
-def _resolve_rep(rep: RefAcc | str) -> RepAcc:
-    """Resolve a `rep`resentation string into a `LayerAcc`/`MultiAcc` using `anndata.acc`."""
-    if isinstance(rep, str):
-        from anndata.acc import A
-
-        rep = A.resolve(rep, vec=False)
-    if isinstance(rep, MultiAcc) and rep.dim != "obs":
-        msg = (
-            f"Representation must be aligned to `obs`, but {rep!r} is aligned to `var`"
-        )
-        raise ValueError(msg)
-    if isinstance(rep, LayerAcc | MultiAcc):
-        return rep
-    msg = (
-        "Representation must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or a "
-        f"`MultiAcc` (e.g. `A.obsm[...]`), was {rep!r}"
-    )
-    raise TypeError(msg)
-
-
-def _ref_to_json[M: NDArray | None](ref: AdRef | str | M) -> str | list[str] | M:
-    """Serialize a vector reference for storage in `.uns`, see `_rep_to_json`.
-
-    Arrays (and v1 strings) are stored unchanged.
-    """
-    from scanpy import settings
-
-    if not isinstance(ref, AdRef) and not (
-        isinstance(ref, str) and settings.preset is Preset.ScanpyV2Preview
-    ):
-        return ref
-    from anndata.acc import A
-
-    return [json.dumps(A.to_json(_resolve_ref(ref)))]
-
-
-def _ref_from_json[M: NDArray | None](
-    ref: str | Sequence[str | int | None] | M,
-) -> AdRef | str | M:
-    """Parse a vector reference stored by `_ref_to_json`."""
-    if (
-        isinstance(ref, Sequence | np.ndarray)
-        and not isinstance(ref, str)
-        and len(ref) == 1
-        and isinstance(ref[0], str)
-    ):
-        from anndata.acc import A
-
-        return A.from_json(json.loads(ref[0]), vec=True)
-    return ref
-
-
-def _rep_to_json(rep: RepAcc | str | None) -> str | list[str] | None:
-    """Serialize a `rep`resentation for storage in `.uns`.
-
-    v1 strings (`'X'` or an `.obsm` key) are stored unchanged,
-    accessors (and hence v2 strings) as `anndata.acc` JSON inside a 1-element list,
-    e.g. `A.obsm['pca']` as `['["obsm", "pca"]']`.
-
-    TODO: Once AnnData can store a heterogeneous list, store that instead of a 1-element list.
-    See https://github.com/scverse/anndata/issues/1979
-    """
-    from scanpy import settings
-
-    if rep is None or (
-        isinstance(rep, str) and settings.preset is not Preset.ScanpyV2Preview
-    ):
-        return rep
-    from anndata.acc import A
-
-    return [json.dumps(A.to_json(_resolve_rep(rep)))]
-
-
-def _rep_from_json(rep: str | Sequence[str | int | None] | None) -> RepAcc | str | None:
-    """Parse a `rep`resentation stored by `_rep_to_json`."""
-    from scanpy import settings
-
-    if rep is None:
-        return rep
-    if not isinstance(rep, str):
-        from anndata.acc import A
-
-        if (
-            isinstance(rep, Sequence | np.ndarray)
-            and len(rep) == 1
-            and isinstance(rep[0], str)
-        ):
-            # see `_rep_to_json`
-            rep: Sequence[str | int | None] = json.loads(rep[0])
-        return _resolve_rep(A.from_json(rep, vec=False))
-    if settings.preset is Preset.ScanpyV2Preview:
-        from anndata.acc import A
-
-        # a plain string was stored under the v1 preset,
-        # so interpret it as one instead of as an `anndata.acc` spec
-        return A.X if rep == "X" else A.obsm[rep]
-    return rep
+    return AnnData(X=x, obs=adata.obs, var=var)

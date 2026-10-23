@@ -132,6 +132,7 @@ def test_results(
 
 @pytest.mark.parametrize("method", ["t-test", "wilcoxon"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_results_layers(
     subtests: pytest.Subtests,
     data_dir: Path,
@@ -147,14 +148,16 @@ def test_results_layers(
     scores = get_true_scores(data_dir, method)["scores"]
 
     with subtests.test("layer"):
-        rank_genes_groups(
-            adata,
-            "true_groups",
-            method=method,
-            layer="to_test",
-            use_raw=None if method == "wilcoxon" else False,
-            n_genes=20,
-        )
+        # the deprecated spelling, so this also runs without `anndata.acc`
+        with pytest.warns(FutureWarning, match=r"argument layer is deprecated"):
+            rank_genes_groups(
+                adata,
+                "true_groups",
+                method=method,
+                layer="to_test",
+                use_raw=None if method == "wilcoxon" else False,
+                n_genes=20,
+            )
         assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
         for g in range(scores.shape[0]):
             np.testing.assert_allclose(
@@ -171,6 +174,7 @@ def test_results_layers(
             )
 
 
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_rank_genes_groups_use_raw():
     # https://github.com/scverse/scanpy/issues/1929
     pbmc = pbmc68k_reduced()
@@ -205,6 +209,7 @@ def test_emptycat():
         rank_genes_groups(pbmc, groupby="louvain")
 
 
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_log1p_save_restore(tmp_path):
     """Tests the sequence log1p→save→load→rank_genes_groups."""
     from anndata import read_h5ad
@@ -577,3 +582,23 @@ def test_mean_in_log_space(
         )
     logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
     np.testing.assert_equal(logfcs, expected_logfc)
+
+
+def test_rank_genes_groups_out() -> None:
+    """`out=True` returns what would be stored, `Prefix`/`key_added` rename it."""
+    pbmc = pbmc68k_reduced()
+    before = set(pbmc.uns)
+    res = rank_genes_groups(pbmc, "bulk_labels", n_genes=3, out=True)
+    assert set(pbmc.uns) == before
+    assert {"params", "names", "scores"} <= res.keys()
+
+    rank_genes_groups(pbmc, "bulk_labels", n_genes=3, out=sc.Prefix("p"))
+    np.testing.assert_array_equal(
+        pbmc.uns["p_rank_genes_groups"]["names"], res["names"]
+    )
+    with pytest.warns(FutureWarning, match=r"argument key_added is deprecated"):
+        rank_genes_groups(pbmc, "bulk_labels", n_genes=3, key_added="k")
+    np.testing.assert_array_equal(pbmc.uns["k"]["names"], res["names"])
+
+    with pytest.raises(TypeError, match=r"`out` must be a `bool` or `sc.Prefix`"):
+        rank_genes_groups(pbmc, "bulk_labels", out="obs.x")

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import sys
+from collections.abc import Mapping
 from inspect import signature
 from textwrap import indent
 from typing import TYPE_CHECKING
@@ -15,29 +16,41 @@ import numpy as np
 import scipy
 from packaging.version import Version
 from scipy import sparse
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
-from .._docs import doc_rng
+from .._docs import DEPR_KEY_ADDED, doc_rng
 from .._keys import _EmbeddingKeys, _existing_preset_keys
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng
-from ..get.get import _rep_to_json
+from ..get._out import (
+    Prefix,
+    _dest,
+    _dest_key,
+    _out_dests,
+    _write_dests,
+    deprecated_copy,
+)
+from ..get._uns import _use_to_uns
+from ..get._use import _resolve_obs
 from . import _connectivity
 from ._common import (
+    NEIGHBORS_KINDS,
     _get_indices_distances_from_dense_matrix,
     _get_indices_distances_from_sparse_matrix,
     _get_metadata,
     _get_sparse_matrix_from_indices_distances,
     _make_transformer,
+    _neighbors_dests,
 )
 from ._connectivity import umap
-from ._doc import doc_n_pcs, doc_use_rep
-from ._types import KwdsForTransformer, _Method
+from ._doc import doc_n_pcs, doc_out_key_added, doc_use_rep
+from ._types import KwdsForTransformer, NeighborsOut, _Method
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, MutableMapping
+    from collections.abc import Callable, MutableMapping
     from typing import Any, Literal
 
     from anndata import AnnData
@@ -45,7 +58,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._utils.random import RNGLike, SeedLike
-    from ..get.get import RepAcc
+    from ..get._types import ArrAcc, MultiAcc, RepAcc
     from ._types import (
         KnnTransformerLike,
         RPForestDict,
@@ -58,24 +71,30 @@ if TYPE_CHECKING:
 SCIPY_1_17 = pkg_version("scipy") >= Version("1.17")
 
 
-@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
+@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng, out=doc_out_key_added)
 @_accepts_legacy_random_state(_DEFAULT_SEED := 0)
-def neighbors(  # noqa: PLR0913
+@deprecated_arg("use_rep", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_copy
+def neighbors(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     n_neighbors: int = 15,
     n_pcs: int | None = None,
     *,
     distances: np.ndarray | SpBase | None = None,
-    use_rep: RepAcc | str | None = None,
+    use: RepAcc | str | None = None,
+    use_rep: str | None = None,
     knn: bool = True,
     method: _Method = "umap",
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: _Metric | _MetricFn | None = None,
     metric_kwds: Mapping[str, Any] = frozendict({}),
     rng: SeedLike | RNGLike | None = None,
+    out: Mapping[str, ArrAcc | str] | Prefix | bool = False,
+    # deprecated
     key_added: str | None = None,
     copy: bool = False,
-) -> AnnData | None:
+) -> AnnData | NeighborsOut | None:
     """Compute the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
 
     The computation proceeds in two independent stages.
@@ -140,27 +159,21 @@ def neighbors(  # noqa: PLR0913
     {rng}
 
         *ignored if* ``transformer`` *is an instance.*
-    key_added
-        If not specified, the neighbors data is stored in `.uns['neighbors']`,
-        distances and connectivities are stored in `.obsp['distances']` and
-        `.obsp['connectivities']` respectively.
-        If specified, the neighbors data is added to .uns[key_added],
-        distances are stored in `.obsp[f'{{key_added}}_distances']` and
-        connectivities in `.obsp[f'{{key_added}}_connectivities']`.
+    {out}
     copy
         Return a copy instead of writing to adata.
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the outputs if `out=True`, else `None`. Sets the following fields:
 
-    `adata.obsp['distances' | f'{{key_added}}_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
-        Distance matrix of the nearest neighbors search. Each row (cell) has `n_neighbors`-1 non-zero entries. These are the distances to their `n_neighbors`-1 nearest neighbors (excluding the cell itself).
-    `adata.obsp['connectivities' | f'{{key_added}}_connectivities']` : :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
+    `adata.obsp['connectivities' | f'{{prefix}}_connectivities']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
-    `adata.uns['neighbors' | key_added]` : :class:`dict`
-        neighbors parameters.
+    `adata.obsp['distances' | f'{{prefix}}_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+        Distance matrix of the nearest neighbors search. Each row (cell) has `n_neighbors`-1 non-zero entries. These are the distances to their `n_neighbors`-1 nearest neighbors (excluding the cell itself).
+    `adata.uns['neighbors' | f'{{prefix}}_neighbors']` : :class:`dict`
+        neighbors parameters, and the `.obsp` keys the matrices were written to.
 
     Examples
     --------
@@ -181,21 +194,31 @@ def neighbors(  # noqa: PLR0913
     :doc:`/how-to/knn-transformers`
 
     """
+    if use is not None:
+        use = _resolve_obs(use, rep=True)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
+    )
+    dests = _out_dests(
+        out,
+        key_added,
+        dests=_neighbors_dests,
+        kinds=NEIGHBORS_KINDS,
+        bases=_neighbors_dests(None),
+        uns="neighbors",
     )
 
     if distances is None:
         if metric is None:
             metric = "euclidean"
         start = logg.info("computing neighbors")
-        adata = adata.copy() if copy else adata
         if adata.is_view:  # we shouldn't need this here...
             adata._init_as_actual(adata.copy())
         neighbors_ = Neighbors(adata)
         neighbors_.compute_neighbors(
             n_neighbors,
             n_pcs=n_pcs,
+            use=use,
             use_rep=use_rep,
             knn=knn,
             method=method,
@@ -209,7 +232,7 @@ def neighbors(  # noqa: PLR0913
         ignored = {
             p.name
             for p in signature(neighbors).parameters.values()
-            if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds"}
+            if p.name in {"use", "use_rep", "knn", "n_pcs", "metric_kwds"}
             if params[p.name] != p.default
         }
         if meta_random_state.get("random_state") != _DEFAULT_SEED:
@@ -244,34 +267,39 @@ def neighbors(  # noqa: PLR0913
         neighbors_._distances = distances
         neighbors_._connectivities = neighbors_._compute_connectivites(method)
 
-    key_added, neighbors_dict = _get_metadata(
-        key_added,
+    vals = NeighborsOut(neighbors_.connectivities, neighbors_.distances)
+    if dests is True:
+        logg.info("    finished", time=start)
+        return vals
+    key, dests = dests
+    key, neighbors_dict = _get_metadata(
+        key,
+        dests,
         n_neighbors=neighbors_.n_neighbors,
         method=method,
         metric=metric,
         **meta_random_state,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
-        **({} if use_rep is None else dict(use_rep=_rep_to_json(use_rep))),
+        **_use_to_uns(use, use_rep, rep=True),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
     )
 
     if neighbors_.rp_forest is not None:
         neighbors_dict["rp_forest"] = neighbors_.rp_forest
 
-    adata.uns[key_added] = neighbors_dict
-    adata.obsp[neighbors_dict["distances_key"]] = neighbors_.distances
-    adata.obsp[neighbors_dict["connectivities_key"]] = neighbors_.connectivities
+    adata.uns[key] = neighbors_dict
+    _write_dests(adata, vals, dests)
 
     logg.info(
         "    finished",
         time=start,
         deep=(
-            f"added to `.uns[{key_added!r}]`\n"
-            f"    `.obsp[{neighbors_dict['distances_key']!r}]`, distances for each pair of neighbors\n"
-            f"    `.obsp[{neighbors_dict['connectivities_key']!r}]`, weighted adjacency matrix"
+            f"added to `.uns[{key!r}]`\n"
+            f"    `.obsp[{neighbors_dict.get('distances_key')!r}]`, distances for each pair of neighbors\n"
+            f"    `.obsp[{neighbors_dict.get('connectivities_key')!r}]`, weighted adjacency matrix"
         ),
     )
-    return adata if copy else None
+    return None
 
 
 def _make_forest_dict(forest):
@@ -347,6 +375,20 @@ class OnFlySymMatrix:
         )
 
 
+def _diffmap_keys(
+    adata: AnnData, diffmap: MultiAcc | str | Prefix | None
+) -> _EmbeddingKeys | None:
+    """Where `tl.diffmap` wrote, given the `out` it was called with (`None` for the default)."""
+    if diffmap is None:
+        return _existing_preset_keys(adata, "diffmap")
+    key = (
+        f"{diffmap.prefix}_diffmap"
+        if isinstance(diffmap, Prefix)
+        else _dest_key(_dest(_resolve_obs(diffmap)))
+    )
+    return _EmbeddingKeys(key, key)
+
+
 class Neighbors:
     """Data represented as graph of nearest neighbors.
 
@@ -361,6 +403,10 @@ class Neighbors:
         Number of diffusion components to use.
     neighbors_key
         Where to look in `.uns` and `.obsp` for neighbors data.
+    diffmap
+        Where :func:`~scanpy.tl.diffmap` wrote its results, i.e. the `out` passed to it:
+        `None` for the default places, `sc.Prefix('p')` for `A.obsm['p_diffmap']`,
+        or an accessor like `A.obsm['k']`.
 
     """
 
@@ -370,7 +416,7 @@ class Neighbors:
         *,
         n_dcs: int | None = None,
         neighbors_key: str | None = None,
-        diffmap_key: str | None = None,
+        diffmap: MultiAcc | str | Prefix | None = None,
     ) -> None:
         self._adata = adata
         self._init_iroot()
@@ -424,12 +470,10 @@ class Neighbors:
                 self._connected_components = connected_components(self._connectivities)
                 self._number_connected_components = self._connected_components[0]
 
-        if keys := (
-            _EmbeddingKeys(diffmap_key, diffmap_key)
-            if diffmap_key
-            else _existing_preset_keys(adata, "diffmap")
-        ):
-            self._eigen_values = adata.uns[keys.uns]
+        if keys := _diffmap_keys(adata, diffmap):
+            # `tl.diffmap` stores the eigenvalues directly in V1 and as `evals` otherwise
+            evals = adata.uns[keys.uns]
+            self._eigen_values = evals["evals"] if isinstance(evals, Mapping) else evals
             self._eigen_basis = adata.obsm[keys.obsm]
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):
@@ -531,7 +575,8 @@ class Neighbors:
         n_neighbors: int = 30,
         n_pcs: int | None = None,
         *,
-        use_rep: RepAcc | str | None = None,
+        use: RepAcc | str | None = None,
+        use_rep: str | None = None,
         knn: bool = True,
         method: _Method | None = "umap",
         transformer: KnnTransformerLike | _KnownTransformer | None = None,
@@ -585,7 +630,9 @@ class Neighbors:
         self._rp_forest = None
         self.n_neighbors = n_neighbors
         self.knn = knn
-        x = _choose_representation_compat(self._adata, use_rep=use_rep, n_pcs=n_pcs)
+        x = _choose_representation_compat(
+            self._adata, use=use, use_rep=use_rep, n_pcs=n_pcs
+        )
         self._distances = transformer.fit_transform(x)
         knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
             self._distances, n_neighbors

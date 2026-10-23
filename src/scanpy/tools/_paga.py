@@ -5,29 +5,49 @@ from typing import TYPE_CHECKING, NamedTuple
 import numpy as np
 import scipy as sp
 from scipy.sparse.csgraph import minimum_spanning_tree
-from scverse_misc import Deprecation, deprecated
+from scverse_misc import Deprecation, deprecated, deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
+from .._docs import DEPR_NEIGHBORS_KEY, doc_out_key
+from .._utils import _doc_params
+from ..get._out import Prefix, _out_key, deprecated_copy
 from ..neighbors import Neighbors
+from ..neighbors._common import _neighbors_key
+from ._docs import doc_use_neighbors
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Any, Literal
 
     from anndata import AnnData
+
+    from ..neighbors._common import NeighborsUse
 
 _AVAIL_MODELS = {"v1.0", "v1.2"}
 
 
+@_doc_params(
+    use=doc_use_neighbors(),
+    out=doc_out_key(
+        "the abstracted graph",
+        default="`.uns['paga']` (and the group sizes to `.uns[f'{{groups}}_sizes']`)",
+        prefixed="`.uns['p_paga']` (and `.uns[f'p_{{groups}}_sizes']`)",
+    ),
+)
+@deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
+@deprecated_copy
 def paga(
     adata: AnnData,
     groups: str | None = None,
     *,
     use_rna_velocity: bool = False,
     model: Literal["v1.2", "v1.0"] = "v1.2",
+    use: NeighborsUse = None,
+    out: Prefix | bool = False,
+    # deprecated
     neighbors_key: str | None = None,
     copy: bool = False,
-) -> AnnData | None:
+) -> AnnData | dict[str, Any] | None:
     """Map out the coarse-grained connectivity structures of complex manifolds :cite:p:`Wolf2019`.
 
     By quantifying the connectivity of partitions (groups, clusters) of the
@@ -68,6 +88,8 @@ def paga(
         to change in the future.
     model
         The PAGA connectivity model.
+    {use}
+    {out}
     neighbors_key
         If not specified, paga looks `.uns['neighbors']` for neighbors settings
         and `.obsp['connectivities']`, `.obsp['distances']` for connectivities and
@@ -82,12 +104,13 @@ def paga(
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the following as a :class:`dict` (plus `'sizes'`, the group sizes) if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.uns['connectivities']` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.uns['paga']['connectivities']` : :class:`numpy.ndarray` (dtype `float`)
         The full adjacency matrix of the abstracted graph, weights correspond to
         confidence in the connectivities of partitions.
-    `adata.uns['connectivities_tree']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+    `adata.uns['paga']['connectivities_tree']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         The adjacency matrix of the tree-like subgraph that best explains
         the topology.
 
@@ -106,6 +129,7 @@ def paga(
     pl.paga_compare
 
     """
+    neighbors_key = _neighbors_key(use, neighbors_key)
     check_neighbors = "neighbors" if neighbors_key is None else neighbors_key
     if check_neighbors not in adata.uns:
         msg = "You need to run `pp.neighbors` first to compute a neighborhood graph."
@@ -125,24 +149,28 @@ def paga(
         msg = f"`groups` key {groups!r} not found in `adata.obs`."
         raise KeyError(msg)
 
-    adata = adata.copy() if copy else adata
+    key = _out_key(out, None, kind="uns", base="paga", default="paga")
     _utils.sanitize_anndata(adata)
     start = logg.info("running PAGA")
     paga = PAGA(adata, groups, model=model, neighbors_key=neighbors_key)
-    # only add if not present
-    if "paga" not in adata.uns:
-        adata.uns["paga"] = {}
+    # connectivities and transitions are computed in separate calls, so merge them
+    res = {} if key is True else adata.uns.setdefault(key, {})
     if not use_rna_velocity:
         paga.compute_connectivities()
-        adata.uns["paga"]["connectivities"] = paga.connectivities
-        adata.uns["paga"]["connectivities_tree"] = paga.connectivities_tree
-        # adata.uns['paga']['expected_n_edges_random'] = paga.expected_n_edges_random
-        adata.uns[f"{groups}_sizes"] = np.array(paga.ns)
+        res["connectivities"] = paga.connectivities
+        res["connectivities_tree"] = paga.connectivities_tree
+        # res['expected_n_edges_random'] = paga.expected_n_edges_random
+        sizes = np.array(paga.ns)
+        if key is True:
+            res["sizes"] = sizes
+        else:
+            prefix = f"{out.prefix}_" if isinstance(out, Prefix) else ""
+            adata.uns[f"{prefix}{groups}_sizes"] = sizes
     else:
         paga.compute_transitions()
-        adata.uns["paga"]["transitions_confidence"] = paga.transitions_confidence
-        # adata.uns['paga']['transitions_ttest'] = paga.transitions_ttest
-    adata.uns["paga"]["groups"] = groups
+        res["transitions_confidence"] = paga.transitions_confidence
+        # res['transitions_ttest'] = paga.transitions_ttest
+    res["groups"] = groups
     logg.info(
         "    finished",
         time=start,
@@ -155,7 +183,7 @@ def paga(
             "    'paga/connectivities_tree', connectivities subtree (adata.uns)"
         ),
     )
-    return adata if copy else None
+    return res if key is True else None
 
 
 class PAGA:

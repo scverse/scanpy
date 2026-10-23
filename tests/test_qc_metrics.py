@@ -130,7 +130,7 @@ def test_qc_metrics(adata_prepared: AnnData):
         ),
     ):
         sc.pp.calculate_qc_metrics(
-            adata_prepared, qc_vars=["mito", "negative"], inplace=True
+            adata_prepared, qc_vars=["mito", "negative"], out=False
         )
     if is_csc_dask:
         return
@@ -194,11 +194,11 @@ def test_qc_metrics_idempotent(adata_prepared: AnnData):
         ),
     ):
         sc.pp.calculate_qc_metrics(
-            adata_prepared, qc_vars=["mito", "negative"], inplace=True
+            adata_prepared, qc_vars=["mito", "negative"], out=False
         )
         old_obs, old_var = adata_prepared.obs.copy(), adata_prepared.var.copy()
         sc.pp.calculate_qc_metrics(
-            adata_prepared, qc_vars=["mito", "negative"], inplace=True
+            adata_prepared, qc_vars=["mito", "negative"], out=False
         )
     if is_csc_dask:
         return
@@ -221,7 +221,7 @@ def test_qc_metrics_no_log1p(adata_prepared: AnnData):
         ),
     ):
         sc.pp.calculate_qc_metrics(
-            adata_prepared, qc_vars=["mito", "negative"], log1p=False, inplace=True
+            adata_prepared, qc_vars=["mito", "negative"], log1p=False, out=False
         )
     assert not np.any(adata_prepared.obs.columns.str.startswith("log1p_"))
     assert not np.any(adata_prepared.var.columns.str.startswith("log1p_"))
@@ -236,10 +236,10 @@ def test_dask_against_in_memory(adata, log1p):
     adata_as_dask = prepare_adata(adata_as_dask)
     with maybe_dask_process_context():
         sc.pp.calculate_qc_metrics(
-            adata_as_dask, qc_vars=["mito", "negative"], log1p=log1p, inplace=True
+            adata_as_dask, qc_vars=["mito", "negative"], log1p=log1p, out=False
         )
     sc.pp.calculate_qc_metrics(
-        adata, qc_vars=["mito", "negative"], log1p=log1p, inplace=True
+        adata, qc_vars=["mito", "negative"], log1p=log1p, out=False
     )
     assert_equal(adata, adata_as_dask)
 
@@ -261,9 +261,9 @@ def test_qc_metrics_format(
     cls, adata_mito: AnnData, qc_var_param: list[str] | str
 ) -> None:
     var = adata_mito.var.copy()
-    sc.pp.calculate_qc_metrics(adata_mito, qc_vars=qc_var_param, inplace=True)
+    sc.pp.calculate_qc_metrics(adata_mito, qc_vars=qc_var_param, out=False)
     adata = AnnData(X=cls(adata_mito.X), var=var)
-    sc.pp.calculate_qc_metrics(adata, qc_vars=qc_var_param, inplace=True)
+    sc.pp.calculate_qc_metrics(adata, qc_vars=qc_var_param, out=False)
     assert np.allclose(adata.obs, adata_mito.obs)
     for col in adata.var:  # np.allclose doesn't like mix of types
         assert np.allclose(adata.var[col], adata_mito.var[col])
@@ -281,13 +281,15 @@ def test_qc_metrics_percentage(adata_mito: AnnData) -> None:  # In response to #
         sc.pp.calculate_qc_metrics(adata_mito, percent_top=[20, 30, 1001])
 
 
+@needs.anndata_acc
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_layer_raw(adata: AnnData):
     adata = adata.copy()
     adata.raw = adata.copy()
     adata.layers["counts"] = adata.X.copy()
     obs_orig, var_orig = sc.pp.calculate_qc_metrics(adata)
     sc.pp.log1p(adata)  # To be sure they aren't reusing it
-    obs_layer, var_layer = sc.pp.calculate_qc_metrics(adata, layer="counts")
+    obs_layer, var_layer = sc.pp.calculate_qc_metrics(adata, use="layers.counts")
     obs_raw, var_raw = sc.pp.calculate_qc_metrics(adata, use_raw=True)
     assert np.allclose(obs_orig, obs_layer)
     assert np.allclose(obs_orig, obs_raw)
@@ -302,10 +304,45 @@ def test_inner_methods(adata: AnnData):
     obs_orig, var_orig = sc.pp.calculate_qc_metrics(adata)
     assert np.all(obs_orig == describe_obs(adata))
     assert np.all(var_orig == describe_var(adata))
-    sc.pp.calculate_qc_metrics(full_inplace, inplace=True)
+    sc.pp.calculate_qc_metrics(full_inplace, out=False)
     describe_obs(partial_inplace, inplace=True)
     describe_var(partial_inplace, inplace=True)
     assert np.all(full_inplace.obs == partial_inplace.obs)
     assert np.all(full_inplace.var == partial_inplace.var)
     assert np.all(partial_inplace.obs[obs_orig.columns] == obs_orig)
     assert np.all(partial_inplace.var[var_orig.columns] == var_orig)
+
+
+def test_qc_metrics_out_prefix(adata: AnnData) -> None:
+    """`sc.Prefix` prefixes every column, keeping their dtypes."""
+    adata = prepare_adata(adata)
+    obs, var = sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], out=True)
+    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], out=sc.Prefix("p"))
+    pd.testing.assert_frame_equal(
+        adata.obs[[f"p_{c}" for c in obs.columns]], obs.add_prefix("p_")
+    )
+    pd.testing.assert_frame_equal(
+        adata.var[[f"p_{c}" for c in var.columns]], var.add_prefix("p_")
+    )
+
+
+@needs.anndata_acc
+def test_qc_metrics_out_mapping(adata: AnnData) -> None:
+    """A mapping writes only the tables it names, as whole `.obsm`/`.varm` DataFrames."""
+    from anndata.acc import A
+
+    adata = prepare_adata(adata)
+    obs_before, var_before = adata.obs.copy(), adata.var.copy()
+    obs, var = sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], out=True)
+    sc.pp.calculate_qc_metrics(
+        adata, qc_vars=["mito"], out={"obs": A.obsm["qc"], "var": "varm.qc"}
+    )
+    pd.testing.assert_frame_equal(adata.obsm["qc"], obs)
+    pd.testing.assert_frame_equal(adata.varm["qc"], var)
+    pd.testing.assert_frame_equal(adata.obs, obs_before)
+    pd.testing.assert_frame_equal(adata.var, var_before)
+
+    sc.pp.calculate_qc_metrics(adata, out={"obs": A.obsm["only_obs"]})
+    assert "only_obs" not in adata.varm
+    with pytest.raises(TypeError, match=r"must be written to one of \['obsm'\]"):
+        sc.pp.calculate_qc_metrics(adata, out={"obs": A.obs["x"]})

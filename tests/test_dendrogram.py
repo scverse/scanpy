@@ -13,18 +13,40 @@ key = "test"
 
 
 @pytest.mark.parametrize("groupby", ["bulk_labels", ["bulk_labels", "phase"]])
-@pytest.mark.parametrize("key_added", [None, "custom_key"])
-def test_dendrogram_key_added(groupby, key_added):
+@pytest.mark.parametrize("prefix", [None, "custom"])
+def test_dendrogram_prefix(groupby, prefix):
     adata = pbmc68k_reduced()
-    sc.tl.dendrogram(adata, groupby=groupby, key_added=key_added, use_rep="X_pca")
+    sc.tl.dendrogram(
+        adata, groupby=groupby, out=False if prefix is None else sc.Prefix(prefix)
+    )
     if isinstance(groupby, list):
-        dendrogram_key = f"dendrogram_{'_'.join(groupby)}"
+        key = f"dendrogram_{'_'.join(groupby)}"
     else:
-        dendrogram_key = f"dendrogram_{groupby}"
+        key = f"dendrogram_{groupby}"
 
-    if key_added is None:
-        key_added = dendrogram_key
-    assert key_added in adata.uns
+    if prefix is not None:
+        key = f"{prefix}_{key}"
+    assert key in adata.uns
+
+
+def test_dendrogram_out_true():
+    """`out=True` returns the info and writes nothing."""
+    adata = pbmc68k_reduced()
+    before = set(adata.uns)
+    dat = sc.tl.dendrogram(adata, groupby="bulk_labels", out=True)
+    assert "dendrogram_info" in dat
+    assert set(adata.uns) == before
+
+
+def test_dendrogram_deprecated_args():
+    adata = pbmc68k_reduced()
+    with pytest.warns(FutureWarning, match=r"argument key_added is deprecated"):
+        sc.tl.dendrogram(adata, groupby="bulk_labels", key_added="k")
+    assert "k" in adata.uns
+    with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
+        dat = sc.tl.dendrogram(adata, groupby="bulk_labels", inplace=False)
+    assert "dendrogram_info" in dat
+    assert "dendrogram_bulk_labels" not in adata.uns
 
 
 REP_PCA_0 = [

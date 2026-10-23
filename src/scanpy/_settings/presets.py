@@ -76,9 +76,12 @@ class Default:
         return getattr(params, param)
 
 
+class QcMetricsPreset(NamedTuple):
+    out: bool
+
+
 class HVGPreset(NamedTuple):
     flavor: HVGFlavor
-    return_df: bool
 
 
 class BasicEmbeddingPreset(NamedTuple):
@@ -188,11 +191,19 @@ class Preset(enum.StrEnum):
     """
 
     @preset_property
+    def calculate_qc_metrics() -> Mapping[Preset, QcMetricsPreset]:
+        """Whether :func:`~scanpy.pp.calculate_qc_metrics` returns its metrics (`out=True`) or writes them."""
+        return {
+            Preset.ScanpyV1: QcMetricsPreset(out=True),
+            Preset.ScanpyV2Preview: QcMetricsPreset(out=False),
+        }
+
+    @preset_property
     def highly_variable_genes() -> Mapping[Preset, HVGPreset]:
         """Flavor for :func:`~scanpy.pp.highly_variable_genes`."""
         return {
-            Preset.ScanpyV1: HVGPreset(flavor="seurat", return_df=False),
-            Preset.ScanpyV2Preview: HVGPreset(flavor="seurat_v3_paper", return_df=True),
+            Preset.ScanpyV1: HVGPreset(flavor="seurat"),
+            Preset.ScanpyV2Preview: HVGPreset(flavor="seurat_v3_paper"),
         }
 
     @preset_property

@@ -22,7 +22,7 @@ from ...._keys import _existing_preset_keys
 from ...._settings import Default, settings
 from ...._utils import _doc_params, _get_basis_key, sanitize_anndata
 from ...._utils._doctests import doctest_internet
-from ....get import _check_mask
+from ....get._use import _check_mask
 from .. import _utils, mpl_settings
 from .._docs import (
     doc_adata_color_etc,
@@ -1026,7 +1026,7 @@ def spatial(  # noqa: PLR0913
     >>> adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
     FutureWarning: The function visium_sge is deprecated and will be removed in the future. Use :func:`squidpy.datasets.visium` instead.
         adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
-    >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
+    >>> sc.pp.calculate_qc_metrics(adata, out=False)
     >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
     FutureWarning: The function spatial is deprecated and will be removed in the future. Use :func:`squidpy.pl.spatial_scatter` instead.
         sc.pl.spatial(adata, color="log1p_n_genes_by_counts")

@@ -6,6 +6,12 @@ from typing import TYPE_CHECKING, NamedTuple
 import numpy as np
 
 from ..._compat import warn
+from ..._docs import doc_out_key, doc_use
+from ..._keys import _embedding_keys
+from ..._utils import _doc_params
+from ...get._out import _out_key
+from ...get._types import AdRef
+from ...get._use import _get_arr, _obs_df, _ref_arg, _resolve_obs
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -15,6 +21,8 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
     from ..._utils.random import RNGLike, SeedLike
+    from ...get._out import Prefix
+    from ...get._types import MultiAcc
 
 
 class _Stopping(NamedTuple):
@@ -31,12 +39,24 @@ class Stopping(_Stopping, enum.Enum):
     """Follows harmony-pytorch defaults."""
 
 
+@_doc_params(
+    use=doc_use(
+        "Which embedding to adjust. By default, the one :func:`~scanpy.pp.pca` wrote.",
+        legacy=(),
+    ),
+    out=doc_out_key(
+        "the adjusted embedding",
+        example="A.obsm['pca_harmony']",
+        prefixed="`.obsm['p_pca_harmony']`",
+        default="`.obsm['pca_harmony']`",
+    ),
+)
 def harmony_integrate(  # noqa: PLR0913
     adata: AnnData,
-    key: str | Sequence[str],
+    batch: AdRef | str | Sequence[AdRef | str],
     *,
-    basis: str = "X_pca",
-    adjusted_basis: str = "X_pca_harmony",
+    use: MultiAcc | str | None = None,
+    out: MultiAcc | str | Prefix | bool = False,
     dtype: DTypeLike = np.float64,
     flavor: Literal["harmony2", "harmony1"] = "harmony2",
     n_clusters: int | None = None,
@@ -53,14 +73,14 @@ def harmony_integrate(  # noqa: PLR0913
     correction_method: Literal["fast"] = "fast",
     block_proportion: float = 0.05,
     rng: SeedLike | RNGLike | None = None,
-) -> None:
-    """Integrate different experiments using the Harmony algorithm :cite:p:`Korsunsky2019,Patikas2026`.
+) -> np.ndarray | None:
+    r"""Integrate different experiments using the Harmony algorithm :cite:p:`Korsunsky2019,Patikas2026`.
 
     Integration adjusts a PCA embedding to reduce experiment-specific technical variation,
     allowing cells from different experiments to be compared.
     This CPU implementation is based on the rapids-singlecell and harmony-pytorch packages.
     Multiple batch variables follow the per-covariate formulation described in the Harmony papers:
-    each key is modeled separately instead of combining all keys into one joint category.
+    each batch variable is modeled separately instead of combining them all into one joint category.
     As Harmony works by adjusting the principal components,
     this function should be run after performing PCA but before computing the neighbor graph.
 
@@ -70,7 +90,7 @@ def harmony_integrate(  # noqa: PLR0913
     and automatic batch pruning.
     To revert to the original Harmony behavior::
 
-        sc.pp.harmony_integrate(adata, key, flavor="harmony1")
+        sc.pp.harmony_integrate(adata, batch, flavor="harmony1")
 
     .. array-support:: pp.harmony_integrate
 
@@ -78,14 +98,14 @@ def harmony_integrate(  # noqa: PLR0913
     ----------
     adata
         The annotated data matrix.
-    key
-        The key(s) of the column(s) in ``adata.obs`` that differentiate(s) among experiments/batches.
+    batch
+        The annotation(s) that differentiate(s) among experiments/batches,
+        e.g. `A.obs['batch']` or `[A.obs['batch'], A.obs['donor']]`.
+        :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d, e.g. `'obs.batch'`.
         Multiple keys are modeled as separate batch variables,
         with one active categorical level per variable and cell.
-    basis
-        The name of the field in ``adata.obsm`` where the PCA table is stored.
-    adjusted_basis
-        The name of the field in ``adata.obsm`` where the adjusted PCA table will be stored.
+    {use}
+    {out}
     dtype
         The data type to use for Harmony computation.
         If you use 32-bit you may experience numerical instability.
@@ -126,8 +146,8 @@ def harmony_integrate(  # noqa: PLR0913
         Higher values (e.g. ``4``) produce more aggressive mixing;
         lower values (e.g. ``0.5``) allow more batch-specific clusters.
         Set to ``0`` to disable the diversity penalty for a batch variable.
-        A scalar is applied to every key. A sequence may contain one value per key,
-        expanded over that key’s categorical levels,
+        A scalar is applied to every batch variable. A sequence may contain one value per variable,
+        expanded over that variable’s categorical levels,
         or one value per categorical level across all keys.
     tau
         Discounting factor on ``theta``.
@@ -168,8 +188,8 @@ def harmony_integrate(  # noqa: PLR0913
 
     Returns
     -------
-    Updates adata with the field ``adata.obsm[adjusted_basis]``,
-    containing principal components adjusted by Harmony
+    Returns the adjusted embedding if `out=True`, else `None`.
+    It contains the principal components adjusted by Harmony,
     such that different experiments are integrated.
     """
     from .core import Harmony
@@ -212,16 +232,12 @@ def harmony_integrate(  # noqa: PLR0913
                 UserWarning,
             )
 
-    # Ensure the basis exists in adata.obsm
-    if basis not in adata.obsm:
-        msg = (
-            f"The specified basis {basis!r} is not available in `adata.obsm`. "
-            f"Available bases: {list(adata.obsm.keys())}"
-        )
-        raise ValueError(msg)
-
     # Get the input data
-    input_data = adata.obsm[basis]
+    use = _resolve_obs(use)
+    input_data = (
+        adata.obsm[_embedding_keys("pca").obsm] if use is None else _get_arr(adata, use)
+    )
+    dest = _out_key(out, None, kind="obsm", base="pca_harmony", default="pca_harmony")
 
     # Convert to numpy array with specified dtype
     try:
@@ -239,9 +255,18 @@ def harmony_integrate(  # noqa: PLR0913
         raise ValueError(msg)
 
     # Run Harmony
+    batch_df = _obs_df(
+        adata,
+        _ref_arg(
+            [batch] if isinstance(batch, AdRef | str) else batch,
+            None,
+            name="batch",
+            legacy_name="",
+        ),
+    )
     harmony = Harmony(
-        adata.obs,
-        key,
+        batch_df,
+        list(batch_df.columns),
         theta=theta,
         sigma=sigma,
         n_clusters=n_clusters,
@@ -260,5 +285,7 @@ def harmony_integrate(  # noqa: PLR0913
     )
     harmony_out = harmony.fit(x)
 
-    # Store result
-    adata.obsm[adjusted_basis] = harmony_out
+    if dest is True:
+        return harmony_out
+    adata.obsm[dest] = harmony_out
+    return None

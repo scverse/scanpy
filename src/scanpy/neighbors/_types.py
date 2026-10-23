@@ -1,20 +1,22 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Literal, Protocol, TypedDict
+from typing import TYPE_CHECKING, Literal, NamedTuple, Protocol, TypedDict
 
 import numpy as np
+
+from .._compat import CSRBase  # runtime: `NeighborsOut`’s default
 
 if TYPE_CHECKING:
     from typing import Any, NotRequired, Self
 
-    from .._compat import CSRBase
     from .._utils.random import _LegacyRandom
 
 __all__ = [
     "KnnTransformerLike",
     "KwdsForTransformer",
     "NeighborsDict",
+    "NeighborsOut",
     "NeighborsParams",
     "_KnownTransformer",
     "_Method",
@@ -83,9 +85,18 @@ class KwdsForTransformer(TypedDict):
     rng: NotRequired[np.random.Generator]
 
 
+class NeighborsOut[T = CSRBase](NamedTuple):
+    """Outputs of :func:`~scanpy.pp.neighbors` and :func:`~scanpy.pp.bbknn`."""
+
+    connectivities: T
+    """Weighted adjacency matrix of the neighborhood graph."""
+    distances: T
+    """Distances to each observation’s nearest neighbors."""
+
+
 class NeighborsDict[P: NeighborsParams](TypedDict):
-    connectivities_key: str
-    distances_key: str
+    connectivities_key: NotRequired[str]
+    distances_key: NotRequired[str]
     params: P
     rp_forest: NotRequired[RPForestDict]
 
@@ -96,7 +107,8 @@ class NeighborsParams(TypedDict):
     metric: _Metric | _MetricFn | None
     random_state: NotRequired[_LegacyRandom]
     metric_kwds: NotRequired[Mapping[str, Any]]
-    use_rep: NotRequired[str | list[str]]  # see `scanpy.get.get._rep_to_json`
+    use_rep: NotRequired[str]  # see `scanpy.get._uns._use_to_uns`
+    layer: NotRequired[str]
     n_pcs: NotRequired[int]
 
 

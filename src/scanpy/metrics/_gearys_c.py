@@ -8,22 +8,32 @@ from typing import TYPE_CHECKING, cast
 import numba
 import numpy as np
 from fast_array_utils.numba import njit
+from scverse_misc import Deprecation, deprecated_arg
 
 from .._compat import CSRBase
+from .._docs import DEPR_RAW
 from .._utils import _doc_params
-from ..get import _get_arr
 from ..neighbors._doc import doc_neighbors_key
-from ._common import _get_graph, _SparseMetric
+from ._common import DEPR_GRAPH, DOC_USE, _graph_and_vals, _SparseMetric
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from ._common import _Vals
+    from ._common import _MetricUse, _Vals
 
 
 @singledispatch
-@_doc_params(neighbors_key=doc_neighbors_key)
+@_doc_params(
+    neighbors_key=doc_neighbors_key,
+    use=DOC_USE,
+)
+@deprecated_arg("use_graph", DEPR_GRAPH)
+@deprecated_arg("neighbors_key", DEPR_GRAPH)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsp", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
 def gearys_c(
     adata_or_graph: AnnData | CSRBase,
     /,
@@ -31,6 +41,7 @@ def gearys_c(
     *,
     use_graph: str | None = None,
     neighbors_key: str | None = None,
+    use: _MetricUse | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     obsp: str | None = None,
@@ -40,9 +51,9 @@ def gearys_c(
 
     Specifically as used by `VISION <https://doi.org/10.1038/s41467-019-12235-0>`_.
 
-    Geary's C is a measure of autocorrelation for some measure on a graph. This
-    can be to whether measures are correlated between neighboring cells. Lower
-    values indicate greater correlation.
+    Geary's C is a measure of autocorrelation for some measure on a graph.
+    This can be to whether measures are correlated between neighboring cells.
+    Lower values indicate greater correlation.
 
     .. math::
 
@@ -59,24 +70,16 @@ def gearys_c(
         AnnData object containing a graph (see ``use_graph``) or the graph itself.
         See the examples for more info.
     vals
-        Values to calculate Geary's C for. If this is two dimensional, should
-        be of shape `(n_features, n_cells)`. Otherwise should be of shape
-        `(n_cells,)`. This matrix can be selected from elements of the anndata
-        object by using key word arguments: `layer`, `obsm`, `obsp`, or
-        `use_raw`.
+        Values to calculate Geary's C for.
+        If this is two dimensional, should be of shape `(n_features, n_cells)`.
+        Otherwise should be of shape `(n_cells,)`.
+        Deprecated if `adata_or_graph` is an :class:`~anndata.AnnData`, use `use` instead.
     use_graph
         Key to use for graph in anndata object.
         If not provided, default neighbors connectivities will be used instead.
         (See ``neighbors_key`` below.)
     {neighbors_key}
-    layer
-        Key for `adata.layers` to choose `vals`.
-    obsm
-        Key for `adata.obsm` to choose `vals`.
-    obsp
-        Key for `adata.obsp` to choose `vals`.
-    use_raw
-        Whether to use `adata.raw.X` for `vals`.
+    {use}
 
     Returns
     -------
@@ -90,9 +93,10 @@ def gearys_c(
     .. code:: python
 
         import scanpy as sc, numpy as np
+        from anndata.acc import A
 
         pbmc = sc.datasets.pbmc68k_processed()
-        pc_c = sc.metrics.gearys_c(pbmc, obsm="X_pca")
+        pc_c = sc.metrics.gearys_c(pbmc, use=A.obsm["X_pca"])
 
     It's equivalent to call the function directly on the underlying arrays:
 
@@ -102,10 +106,17 @@ def gearys_c(
         np.testing.assert_array_equal(pc_c, alt)
 
     """
-    adata = cast("AnnData", adata_or_graph)
-    g = _get_graph(adata, use_graph=use_graph, neighbors_key=neighbors_key)
-    if vals is None:
-        vals = _get_arr(adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp).T
+    g, vals = _graph_and_vals(
+        cast("AnnData", adata_or_graph),
+        use,
+        vals=vals,
+        use_graph=use_graph,
+        neighbors_key=neighbors_key,
+        use_raw=use_raw,
+        layer=layer,
+        obsm=obsm,
+        obsp=obsp,
+    )
     return gearys_c(g, vals)
 
 

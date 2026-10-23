@@ -81,3 +81,16 @@ Compute densities on embeddings.
    tl.score_genes
    tl.score_genes_cell_cycle
 ```
+
+## Output types
+
+Functions with several outputs return these if passed `out=True`.
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   tl.CellCycleOut
+   tl.DptOut
+```

@@ -2,39 +2,87 @@ from __future__ import annotations
 
 from functools import singledispatch
 from operator import truediv
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numba
 import numpy as np
 from anndata import AnnData
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
+from numpy.typing import NDArray  # runtime: `ScaleOut`’s default
 from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
-from .._docs import doc_mask
+from .._docs import doc_mask, doc_out_multi, doc_use
 from .._settings import Default, settings
 from .._utils import (
     _doc_params,
     axis_mul_or_truediv,
     check_array_function_arguments,
     dematrix,
+    expose_dispatch,
     raise_not_implemented_error_if_backed_type,
     view_to_actual,
 )
-from ..get import _check_mask, _get_arr, _set_obs_rep
-from ..get.get import AdRef, _mask_arg
+from ..get._out import _dest_kind, _out_dests, _use_dest, _write_dests, deprecated_copy
+from ..get._types import AdRef
+from ..get._use import _check_mask, _get_arr, _mask_arg, _resolve_obs
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from typing import TypeAlias
 
-    from numpy.typing import ArrayLike, NDArray
+    from numpy.typing import ArrayLike
 
-    from ..get.get import Mask
+    from ..get._out import OutKind, Prefix
+    from ..get._types import ArrAcc, Mask, RepAcc, VecRef
 
 # not `type`: Sphinx would render the private name in signatures
 _Array: TypeAlias = CSBase | np.ndarray | DaskArray  # noqa: UP040
+
+
+class ScaleOut[
+    M = np.ndarray | CSBase | DaskArray,
+    V = NDArray[np.float64] | DaskArray,
+](NamedTuple):
+    """Outputs of :func:`~scanpy.pp.scale`."""
+
+    scaled: M
+    """The scaled matrix."""
+    mean: V
+    """Means per variable before scaling."""
+    std: V
+    """Standard deviations per variable before scaling."""
+
+
+SCALE_KINDS: ScaleOut[set[OutKind], set[OutKind]] = ScaleOut(
+    {"layer", "obsm"}, {"var"}, {"var"}
+)
+"""Where `out` can write the outputs of `pp.scale`."""
+
+doc_out_scale = doc_out_multi(
+    dict(
+        scaled=(
+            "The scaled matrix. "
+            "By default written to the place `use` reads from, "
+            "with `sc.Prefix('p')` to `A.layers['p_scaled']` "
+            "(`A.obsm['p_scaled']` if `use` points to `.obsm`)."
+        ),
+        mean=(
+            "Means per variable before scaling. By default written to `A.var['mean']` "
+            "(`A.var['mean of {mask}']` or `A.var['mean with mask']` if `mask` is given), "
+            "with `sc.Prefix('p')` to `A.var['p_mean']` (or `'p_mean of {mask}'`, …)."
+        ),
+        std=(
+            "Standard deviations per variable before scaling. By default written to `A.var['std']` "
+            "(`A.var['std of {mask}']` or `A.var['std with mask']` if `mask` is given), "
+            "with `sc.Prefix('p')` to `A.var['p_std']` (or `'p_std of {mask}'`, …)."
+        ),
+    ),
+    example="{'scaled': A.layers['scaled']}",
+    returns=":class:`~scanpy.pp.ScaleOut`",
+)
 
 
 @singledispatch
@@ -77,29 +125,41 @@ def clip_array(
     return x
 
 
+@singledispatch
+def _scale(data, **kwargs):
+    """Dispatch on array kind. `AnnData` goes to `scale_anndata`, see `scale`."""
+    return scale_array(data, **kwargs)
+
+
 @_doc_params(
     mask=doc_mask(
         "Restrict both the derivation of scaling parameters and the scaling itself\n"
         "    to a certain set of observations.",
         dim="obs",
         extra="This will transform data from csc to csr format if `issparse(data)`.",
-    )
+    ),
+    use=doc_use("Which matrix to scale."),
+    out=doc_out_scale,
 )
-@singledispatch
-# `stacklevel=2` skips `singledispatch`’s dispatcher frame
-@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
+@expose_dispatch(_scale)
+@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."))
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use`/`out` instead."))
+@deprecated_copy
 def scale[A: _Array](
     data: AnnData | A,
     *,
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
+    use: RepAcc | str | None = None,
+    out: Mapping[str, ArrAcc | VecRef | str] | Prefix | bool = False,
+    mask: Mask | None = None,
+    # deprecated
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask: Mask | None = None,
-    # deprecated
     mask_obs: Mask | None = None,
-) -> AnnData | A | None:
+) -> AnnData | A | ScaleOut | None:
     """Scale data to unit variance and zero mean.
 
     .. note::
@@ -128,51 +188,56 @@ def scale[A: _Array](
         The default will be removed in scanpy 2.0.
     max_value
         Clip (truncate) to this value after scaling. If `None`, do not clip.
+    {use}
+    {out}
     copy
-        Whether this function should be performed inplace. If an AnnData object
-        is passed, this also determines if a copy is returned.
-    layer
-        If provided, which element of layers to scale.
-    obsm
-        If provided, which element of obsm to scale.
+        For array input, whether to leave the input unmodified.
     {mask}
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
+    For array input, returns the scaled matrix.
+    Otherwise, returns the outputs as a :class:`~scanpy.pp.ScaleOut` if `out=True`, else `None`.
+    Sets the following fields:
 
-    `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse.csr_matrix` (dtype `float`)
+    `adata.X` | `adata.layers[...]` : :class:`numpy.ndarray` | :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Scaled count data matrix.
     `adata.var['mean']` : :class:`pandas.Series` (dtype `float`)
         Means per gene before scaling.
     `adata.var['std']` : :class:`pandas.Series` (dtype `float`)
         Standard deviations per gene before scaling.
-    `adata.var['var']` : :class:`pandas.Series` (dtype `float`)
-        Variances per gene before scaling.
 
     """
-    check_array_function_arguments(layer=layer, obsm=obsm)
-    if layer is not None:
-        msg = f"`layer` argument inappropriate for value of type {type(data)}"
-        raise ValueError(msg)
-    if obsm is not None:
-        msg = f"`obsm` argument inappropriate for value of type {type(data)}"
-        raise ValueError(msg)
-    return scale_array(
+    # validated here, before dispatch, so array input gets these messages too
+    if not isinstance(data, AnnData):
+        check_array_function_arguments(layer=layer, obsm=obsm, use=use)
+        if out is not False:
+            msg = "Argument `out` is only valid if an AnnData object is passed."
+            raise TypeError(msg)
+        return _scale(
+            data,
+            zero_center=zero_center,
+            max_value=max_value,
+            copy=copy,
+            mask=mask,
+            mask_obs=mask_obs,
+        )
+    return scale_anndata(
         data,
         zero_center=zero_center,
         max_value=max_value,
-        copy=copy,
+        use=use,
+        out=out,
         mask=mask,
+        layer=layer,
+        obsm=obsm,
         mask_obs=mask_obs,
     )
 
 
-@scale.register(np.ndarray)
-@scale.register(DaskArray)
-@scale.register(CSBase)
-# `stacklevel=2` skips `singledispatch`’s dispatcher frame
-@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
+@_scale.register(np.ndarray)
+@_scale.register(DaskArray)
+@_scale.register(CSBase)
 def scale_array[A: _Array](
     x: A,
     *,
@@ -319,21 +384,20 @@ def scale_and_clip_csr(
                     data[j] /= std[indices[j]]
 
 
-@scale.register(AnnData)
-# `stacklevel=2` skips `singledispatch`’s dispatcher frame
-@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
+@_scale.register(AnnData)
 def scale_anndata(
     adata: AnnData,
     *,
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
-    copy: bool = False,
+    use: RepAcc | str | None = None,
+    out: Mapping[str, ArrAcc | VecRef | str] | Prefix | bool = False,
+    mask: Mask | None = None,
     layer: str | None = None,
     obsm: str | None = None,
-    mask: Mask | None = None,
     mask_obs: Mask | None = None,
-) -> AnnData | None:
-    adata = adata.copy() if copy else adata
+) -> ScaleOut | None:
+    use = _resolve_obs(use)
     mask = _mask_arg(mask, mask_obs, dim="obs")
     str_mean_std = ("mean", "std")
     if mask is not None:
@@ -342,16 +406,36 @@ def scale_anndata(
         else:
             str_mean_std = ("mean with mask", "std with mask")
         mask = _check_mask(adata, mask, "obs")
-    view_to_actual(adata)
-    x = _get_arr(adata, layer=layer, obsm=obsm)
-    raise_not_implemented_error_if_backed_type(x, "scale")
-    x, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
-        x,
-        zero_center=zero_center,
-        max_value=max_value,
-        copy=False,  # because a copy has already been made, if it were to be made
-        return_mean_std=True,
-        mask=mask,
+    # the scaled matrix goes back to where it was read from by default
+    src = _use_dest(use, layer=layer, obsm=obsm)
+    dests = _out_dests(
+        out,
+        None,
+        dests=lambda _: ScaleOut(
+            src, dict(var=str_mean_std[0]), dict(var=str_mean_std[1])
+        ),
+        kinds=SCALE_KINDS,
+        bases=ScaleOut(
+            {_dest_kind(src): "scaled"},
+            dict(var=str_mean_std[0]),
+            dict(var=str_mean_std[1]),
+        ),
     )
-    _set_obs_rep(adata, x, layer=layer, obsm=obsm)
-    return adata if copy else None
+    view_to_actual(adata)
+    x = _get_arr(adata, use, layer=layer, obsm=obsm)
+    raise_not_implemented_error_if_backed_type(x, "scale")
+    vals = ScaleOut(
+        *_scale(
+            x,
+            zero_center=zero_center,
+            max_value=max_value,
+            # scaling is in-place, so leave the source alone unless we write back over it
+            copy=dests is True or src != dests[1].scaled,
+            return_mean_std=True,
+            mask=mask,
+        )
+    )
+    if dests is True:
+        return vals
+    _write_dests(adata, vals, dests[1])
+    return None

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .._docs import doc_use
+
 doc_adata = """\
 adata
     The annotated data matrix of shape `n_obs` × `n_vars`.
@@ -29,9 +31,12 @@ check_values
     without checking. Setting this to `False` can speed up code for large datasets.
 """
 
-doc_layer = """\
-layer
-    Layer to use as input instead of `X`. If `None`, `X` is used.
+doc_layer = f"""\
+{doc_use("Which matrix to use as input.", legacy=("layer",))}
+"""
+
+doc_input_matrix = f"""\
+{doc_use("Which matrix to use as input.")}
 """
 
 doc_subset = """\
@@ -44,9 +49,9 @@ doc_genes_batch_chunk = """\
 n_top_genes
     Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'` or
     `flavor='pearson_residuals'`.
-batch_key
-    If specified, highly-variable genes are selected within each batch separately
-    and merged. This simple process avoids the selection of batch-specific genes
+batch
+    If specified (e.g. `A.obs['batch']`),
+    highly-variable genes are selected within each batch separately and merged. This simple process avoids the selection of batch-specific genes
     and acts as a lightweight batch correction method. Genes are first sorted by
     how many batches they are a HVG. If `flavor='pearson_residuals'`, ties are
     broken by the median rank (across batches) based on within-batch residual
@@ -77,4 +82,9 @@ copy
     If `True`, the function runs on a copy of the input object and returns the
     modified copy. Otherwise, the input object is modified direcly. Not compatible
     with `inplace=False`.
+"""
+
+doc_batch_key = """\
+batch_key
+    The name of a `.obs` column, i.e. `batch_key='b'` is `batch=A.obs['b']`.\
 """

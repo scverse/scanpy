@@ -11,17 +11,22 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from fast_array_utils import stats
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, warn
+from .._docs import DEPR_BATCH_KEY, doc_out_key, doc_use
 from .._settings import Default, Verbosity, settings
 from .._utils import (
+    _doc_params,
     check_nonnegative_integers,
     dim_acc,
     raise_if_dask_feature_axis_chunked,
     sanitize_anndata,
 )
-from ..get import _get_arr, aggregate
+from ..get import aggregate
+from ..get._out import Prefix, _legacy_out, _out_key
+from ..get._use import _get_arr, _get_vec_compat, _ref_arg, _resolve_obs
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
@@ -32,6 +37,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._settings.presets import HVGFlavor
+    from ..get._types import AdRef, MultiAcc, RepAcc
 
 
 @singledispatch
@@ -119,13 +125,14 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
     flavor: Literal["seurat_v3", "seurat_v3_paper"] = "seurat_v3",
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     n_top_genes: int = 2000,
-    batch_key: str | None = None,
+    batch_key: AdRef | str | None = None,
     check_values: bool = True,
     span: float = 0.3,
     subset: bool = False,
-    inplace: bool = True,
+    out: Prefix | bool = False,
 ) -> pd.DataFrame | None:
     """See `highly_variable_genes`.
 
@@ -133,7 +140,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
 
     Returns
     -------
-    Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`) or
+    Depending on `out` returns calculated metrics (:class:`~pd.DataFrame`) or
     updates `.var` with the following fields:
 
     highly_variable : :class:`bool`
@@ -156,7 +163,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         e.add_note("Please install `scikit-misc` and try again.")
         raise
     df = pd.DataFrame(index=adata.var_names)
-    data = _get_arr(adata, layer=layer)
+    data = _get_arr(adata, use, layer=layer)
     raise_if_dask_feature_axis_chunked(data)
 
     if check_values and not check_nonnegative_integers(data):
@@ -168,7 +175,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     batch_info = (
         pd.Categorical(np.zeros(adata.shape[0], dtype=int))
         if batch_key is None
-        else adata.obs[batch_key]
+        else pd.Categorical(_get_vec_compat(adata, batch_key, dim="obs"))
     )
     norm_gene_vars = []
 
@@ -280,8 +287,16 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     df["highly_variable"] = False
     df.loc[sorted_index[: int(n_top_genes)], "highly_variable"] = True
 
-    if inplace:
-        adata.uns["hvg"] = {"flavor": flavor}
+    if out is not True:
+        cols = ["highly_variable", "highly_variable_rank", "means", "variances"]
+        if batch_key is not None:
+            cols.append("highly_variable_nbatches")
+        res = pd.DataFrame(
+            {col: df[col].to_numpy() for col in cols}, index=adata.var_names
+        ).assign(
+            variances_norm=df["variances_norm"].to_numpy().astype("float64", copy=False)
+        )
+        _write_hvg(adata, res, out, uns={"flavor": flavor})
         logg.hint(
             "added\n"
             "    'highly_variable', boolean vector (adata.var)\n"
@@ -290,20 +305,6 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             "    'variances', float vector (adata.var)\n"
             "    'variances_norm', float vector (adata.var)"
         )
-        for to_numpy_key in [
-            "highly_variable",
-            "highly_variable_rank",
-            "means",
-            "variances",
-        ]:
-            adata.var[to_numpy_key] = df[to_numpy_key].to_numpy()
-        adata.var["variances_norm"] = (
-            df["variances_norm"].to_numpy().astype("float64", copy=False)
-        )
-        if batch_key is not None:
-            adata.var["highly_variable_nbatches"] = df[
-                "highly_variable_nbatches"
-            ].to_numpy()
         if subset:
             adata._inplace_subset_var(df["highly_variable"].to_numpy())
     else:
@@ -314,6 +315,25 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
 
         return df
     return None
+
+
+def _write_hvg(
+    adata: AnnData,
+    res: pd.DataFrame,
+    out: MultiAcc | str | Prefix | Literal[False],
+    *,
+    uns: dict[str, object],
+) -> None:
+    """Write `highly_variable_genes` results: as (prefixed) `.var` columns, or to `.varm`."""
+    if out is False or isinstance(out, Prefix):
+        prefix = f"{out.prefix}_" if out else ""
+        res = res.add_prefix(prefix)
+        adata.var[res.columns] = res
+        adata.uns[f"{prefix}hvg"] = uns
+        return
+    key = _out_key(out, None, kind="varm", base="hvg")
+    adata.varm[key] = res
+    adata.uns[key] = uns
 
 
 @dataclass
@@ -369,6 +389,7 @@ class HvgArgs(TypedDict):
 def _highly_variable_genes_single_batch(
     adata: AnnData,
     *,
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     filter_unexpressed_genes: bool = False,
     **kwargs: Unpack[HvgArgs],
@@ -385,15 +406,13 @@ def _highly_variable_genes_single_batch(
     flavor = kwargs["flavor"]
     n_bins = kwargs["n_bins"]
 
-    x = _get_arr(adata, layer=layer)
+    x = _get_arr(adata, use, layer=layer)
 
     # Filter to genes that are expressed
     if filter_unexpressed_genes:
         with settings.override(verbosity=Verbosity.error):
             # TODO use groupby or so instead of materialize_as_ndarray
-            filt, _ = materialize_as_ndarray(
-                filter_genes(x, min_cells=1, inplace=False)
-            )
+            filt, _ = materialize_as_ndarray(filter_genes(x, min_cells=1))
     else:
         filt = np.ones(x.shape[1], dtype=bool)
 
@@ -566,12 +585,17 @@ def _per_batch_func[R, **P](
 
 
 def _highly_variable_genes_batched(
-    adata: AnnData, batch_key: str, *, layer: str | None, **kwargs: Unpack[HvgArgs]
+    adata: AnnData,
+    batch_key: AdRef | str,
+    *,
+    use: RepAcc | str | None,
+    layer: str | None,
+    **kwargs: Unpack[HvgArgs],
 ) -> pd.DataFrame:
     cutoff = kwargs["cutoff"]
     sanitize_anndata(adata)
-    batches = adata.obs[batch_key].cat.categories
-    x = _get_arr(adata, layer=layer)
+    batch_info = pd.Categorical(_get_vec_compat(adata, batch_key, dim="obs"))
+    x = _get_arr(adata, use, layer=layer)
 
     func = _per_batch_func
     if is_dask := isinstance(x, DaskArray):
@@ -583,12 +607,13 @@ def _highly_variable_genes_batched(
         func(
             _highly_variable_genes_single_batch,
             adata=adata,
-            batch_mask=adata.obs[batch_key] == batch,
+            batch_mask=np.asarray(batch_info == batch),
+            use=use,
             layer=layer,
             filter_unexpressed_genes=True,
             **kwargs,
         )
-        for batch in batches
+        for batch in batch_info.categories
     )
 
     if is_dask:
@@ -608,7 +633,9 @@ def _highly_variable_genes_batched(
         )
     )
     df["highly_variable_nbatches"] = df["highly_variable"]
-    df["highly_variable_intersection"] = df["highly_variable_nbatches"] == len(batches)
+    df["highly_variable_intersection"] = df["highly_variable_nbatches"] == len(
+        batch_info.categories
+    )
 
     if isinstance(cutoff, int):
         # sort genes by how often they selected as hvg within each batch and
@@ -629,9 +656,24 @@ def _highly_variable_genes_batched(
     return df
 
 
+@_doc_params(
+    use=doc_use("Which matrix to use for expression values.", legacy=("layer",)),
+    out=doc_out_key(
+        "the metrics",
+        example="A.varm['hvg']",
+        default="the `.var` columns and `.uns['hvg']` listed below",
+        prefixed="`.var['p_highly_variable']`, `.var['p_means']`, … and `.uns['p_hvg']`",
+    ),
+)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
+)
+@deprecated_arg("batch_key", DEPR_BATCH_KEY)
 def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     n_top_genes: int | None = None,
     min_disp: float = 0.5,
@@ -642,10 +684,13 @@ def highly_variable_genes(  # noqa: PLR0913
     n_bins: int = 20,
     flavor: HVGFlavor | Default = Default(preset=("highly_variable_genes", "flavor")),
     subset: bool = False,
-    inplace: bool = True,
-    batch_key: str | None = None,
+    batch: AdRef | str | None = None,
     filter_unexpressed_genes: bool | None = None,
     check_values: bool = True,
+    out: MultiAcc | str | Prefix | bool = False,
+    # deprecated
+    inplace: bool = True,
+    batch_key: str | None = None,
 ) -> pd.DataFrame | None:
     """Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
 
@@ -669,13 +714,13 @@ def highly_variable_genes(  # noqa: PLR0913
     per feature) with a regularized standard deviation. Next, the normalized variance
     is computed as the variance of each gene after the transformation. Genes are ranked
     by the normalized variance.
-    Only if `batch_key` is not `None`, the two flavors differ: For `flavor='seurat_v3'`, genes are first sorted by the median (across batches) rank, with ties broken by the number of batches a gene is a HVG.
+    Only if `batch` is not `None`, the two flavors differ: For `flavor='seurat_v3'`, genes are first sorted by the median (across batches) rank, with ties broken by the number of batches a gene is a HVG.
     For `flavor='seurat_v3_paper'`, genes are first sorted by the number of batches a gene is a HVG, with ties broken by the median (across batches) rank.
 
     The following may help when comparing to Seurat's naming:
-    If `batch_key=None` and `flavor='seurat'`, this mimics Seurat's `FindVariableFeatures(…, method='mean.var.plot')`.
-    If `batch_key=None` and `flavor='seurat_v3'`/`flavor='seurat_v3_paper'`, this mimics Seurat's `FindVariableFeatures(..., method='vst')`.
-    If `batch_key` is not `None` and `flavor='seurat_v3_paper'`, this mimics Seurat's `SelectIntegrationFeatures`.
+    If `batch=None` and `flavor='seurat'`, this mimics Seurat's `FindVariableFeatures(…, method='mean.var.plot')`.
+    If `batch=None` and `flavor='seurat_v3'`/`flavor='seurat_v3_paper'`, this mimics Seurat's `FindVariableFeatures(..., method='vst')`.
+    If `batch` is not `None` and `flavor='seurat_v3_paper'`, this mimics Seurat's `SelectIntegrationFeatures`.
 
     See also `scanpy.experimental.pp._highly_variable_genes` for additional flavors
     (e.g. Pearson residuals).
@@ -687,8 +732,7 @@ def highly_variable_genes(  # noqa: PLR0913
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
-    layer
-        If provided, use `adata.layers[layer]` for expression values instead of `adata.X`.
+    {use}
     n_top_genes
         Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'`.
     min_mean
@@ -719,10 +763,9 @@ def highly_variable_genes(  # noqa: PLR0913
     subset
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
-    inplace
-        Whether to place calculated metrics in `.var` or return them.
-    batch_key
-        If specified, highly-variable genes are selected within each batch separately and merged.
+    batch
+        If specified (e.g. `A.obs['batch']`),
+        highly-variable genes are selected within each batch separately and merged.
         This simple process avoids the selection of batch-specific genes and acts as a
         lightweight batch correction method. For all flavors, except `seurat_v3`, genes are first sorted
         by how many batches they are a HVG. For dispersion-based flavors ties are broken
@@ -730,14 +773,20 @@ def highly_variable_genes(  # noqa: PLR0913
         (across batches) rank based on within-batch normalized variance.
     filter_unexpressed_genes
         If `True`, remove genes that are not expressed in at least one cell from highly variable genes computation (does NOT remove the gene in-place).
-        Disabled by default and ignored if `batch_key` is set, since filtering always enabled for batch-aware mode.
+        Disabled by default and ignored if `batch` is set, since filtering always enabled for batch-aware mode.
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
         Only used if `flavor='seurat_v3'`/`'seurat_v3_paper'`.
+    {out}
+    inplace
+        Whether to place calculated metrics in `.var` or return them.
+    batch_key
+        The name of a `.obs` column, i.e. `batch_key='b'` is `batch=A.obs['b']`.
 
     Returns
     -------
-    Returns a :class:`pandas.DataFrame` with calculated metrics if `inplace=False`, else returns an `AnnData` object where it sets the following field:
+    Returns a :class:`pandas.DataFrame` with calculated metrics if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
     `adata.var['highly_variable']` : :class:`pandas.Series` (dtype `bool`)
         boolean indicator of highly-variable genes
@@ -756,9 +805,9 @@ def highly_variable_genes(  # noqa: PLR0913
         For `flavor='seurat_v3'`/`'seurat_v3_paper'`, rank of the gene according to normalized
         variance, in case of multiple batches description above
     `adata.var['highly_variable_nbatches']` : :class:`pandas.Series` (dtype `int`)
-        If `batch_key` is given, this denotes in how many batches genes are detected as HVG
+        If `batch` is given, this denotes in how many batches genes are detected as HVG
     `adata.var['highly_variable_intersection']` : :class:`pandas.Series` (dtype `bool`)
-        If `batch_key` is given, this denotes the genes that are highly variable in all batches
+        If `batch` is given, this denotes the genes that are highly variable in all batches
 
     """
     if isinstance(flavor, Default):
@@ -766,12 +815,15 @@ def highly_variable_genes(  # noqa: PLR0913
 
         flavor = settings.preset.highly_variable_genes.flavor
 
+    out = _legacy_out(out, "inplace", None if inplace else True)
+    batch = _ref_arg(batch, batch_key, name="batch", legacy_name="batch_key")
     start = logg.info("extracting highly variable genes")
+    use = _resolve_obs(use)
 
     if not isinstance(adata, AnnData):
         msg = (
             "`pp.highly_variable_genes` expects an `AnnData` argument, "
-            "pass `inplace=False` if you want to return a `pd.DataFrame`."
+            "pass `out=True` if you want to return a `pd.DataFrame`."
         )
         raise ValueError(msg)
 
@@ -782,13 +834,14 @@ def highly_variable_genes(  # noqa: PLR0913
         return _highly_variable_genes_seurat_v3(
             adata,
             flavor=flavor,
+            use=use,
             layer=layer,
             n_top_genes=n_top_genes,
-            batch_key=batch_key,
+            batch_key=batch,
             check_values=check_values,
             span=span,
             subset=subset,
-            inplace=inplace,
+            out=out,
         )
 
     cutoff = _Cutoffs.validate(
@@ -800,9 +853,10 @@ def highly_variable_genes(  # noqa: PLR0913
     )
     del min_disp, max_disp, min_mean, max_mean, n_top_genes
 
-    if not batch_key:
+    if batch is None:
         df = _highly_variable_genes_single_batch(
             adata,
+            use=use,
             layer=layer,
             cutoff=cutoff,
             n_bins=n_bins,
@@ -815,18 +869,32 @@ def highly_variable_genes(  # noqa: PLR0913
             warn(msg, UserWarning)
         # filter_unexpressed_genes will not get passed to _highly_variable_genes_batched since it's always True for that function
         df = _highly_variable_genes_batched(
-            adata, batch_key, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
+            adata,
+            batch,
+            use=use,
+            layer=layer,
+            cutoff=cutoff,
+            n_bins=n_bins,
+            flavor=flavor,
         )
 
     logg.info("    finished", time=start)
 
-    if not inplace:
+    if out is True:
         if subset:
             df = df.loc[df["highly_variable"]]
 
         return df
 
-    adata.uns["hvg"] = {"flavor": flavor}
+    cols = ["highly_variable", "means", "dispersions"]
+    if batch is not None:
+        cols += ["highly_variable_nbatches", "highly_variable_intersection"]
+    res = (
+        df[cols]
+        .assign(dispersions_norm=df["dispersions_norm"].astype(np.float32))
+        .reindex(adata.var_names)
+    )
+    _write_hvg(adata, res, out, uns={"flavor": flavor})
     logg.hint(
         "added\n"
         "    'highly_variable', boolean vector (adata.var)\n"
@@ -834,13 +902,5 @@ def highly_variable_genes(  # noqa: PLR0913
         "    'dispersions', float vector (adata.var)\n"
         "    'dispersions_norm', float vector (adata.var)"
     )
-    adata.var["highly_variable"] = df["highly_variable"]
-    adata.var["means"] = df["means"]
-    adata.var["dispersions"] = df["dispersions"]
-    adata.var["dispersions_norm"] = df["dispersions_norm"].astype(np.float32)
-
-    if batch_key is not None:
-        adata.var["highly_variable_nbatches"] = df["highly_variable_nbatches"]
-        adata.var["highly_variable_intersection"] = df["highly_variable_intersection"]
     if subset:
         adata._inplace_subset_var(df["highly_variable"])

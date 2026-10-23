@@ -7,14 +7,19 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
+from .._docs import DEPR_KEY_ADDED
 from .._utils._doctests import doctest_needs
+from ..get._out import _legacy_out, _uns_use
 
 if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
+
+    from ..get._out import Prefix
 
 type _Method = Literal["overlap_count", "overlap_coef", "jaccard"]
 
@@ -70,17 +75,31 @@ def _calc_jaccard(markers1: dict, markers2: dict):
 
 
 @doctest_needs("leidenalg")
-def marker_gene_overlap(  # noqa: PLR0912, PLR0915
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_arg(
+    "key",
+    Deprecation(
+        "1.13.0",
+        "Use `use` instead, e.g. `use=sc.Prefix('p')` for `key='p_rank_genes_groups'`.",
+    ),
+)
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=False` instead of `inplace=True`.")
+)
+def marker_gene_overlap(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     reference_markers: dict[str, set] | dict[str, list],
     *,
-    key: str = "rank_genes_groups",
+    use: Prefix | None = None,
     method: _Method = "overlap_count",
     normalize: Literal["reference", "data"] | None = None,
     top_n_markers: int | None = None,
     adj_pval_threshold: float | None = None,
-    key_added: str = "marker_gene_overlap",
-    inplace: bool = False,
+    out: Prefix | bool = True,
+    # deprecated
+    key: str | None = None,
+    key_added: str | None = None,
+    inplace: bool | None = None,
 ) -> pd.DataFrame:
     """Calculate an overlap score between data-derived marker genes and provided markers.
 
@@ -98,9 +117,9 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
         A marker gene dictionary object. Keys should be strings with the
         cell identity name and values are sets or lists of strings which match
         format of `adata.var_name`.
-    key
-        The key in `adata.uns` where the rank_genes_groups output is stored.
-        By default this is `'rank_genes_groups'`.
+    use
+        Where :func:`~scanpy.tl.rank_genes_groups` wrote its results, i.e. the `out` passed to it:
+        `None` for `.uns['rank_genes_groups']`, `sc.Prefix('p')` for `.uns['p_rank_genes_groups']`.
     method
         (default: `overlap_count`)
         Method to calculate marker gene overlap. `'overlap_count'` uses the
@@ -121,17 +140,19 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
         genes. This can only be used when adjusted p-values are calculated by
         `sc.tl.rank_genes_groups()`. If `adj_pval_threshold` is set along with
         `top_n_markers`, then `adj_pval_threshold` is ignored.
+    out
+        Must be :data:`True` (the default): the marker gene overlap scores are returned.
+        Writing them to :attr:`~anndata.AnnData.uns` is not implemented.
+    key
+        The key in `adata.uns` where the rank_genes_groups output is stored.
     key_added
-        Name of the `.uns` field that will contain the marker overlap scores.
+        Unused, since writing to :attr:`~anndata.AnnData.uns` is not implemented.
     inplace
-        Return a marker gene dataframe or store it inplace in `adata.uns`.
+        `inplace=False` is `out=True`.
 
     Returns
     -------
-    Returns :class:`pandas.DataFrame` if `inplace=False`, else returns an `AnnData` object where it sets the following field:
-
-    `adata.uns[key_added]` : :class:`pandas.DataFrame` (dtype `float`)
-        Marker gene overlap scores. Default for `key_added` is `'marker_gene_overlap'`.
+    The marker gene overlap scores as a :class:`pandas.DataFrame` (dtype `float`).
 
     Examples
     --------
@@ -155,13 +176,17 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
 
     """
     # Test user inputs
-    if inplace:
+    out = _legacy_out(
+        out, "inplace", None if inplace is None else not inplace, default=True
+    )
+    if out is not True:
         msg = (
             "Writing Pandas dataframes to h5ad is currently under development."
-            "\nPlease use `inplace=False`."
+            "\nPlease use `out=True`."
         )
         raise NotImplementedError(msg)
 
+    key = _uns_use(use, key, base="rank_genes_groups")
     if key not in adata.uns:
         msg = (
             "Could not find marker gene data. "
@@ -285,10 +310,4 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
     marker_matching_df = pd.DataFrame(
         marker_match, index=marker_groups, columns=clusters
     )
-
-    # Store the results
-    if inplace:
-        adata.uns[key_added] = marker_matching_df
-        logg.hint(f"added\n    {key_added!r}, marker overlap scores (adata.uns)")
-    else:
-        return marker_matching_df
+    return marker_matching_df

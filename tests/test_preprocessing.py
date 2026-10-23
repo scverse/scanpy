@@ -22,6 +22,7 @@ from testing.scanpy._helpers import (
     maybe_dask_process_context,
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
 
 if TYPE_CHECKING:
@@ -82,12 +83,14 @@ def base(request):
     return request.param
 
 
+@pytest.mark.filterwarnings(r"ignore:.*argument (obsm|layer).*deprecated:FutureWarning")
 @pytest.mark.parametrize(
     ("kwargs", "expect_warning"),
     [
         pytest.param({}, True, id="X"),
         pytest.param({"layer": "spliced"}, False, id="layer"),
         pytest.param({"obsm": "rep"}, False, id="obsm"),
+        pytest.param({"use": "obsm.rep"}, False, id="use", marks=needs.anndata_acc),
     ],
 )
 def test_log1p_already_transformed_warning(
@@ -107,7 +110,13 @@ def test_log1p_rep(count_matrix_format: _MatrixFormat, base, dtype: DTypeLike) -
         np.abs(sparse.random(100, 200, density=0.3, dtype=dtype)).toarray()
     )
     check_rep_mutation(sc.pp.log1p, x, base=base)
-    check_rep_results(sc.pp.log1p, x, base=base)
+    check_rep_results(_log1p_no_marker, x, base=base)
+
+
+def _log1p_no_marker(adata: AnnData, **kwargs) -> None:
+    """`sc.pp.log1p`, minus the `.X`-only `.uns['log1p']` (see `test_log1p_marks_only_x`)."""
+    sc.pp.log1p(adata, **kwargs)
+    adata.uns.pop("log1p", None)
 
 
 def _random_probs(n: int, frac_zero: float) -> NDArray[np.float64]:
@@ -361,7 +370,7 @@ def test_scale_array(*, count_matrix_format: _MatrixFormat, zero_center: bool) -
     with ctx:
         sc.pp.scale(adata, zero_center=zero_center)
     with ctx:
-        scaled_x = sc.pp.scale(x, zero_center=zero_center, copy=True)
+        scaled_x = sc.pp.scale(x.copy(), zero_center=zero_center)
     np.testing.assert_equal(asarray(scaled_x), asarray(adata.X))
 
 
@@ -386,16 +395,12 @@ def test_regress_out_ordinal():
     adata.obs["n_counts"] = adata.X.sum(axis=1)
 
     # results using only one processor
-    single = sc.pp.regress_out(
-        adata, keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
-    )
+    single = sc.pp.regress_out(adata, ["n_counts", "percent_mito"], n_jobs=1, out=True)
     # results using 8 processors
-    multi = sc.pp.regress_out(
-        adata, keys=["n_counts", "percent_mito"], n_jobs=8, copy=True
-    )
+    multi = sc.pp.regress_out(adata, ["n_counts", "percent_mito"], n_jobs=8, out=True)
 
-    assert adata.X.shape == single.X.shape
-    np.testing.assert_array_equal(single.X, multi.X)
+    assert adata.X.shape == single.shape
+    np.testing.assert_array_equal(single, multi)
 
 
 @pytest.mark.parametrize("dtype", [np.uint32, np.float64, np.uint64])
@@ -409,14 +414,15 @@ def test_regress_out_int(data_dir: Path, dtype: type[np.generic]):
     adata_other = adata.copy()
     adata_other.X = adata_other.X.astype(dtype)
     # results using only one processor
-    sc.pp.regress_out(adata, keys=["labels"])
-    sc.pp.regress_out(adata_other, keys=["labels"])
+    sc.pp.regress_out(adata, ["labels"])
+    sc.pp.regress_out(adata_other, ["labels"])
     assert_equal(adata_other, adata)
     # This file was generated under scanpy 1.10.3
     ground_truth = np.load(data_dir / "cat_regressor_for_int_input.npy")
     np.testing.assert_allclose(ground_truth, adata_other.X, atol=1e-5, rtol=1e-5)
 
 
+@needs.anndata_acc
 @pytest.mark.parametrize("dtype", [np.int64, np.float64, np.int32])
 def test_regress_out_layer(dtype):
     rng = np.random.default_rng()
@@ -435,15 +441,17 @@ def test_regress_out_layer(dtype):
         dtype_cast = np.float32
     adata.layers["counts"] = adata.X.copy().astype(dtype_cast)
 
-    single = sc.pp.regress_out(
-        adata, keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
-    )
+    single = sc.pp.regress_out(adata, ["n_counts", "percent_mito"], n_jobs=1, out=True)
     layer = sc.pp.regress_out(
-        adata, layer="counts", keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
+        adata,
+        use="layers.counts",
+        covariates=["n_counts", "percent_mito"],
+        n_jobs=1,
+        out=True,
     )
 
-    assert adata.X.shape == single.X.shape
-    np.testing.assert_allclose(single.X, layer.layers["counts"])
+    assert adata.X.shape == single.shape
+    np.testing.assert_allclose(single, layer)
 
 
 def test_regress_out_view():
@@ -457,8 +465,8 @@ def test_regress_out_view():
     subset_adata_copy = subset_adata.copy()
 
     with pytest.warns(UserWarning, match=r"Received a view"):
-        sc.pp.regress_out(subset_adata, keys=["n_counts", "percent_mito"])
-    sc.pp.regress_out(subset_adata_copy, keys=["n_counts", "percent_mito"])
+        sc.pp.regress_out(subset_adata, ["n_counts", "percent_mito"])
+    sc.pp.regress_out(subset_adata_copy, ["n_counts", "percent_mito"])
 
     assert_equal(subset_adata, subset_adata_copy)
     assert not subset_adata.is_view
@@ -472,9 +480,9 @@ def test_regress_out_categorical():
     # create a categorical column
     adata.obs["batch"] = pd.Categorical(rng.integers(1, 4, size=adata.X.shape[0]))
 
-    multi = sc.pp.regress_out(adata, keys="batch", n_jobs=8, copy=True)
+    multi = sc.pp.regress_out(adata, "batch", n_jobs=8, out=True)
 
-    assert adata.X.shape == multi.X.shape
+    assert adata.X.shape == multi.shape
 
 
 def test_regress_out_constants():
@@ -484,7 +492,7 @@ def test_regress_out_constants():
     adata.obs["n_counts"] = adata.X.sum(axis=1)
     adata_copy = adata.copy()
 
-    sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
+    sc.pp.regress_out(adata, ["n_counts", "percent_mito"])
 
     assert_equal(adata, adata_copy)
 
@@ -501,7 +509,7 @@ def test_regress_out_reproducible(
 ) -> None:
     adata = sc.datasets.pbmc68k_reduced()
     adata = adata.raw.to_adata()[:200, :200].copy()
-    sc.pp.regress_out(adata, keys=keys)
+    sc.pp.regress_out(adata, keys)
     # This file was generated from the original implementation in version 1.10.3
     # Now we compare new implementation with the old one
     tester = np.load(data_dir / test_file)
@@ -539,22 +547,22 @@ def test_downsample_counts_per_cell(
     with pytest.raises(ValueError, match=r"Must specify exactly one"):
         sc.pp.downsample_counts(adata, replace=replace)
     initial_totals = np.ravel(adata.X.sum(axis=1))
-    adata = sc.pp.downsample_counts(
-        adata, counts_per_cell=target, replace=replace, copy=True
+    res = sc.pp.downsample_counts(
+        adata, counts_per_cell=target, replace=replace, out=True
     )
-    new_totals = np.ravel(adata.X.sum(axis=1))
-    if isinstance(adata.X, CSBase):
-        assert all(adata.X.toarray()[x == 0] == 0)
+    new_totals = np.ravel(res.sum(axis=1))
+    if isinstance(res, CSBase):
+        assert all(res.toarray()[x == 0] == 0)
     else:
-        assert all(adata.X[x == 0] == 0)
+        assert all(res[x == 0] == 0)
     assert all(new_totals <= target)
     assert all(initial_totals >= new_totals)
     assert all(
         initial_totals[initial_totals <= target] == new_totals[initial_totals <= target]
     )
     if not replace:
-        assert np.all(x >= adata.X)
-    assert x.dtype == adata.X.dtype
+        assert np.all(x >= res)
+    assert x.dtype == res.dtype
 
 
 @pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
@@ -569,14 +577,14 @@ def test_downsample_counts_per_cell_multiple_targets(
     initial_totals = np.ravel(adata.X.sum(axis=1))
     with pytest.raises(ValueError, match=r"counts_per_cell.*length as number of obs"):
         sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
-    adata = sc.pp.downsample_counts(
-        adata, counts_per_cell=targets, replace=replace, copy=True
+    res = sc.pp.downsample_counts(
+        adata, counts_per_cell=targets, replace=replace, out=True
     )
-    new_totals = np.ravel(adata.X.sum(axis=1))
-    if isinstance(adata.X, CSBase):
-        assert all(adata.X.toarray()[x == 0] == 0)
+    new_totals = np.ravel(res.sum(axis=1))
+    if isinstance(res, CSBase):
+        assert all(res.toarray()[x == 0] == 0)
     else:
-        assert all(adata.X[x == 0] == 0)
+        assert all(res[x == 0] == 0)
     assert all(new_totals <= targets)
     assert all(initial_totals >= new_totals)
     assert all(
@@ -584,8 +592,8 @@ def test_downsample_counts_per_cell_multiple_targets(
         == new_totals[initial_totals <= targets]
     )
     if not replace:
-        assert np.all(x >= adata.X)
-    assert x.dtype == adata.X.dtype
+        assert np.all(x >= res)
+    assert x.dtype == res.dtype
 
 
 @pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
@@ -599,23 +607,23 @@ def test_downsample_total_counts(
     total = x.sum()
     target = np.floor_divide(total, 10)
     initial_totals = np.ravel(adata_orig.X.sum(axis=1))
-    adata = sc.pp.downsample_counts(
-        adata_orig, total_counts=target, replace=replace, copy=True
+    res = sc.pp.downsample_counts(
+        adata_orig, total_counts=target, replace=replace, out=True
     )
-    new_totals = np.ravel(adata.X.sum(axis=1))
-    if isinstance(adata.X, CSBase):
-        assert all(adata.X.toarray()[x == 0] == 0)
+    new_totals = np.ravel(res.sum(axis=1))
+    if isinstance(res, CSBase):
+        assert all(res.toarray()[x == 0] == 0)
     else:
-        assert all(adata.X[x == 0] == 0)
-    assert adata.X.sum() == target
+        assert all(res[x == 0] == 0)
+    assert res.sum() == target
     assert all(initial_totals >= new_totals)
     if not replace:
-        assert np.all(x >= adata.X)
-        adata = sc.pp.downsample_counts(
-            adata_orig, total_counts=total + 10, replace=False, copy=True
+        assert np.all(x >= res)
+        res = sc.pp.downsample_counts(
+            adata_orig, total_counts=total + 10, replace=False, out=True
         )
-        assert (x == adata.X).all()
-    assert x.dtype == adata.X.dtype
+        assert (x == res).all()
+    assert x.dtype == res.dtype
 
 
 def test_recipe_weinreb():
@@ -646,19 +654,47 @@ def test_sqrt(count_matrix_format: _MatrixFormat, *, chunked: bool) -> None:
         pytest.param(sc.pp.filter_genes, "var", "min_cells", "n_cells", id="genes"),
     ],
 )
-def test_filter_inplace_false(
-    filter_func: Callable, attr: str, arg: str, col: str
-) -> None:
-    """`inplace=False` returns the mask and counts without touching `adata`."""
+def test_filter_out_true(filter_func: Callable, attr: str, arg: str, col: str) -> None:
+    """`out=True` returns the mask and counts without touching `adata`."""
     adata = pbmc68k_reduced().raw.to_adata()
     orig = adata.copy()
 
-    mask, number = filter_func(adata, **{arg: 3}, inplace=False)
+    mask, number = filter_func(adata, **{arg: 3}, out=True)
+    with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
+        mask_legacy, _ = filter_func(adata, **{arg: 3}, inplace=False)
+    np.testing.assert_array_equal(mask, mask_legacy)
 
     assert_equal(adata, orig)
     filter_func(adata, **{arg: 3})
     assert mask.sum() == len(getattr(adata, attr))
     np.testing.assert_array_equal(number[mask], getattr(adata, attr)[col])
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize(
+    ("filter_func", "attr", "arg", "col"),
+    [
+        pytest.param(sc.pp.filter_cells, "obs", "min_genes", "n_genes", id="cells"),
+        pytest.param(sc.pp.filter_genes, "var", "min_cells", "n_cells", id="genes"),
+    ],
+)
+def test_filter_out_acc(filter_func: Callable, attr: str, arg: str, col: str) -> None:
+    """An accessor `out` names the counts column, and subsetting still happens."""
+    from anndata.acc import A
+
+    adata = pbmc68k_reduced().raw.to_adata()
+    if col in (annot := getattr(adata, attr)):
+        del annot[col]
+    expected = adata.copy()
+    filter_func(expected, **{arg: 3})
+    filter_func(adata, **{arg: 3}, out=getattr(A, attr)["custom"])
+    assert col not in getattr(adata, attr)
+    assert getattr(adata, attr).index.equals(getattr(expected, attr).index)
+    np.testing.assert_array_equal(
+        getattr(adata, attr)["custom"], getattr(expected, attr)[col]
+    )
+    with pytest.raises(TypeError, match=rf"must point to `\.{attr}`"):
+        filter_func(adata, **{arg: 3}, out=A.obsm["x"])
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -727,3 +763,26 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
     adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
     adata.X = conv.to_dense(adata.X)
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
+
+
+@needs.anndata_acc
+def test_regress_out_keys_ref() -> None:
+    """`keys` can also be references."""
+    from anndata.acc import A
+
+    adata = pbmc68k_reduced()
+    expected = sc.pp.regress_out(adata, ["n_counts", "percent_mito"], out=True)
+    res = sc.pp.regress_out(adata, [A.obs["n_counts"], A.obs["percent_mito"]], out=True)
+    np.testing.assert_allclose(res, expected)
+    expected = sc.pp.regress_out(adata, "bulk_labels", out=True)
+    np.testing.assert_allclose(
+        sc.pp.regress_out(adata, A.obs["bulk_labels"], out=True), expected
+    )
+
+
+def test_regress_out_keys_deprecated() -> None:
+    adata = pbmc68k_reduced()
+    expected = sc.pp.regress_out(adata, ["n_counts", "percent_mito"], out=True)
+    with pytest.warns(FutureWarning, match=r"argument keys is deprecated"):
+        res = sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"], out=True)
+    np.testing.assert_allclose(res, expected)

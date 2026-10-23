@@ -17,12 +17,10 @@ def rename_groups(
     adata: AnnData,
     restrict_key: str,
     *,
-    key_added: str | None,
     restrict_categories: Iterable[str],
     restrict_indices: NDArray[np.bool],
     groups: NDArray,
 ) -> pd.Series[str]:
-    key_added = f"{restrict_key}_R" if key_added is None else key_added
     all_groups = adata.obs[restrict_key].astype("U")
     prefix = f"{'-'.join(restrict_categories)},"
     new_groups = [prefix + g for g in groups.astype("U")]

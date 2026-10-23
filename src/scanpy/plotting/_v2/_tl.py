@@ -8,12 +8,17 @@ import pandas as pd
 from anndata.acc import GraphAcc, MultiAcc
 from hv_anndata import A
 
+from ...get._out import _out_key
+
 if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
+    from anndata.acc import AdRef
     from hv_anndata import AdDim
     from scipy.sparse import csr_matrix  # noqa: TID251
+
+    from ...get._out import Prefix
 
 
 def draw_graph(
@@ -21,8 +26,6 @@ def draw_graph(
     kdims: list[AdDim] | MultiAcc,
     edge_vdim: Literal["distances", "connectivities"] | GraphAcc = "connectivities",
     node_vdims: AdDim | list[AdDim] | None = None,
-    *,
-    neighbors_key: str = "neighbors",
 ) -> hv.Graph:
     """Draw a graph.
 
@@ -34,16 +37,13 @@ def draw_graph(
         Key dimensions of the graph.
         Can just be ``A.obsm[<k>]`` or ``A.varm[<k>]`` to auto-select components.
     edge_vdim
-        Edge value dimension.
-        If ``"distances"``/``"connectivities"``,
-        the graph data is retrieved like :func:`scanpy.pp.neighbors` stores it:
-        ``A.uns[neighbors_key][f"{edge_vdim}_key"]``.
-        Therefore ``.opts(edge_color=calculated_edge_vdim)`` is set by default.
+        Edge value dimension, e.g. ``A.obsp["p_connectivities"]``.
+        ``"distances"``/``"connectivities"`` are short for
+        where :func:`scanpy.pp.neighbors` writes them by default,
+        e.g. ``A.obsp["connectivities"]``.
+        ``.opts(edge_color=edge_vdim)`` is set by default.
     node_vdims
         Node value dimensions.
-    neighbors_key
-        Key in ``adata.uns`` where neighbors are stored.
-        Used only if ``edge_vdim`` is ``"distances"``/``"connectivities"``.
 
     Returns
     -------
@@ -80,7 +80,7 @@ def draw_graph(
     if isinstance(kdims, MultiAcc):
         kdims = [kdims[0], kdims[1]]
     if isinstance(edge_vdim, str):
-        edge_vdim = A.obsp[adata.uns[neighbors_key][f"{edge_vdim}_key"]]
+        edge_vdim = A.obsp[edge_vdim]
     elif not isinstance(edge_vdim, GraphAcc):
         msg = f"edge_vdim must be a string or `A.obsp[key]`, got {edge_vdim!r}."
         raise TypeError(msg)
@@ -191,7 +191,7 @@ def embedding_density(
     basis: MultiAcc,
     *,
     groupby: str | None = None,
-    key: str | None = None,
+    use: AdRef | str | Prefix | None = None,
 ) -> hv.Scatter | hv.NdLayout:
     """Plot embedding density.
 
@@ -203,8 +203,10 @@ def embedding_density(
         Embedding to plot (e.g. ``A.obsm["umap"]``).
     groupby
         ``groupby`` as specified in :func:`scanpy.tl.embedding_density`.
-    key
-        ``key_added`` as specified in :func:`scanpy.tl.embedding_density`.
+    use
+        Where :func:`~scanpy.tl.embedding_density` wrote the densities, i.e. the `out` passed to it:
+        `None` for the default place, `sc.Prefix('p')` for its `p_`-prefixed name,
+        or an accessor like `A.obs['density']`.
 
     Returns
     -------
@@ -226,8 +228,10 @@ def embedding_density(
 
     """
     basis_name = basis.k.removeprefix("X_")
-    if key is None:
-        key = f"{basis_name}_density{'' if groupby is None else f'_{groupby}'}"
+    default = f"{basis_name}_density{'' if groupby is None else f'_{groupby}'}"
+    key = _out_key(
+        False if use is None else use, None, kind="obs", base=default, default=default
+    )
 
     groupby_vdims = [] if groupby is None else [A.obs[groupby]]
     scatter = hv.Scatter(adata, basis[0], [basis[1], *groupby_vdims, A.obs[key]]).opts(

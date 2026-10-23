@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from ._dendrogram import dendrogram
 from ._diffmap import diffmap
-from ._dpt import dpt
+from ._dpt import DptOut, dpt
 from ._draw_graph import draw_graph
 from ._embedding_density import embedding_density
 from ._ingest import (
@@ -23,7 +23,7 @@ from ._paga import (
     paga_expression_entropies,  # noqa: F401
 )
 from ._rank_genes_groups import filter_rank_genes_groups, rank_genes_groups
-from ._score_genes import score_genes, score_genes_cell_cycle
+from ._score_genes import CellCycleOut, score_genes, score_genes_cell_cycle
 from ._sim import sim
 from ._tsne import tsne
 from ._umap import umap
@@ -41,6 +41,8 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
+    "CellCycleOut",
+    "DptOut",
     "dendrogram",
     "diffmap",
     "dpt",
