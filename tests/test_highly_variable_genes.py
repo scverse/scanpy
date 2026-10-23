@@ -510,6 +510,31 @@ def test_seurat_v3_degenerate() -> None:
     sc.pp.highly_variable_genes(adata, flavor="seurat_v3")
 
 
+@needs.skmisc
+@pytest.mark.parametrize("duplicate_names", [False, True])
+def test_seurat_v3_n_top_genes_with_duplicate_names(*, duplicate_names: bool) -> None:
+    rng = np.random.default_rng(0)
+    n_genes = 120
+    with (
+        pytest.warns(UserWarning, match="Variable names are not unique")
+        if duplicate_names
+        else nullcontext()
+    ):
+        adata = AnnData(
+            rng.negative_binomial(3, 0.3, (300, n_genes)).astype(np.float32),
+            var=pd.DataFrame(
+                index=(
+                    [f"g{i % 100}" for i in range(n_genes)]
+                    if duplicate_names
+                    else [f"g{i}" for i in range(n_genes)]
+                )
+            ),
+        )
+        sc.pp.highly_variable_genes(adata, flavor="seurat_v3", n_top_genes=30)
+
+    assert adata.var["highly_variable"].sum() == 30
+
+
 def test_batches() -> None:
     adata = pbmc68k_reduced()
     adata.X[:100, :100] = np.zeros((100, 100))
