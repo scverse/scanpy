@@ -22,7 +22,7 @@ from testing.scanpy._pytest.marks import needs
         ),
         pytest.param(
             "regress_out",
-            partial(sc.pp.regress_out, keys=["n_counts", "percent_mito"]),
+            partial(sc.pp.regress_out, covariates=["n_counts", "percent_mito"]),
             "",
             id="regress_out",
         ),
@@ -30,7 +30,9 @@ from testing.scanpy._pytest.marks import needs
             # `out` makes `regress_out` copy `x`; that must not happen
             # before the backed check, or the copy would silently succeed
             "regress_out",
-            partial(sc.pp.regress_out, keys=["n_counts", "percent_mito"], out=True),
+            partial(
+                sc.pp.regress_out, covariates=["n_counts", "percent_mito"], out=True
+            ),
             "",
             id="regress_out_out",
         ),

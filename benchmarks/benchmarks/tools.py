@@ -44,10 +44,10 @@ class ToolsSuite:  # noqa: D101
         sc.tl.leiden(self.adata, flavor="igraph")
 
     def time_combat(self, *_) -> None:
-        sc.pp.combat(self.adata, key="bulk_labels")
+        sc.pp.combat(self.adata, "bulk_labels")
 
     def peakmem_combat(self, *_) -> None:
-        sc.pp.combat(self.adata, key="bulk_labels")
+        sc.pp.combat(self.adata, "bulk_labels")
 
 
 class ScoreGenesSuite:
