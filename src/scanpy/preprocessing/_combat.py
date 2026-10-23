@@ -51,8 +51,8 @@ def _design_matrix(
     if other_cols:
         col_repr = " + ".join(f"Q('{x}')" for x in other_cols)
         factor_matrix = patsy.dmatrix(
-            f"~ 0 + {col_repr}", model[other_cols], return_type="dataframe"
-        )
+            f"~ {col_repr}", model[other_cols], return_type="dataframe"
+        ).drop(columns="Intercept")
 
         design = pd.concat((design, factor_matrix), axis=1)
         logg.info(f"Found {len(other_cols)} categorical variables:")
