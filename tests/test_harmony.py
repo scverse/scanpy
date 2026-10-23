@@ -10,6 +10,7 @@ import pytest
 from anndata import AnnData, read_h5ad
 from scipy.stats import pearsonr
 
+from scanpy import Prefix
 from scanpy.preprocessing import harmony_integrate
 from scanpy.preprocessing._harmony.core import (
     _SUPPRESS_PENALTY,
@@ -146,7 +147,7 @@ def test_harmony_integrate(
         dtype=dtype,
         flavor=flavor,
     )
-    assert adata.obsm["X_pca_harmony"].shape == adata.obsm["X_pca"].shape
+    assert adata.obsm["pca_harmony"].shape == adata.obsm["X_pca"].shape
 
 
 def test_harmony_original_correction_rejected() -> None:
@@ -170,7 +171,7 @@ def test_harmony_integrate_reference(
         max_iter_harmony=20,
         flavor="harmony1",
     )
-    x, base = adata_reference.obsm["harmony_org"], adata_reference.obsm["X_pca_harmony"]
+    x, base = adata_reference.obsm["harmony_org"], adata_reference.obsm["pca_harmony"]
 
     with subtests.test("r"):
         assert _get_measure(x, base, "r").min() > 0.95
@@ -193,7 +194,7 @@ def test_harmony_multiple_keys() -> None:
         rng=0,
     )
 
-    assert adata.obsm["X_pca_harmony"].shape == adata.obsm["X_pca"].shape
+    assert adata.obsm["pca_harmony"].shape == adata.obsm["X_pca"].shape
 
 
 def test_harmony_multikey_marginal_codes_and_theta() -> None:
@@ -388,7 +389,7 @@ def test_harmony2_multikey_reference(
         max_iter_harmony=max_iter_harmony,
     )
 
-    result = adata.obsm["X_pca_harmony"]
+    result = adata.obsm["pca_harmony"]
     assert _get_measure(reference, result, "r").min() > 0.95
     assert _get_measure(reference, result, "L2").max() < 0.1
 
@@ -406,22 +407,22 @@ def test_harmony_custom_parameters() -> None:
         ridge_lambda=0.5,
         flavor="harmony1",
     )
-    assert adata.obsm["X_pca_harmony"].shape == adata.obsm["X_pca"].shape
+    assert adata.obsm["pca_harmony"].shape == adata.obsm["X_pca"].shape
 
 
 def test_harmony_no_nan_output() -> None:
     """Test that Harmony output contains no NaN values."""
     adata = pbmc68k_reduced()
     harmony_integrate(adata, "bulk_labels")
-    assert not np.isnan(adata.obsm["X_pca_harmony"]).any()
+    assert not np.isnan(adata.obsm["pca_harmony"]).any()
 
 
 def test_harmony_input_validation(subtests) -> None:
     """Test that Harmony raises errors for invalid inputs."""
     adata = pbmc68k_reduced()
 
-    with subtests.test("no basis"), pytest.raises(ValueError, match="not available"):
-        harmony_integrate(adata, "bulk_labels", basis="nonexistent")
+    with subtests.test("no pca"), pytest.raises(KeyError, match="X_pca"):
+        harmony_integrate(AnnData(adata.X, obs=adata.obs), "bulk_labels")
     with subtests.test("no key"), pytest.raises(KeyError):
         harmony_integrate(adata, "nonexistent_key")
 
@@ -578,6 +579,15 @@ def test_harmony2_ircolitis_reference(
     )
 
     reference = adata.obsm["harmony2_ref"]
-    result = adata.obsm["X_pca_harmony"]
+    result = adata.obsm["pca_harmony"]
     assert _get_measure(reference, result, "r").min() > 0.95
     assert _get_measure(reference, result, "L2").max() < 0.1
+
+
+def test_harmony_out() -> None:
+    """`out=True` returns the embedding, `sc.Prefix` names it `p_pca_harmony`."""
+    adata = pbmc68k_reduced()
+    res = harmony_integrate(adata, "bulk_labels", out=True, rng=0)
+    assert "pca_harmony" not in adata.obsm
+    harmony_integrate(adata, "bulk_labels", out=Prefix("p"), rng=0)
+    np.testing.assert_allclose(adata.obsm["p_pca_harmony"], res)
