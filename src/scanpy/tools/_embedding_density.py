@@ -96,7 +96,7 @@ def embedding_density(  # noqa: PLR0912
     Returns
     -------
     Returns the densities if `out=True`, else `None`.
-    Sets the following fields (`key` defaults to `[basis]_density_[groupby]`, where `[basis]` is one of `umap`, `diffmap`, `pca`, `tsne`, or `draw_graph_fa` and `[groupby]` denotes the parameter input):
+    Sets the following fields for `key` as `[basis]_density_[groupby]`, where `[basis]` is one of `umap`, `diffmap`, `pca`, `tsne`, or `draw_graph_fa` and `[groupby]` denotes the parameter input:
 
     `adata.obs[key]` : :class:`numpy.ndarray` (dtype `float`)
         Embedding density values for each cell.
