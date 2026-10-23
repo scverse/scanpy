@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import sys
+from collections.abc import Mapping
 from inspect import signature
 from textwrap import indent
 from typing import TYPE_CHECKING
@@ -24,7 +25,14 @@ from .._docs import DEPR_KEY_ADDED, doc_rng
 from .._keys import _EmbeddingKeys, _existing_preset_keys
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng
-from ..get._out import _out_dests, _write_dests, deprecated_copy
+from ..get._out import (
+    Prefix,
+    _dest,
+    _dest_key,
+    _out_dests,
+    _write_dests,
+    deprecated_copy,
+)
 from ..get._uns import _use_to_uns
 from ..get._use import _resolve_obs
 from . import _connectivity
@@ -42,7 +50,7 @@ from ._doc import doc_n_pcs, doc_out_key_added, doc_use_rep
 from ._types import KwdsForTransformer, NeighborsOut, _Method
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, MutableMapping
+    from collections.abc import Callable, MutableMapping
     from typing import Any, Literal
 
     from anndata import AnnData
@@ -50,8 +58,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._utils.random import RNGLike, SeedLike
-    from ..get._out import Prefix
-    from ..get._types import ArrAcc, RepAcc
+    from ..get._types import ArrAcc, MultiAcc, RepAcc
     from ._types import (
         KnnTransformerLike,
         RPForestDict,
@@ -368,6 +375,20 @@ class OnFlySymMatrix:
         )
 
 
+def _diffmap_keys(
+    adata: AnnData, diffmap: MultiAcc | str | Prefix | None
+) -> _EmbeddingKeys | None:
+    """Where `tl.diffmap` wrote, given the `out` it was called with (`None` for the default)."""
+    if diffmap is None:
+        return _existing_preset_keys(adata, "diffmap")
+    key = (
+        f"{diffmap.prefix}_diffmap"
+        if isinstance(diffmap, Prefix)
+        else _dest_key(_dest(_resolve_obs(diffmap)))
+    )
+    return _EmbeddingKeys(key, key)
+
+
 class Neighbors:
     """Data represented as graph of nearest neighbors.
 
@@ -382,6 +403,10 @@ class Neighbors:
         Number of diffusion components to use.
     neighbors_key
         Where to look in `.uns` and `.obsp` for neighbors data.
+    diffmap
+        Where :func:`~scanpy.tl.diffmap` wrote its results, i.e. the `out` passed to it:
+        `None` for the default places, `sc.Prefix('p')` for `A.obsm['p_diffmap']`,
+        or an accessor like `A.obsm['k']`.
 
     """
 
@@ -391,7 +416,7 @@ class Neighbors:
         *,
         n_dcs: int | None = None,
         neighbors_key: str | None = None,
-        diffmap_key: str | None = None,
+        diffmap: MultiAcc | str | Prefix | None = None,
     ) -> None:
         self._adata = adata
         self._init_iroot()
@@ -445,12 +470,10 @@ class Neighbors:
                 self._connected_components = connected_components(self._connectivities)
                 self._number_connected_components = self._connected_components[0]
 
-        if keys := (
-            _EmbeddingKeys(diffmap_key, diffmap_key)
-            if diffmap_key
-            else _existing_preset_keys(adata, "diffmap")
-        ):
-            self._eigen_values = adata.uns[keys.uns]
+        if keys := _diffmap_keys(adata, diffmap):
+            # `tl.diffmap` stores the eigenvalues directly in V1 and as `evals` otherwise
+            evals = adata.uns[keys.uns]
+            self._eigen_values = evals["evals"] if isinstance(evals, Mapping) else evals
             self._eigen_basis = adata.obsm[keys.obsm]
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):

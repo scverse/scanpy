@@ -114,4 +114,5 @@ Functions with several outputs return these if passed `out=True`.
    pp.PcaOut
    pp.QcMetricsOut
    pp.ScaleOut
+   pp.ScrubletOut
 ```

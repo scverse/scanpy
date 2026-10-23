@@ -15,7 +15,7 @@ from ._pca import PcaOut, pca
 from ._qc import QcMetricsOut, calculate_qc_metrics
 from ._recipes import recipe_seurat, recipe_weinreb17, recipe_zheng17
 from ._scale import ScaleOut, scale
-from ._scrublet import scrublet, scrublet_simulate_doublets
+from ._scrublet import ScrubletOut, scrublet, scrublet_simulate_doublets
 from ._simple import (
     downsample_counts,
     filter_cells,
@@ -33,6 +33,7 @@ __all__ = [
     "PcaOut",
     "QcMetricsOut",
     "ScaleOut",
+    "ScrubletOut",
     "bbknn",
     "calculate_qc_metrics",
     "combat",

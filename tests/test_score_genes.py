@@ -306,8 +306,14 @@ def test_score_genes_cell_cycle(array_type: Callable[[np.ndarray], object]) -> N
     x[phases == "G2M", 10:20] = 3
     adata = AnnData(array_type(x))
 
-    sc.tl.score_genes_cell_cycle(
-        adata, s_genes=adata.var_names[:10], g2m_genes=adata.var_names[10:20], rng=0
-    )
+    kw = dict(s_genes=adata.var_names[:10], g2m_genes=adata.var_names[10:20], rng=0)
+    res = sc.tl.score_genes_cell_cycle(adata, **kw, out=True)
+    assert adata.obs.columns.empty
+    np.testing.assert_array_equal(res.phase, phases)
 
+    sc.tl.score_genes_cell_cycle(adata, **kw)
     np.testing.assert_array_equal(adata.obs["phase"], phases)
+    np.testing.assert_array_equal(adata.obs["S_score"], res.s_score)
+
+    sc.tl.score_genes_cell_cycle(adata, **kw, out=sc.Prefix("p"))
+    assert {"p_S_score", "p_G2M_score", "p_phase"} <= set(adata.obs.columns)

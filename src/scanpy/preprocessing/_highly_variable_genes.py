@@ -25,7 +25,7 @@ from .._utils import (
     sanitize_anndata,
 )
 from ..get import aggregate
-from ..get._out import Prefix, _legacy_out
+from ..get._out import Prefix, _legacy_out, _out_key
 from ..get._use import _get_arr, _resolve_obs
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._settings.presets import HVGFlavor
-    from ..get._types import RepAcc
+    from ..get._types import MultiAcc, RepAcc
 
 
 @singledispatch
@@ -288,7 +288,15 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     df.loc[sorted_index[: int(n_top_genes)], "highly_variable"] = True
 
     if out is not True:
-        adata.uns[_hvg_key(out, "hvg")] = {"flavor": flavor}
+        cols = ["highly_variable", "highly_variable_rank", "means", "variances"]
+        if batch_key is not None:
+            cols.append("highly_variable_nbatches")
+        res = pd.DataFrame(
+            {col: df[col].to_numpy() for col in cols}, index=adata.var_names
+        ).assign(
+            variances_norm=df["variances_norm"].to_numpy().astype("float64", copy=False)
+        )
+        _write_hvg(adata, res, out, uns={"flavor": flavor})
         logg.hint(
             "added\n"
             "    'highly_variable', boolean vector (adata.var)\n"
@@ -297,20 +305,6 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             "    'variances', float vector (adata.var)\n"
             "    'variances_norm', float vector (adata.var)"
         )
-        for to_numpy_key in [
-            "highly_variable",
-            "highly_variable_rank",
-            "means",
-            "variances",
-        ]:
-            adata.var[_hvg_key(out, to_numpy_key)] = df[to_numpy_key].to_numpy()
-        adata.var[_hvg_key(out, "variances_norm")] = (
-            df["variances_norm"].to_numpy().astype("float64", copy=False)
-        )
-        if batch_key is not None:
-            adata.var[_hvg_key(out, "highly_variable_nbatches")] = df[
-                "highly_variable_nbatches"
-            ].to_numpy()
         if subset:
             adata._inplace_subset_var(df["highly_variable"].to_numpy())
     else:
@@ -323,9 +317,23 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     return None
 
 
-def _hvg_key(out: Prefix | bool, name: str) -> str:  # noqa: FBT001
-    """Name an output of `highly_variable_genes`, prefixed if `out` is a `Prefix`."""
-    return f"{out.prefix}_{name}" if isinstance(out, Prefix) else name
+def _write_hvg(
+    adata: AnnData,
+    res: pd.DataFrame,
+    out: MultiAcc | str | Prefix | Literal[False],
+    *,
+    uns: dict[str, object],
+) -> None:
+    """Write `highly_variable_genes` results: as (prefixed) `.var` columns, or to `.varm`."""
+    if out is False or isinstance(out, Prefix):
+        prefix = f"{out.prefix}_" if out else ""
+        res = res.add_prefix(prefix)
+        adata.var[res.columns] = res
+        adata.uns[f"{prefix}hvg"] = uns
+        return
+    key = _out_key(out, None, kind="varm", base="hvg")
+    adata.varm[key] = res
+    adata.uns[key] = uns
 
 
 @dataclass
@@ -650,6 +658,7 @@ def _highly_variable_genes_batched(
     use=doc_use("Which matrix to use for expression values.", legacy=("layer",)),
     out=doc_out_key(
         "the metrics",
+        example="A.varm['hvg']",
         default="the `.var` columns and `.uns['hvg']` listed below",
         prefixed="`.var['p_highly_variable']`, `.var['p_means']`, … and `.uns['p_hvg']`",
     ),
@@ -675,7 +684,7 @@ def highly_variable_genes(  # noqa: PLR0913
     batch_key: str | None = None,
     filter_unexpressed_genes: bool | None = None,
     check_values: bool = True,
-    out: Prefix | bool = False,
+    out: MultiAcc | str | Prefix | bool = False,
     # deprecated
     inplace: bool = True,
 ) -> pd.DataFrame | None:
@@ -869,7 +878,15 @@ def highly_variable_genes(  # noqa: PLR0913
 
         return df
 
-    adata.uns[_hvg_key(out, "hvg")] = {"flavor": flavor}
+    cols = ["highly_variable", "means", "dispersions"]
+    if batch_key is not None:
+        cols += ["highly_variable_nbatches", "highly_variable_intersection"]
+    res = (
+        df[cols]
+        .assign(dispersions_norm=df["dispersions_norm"].astype(np.float32))
+        .reindex(adata.var_names)
+    )
+    _write_hvg(adata, res, out, uns={"flavor": flavor})
     logg.hint(
         "added\n"
         "    'highly_variable', boolean vector (adata.var)\n"
@@ -877,19 +894,5 @@ def highly_variable_genes(  # noqa: PLR0913
         "    'dispersions', float vector (adata.var)\n"
         "    'dispersions_norm', float vector (adata.var)"
     )
-    adata.var[_hvg_key(out, "highly_variable")] = df["highly_variable"]
-    adata.var[_hvg_key(out, "means")] = df["means"]
-    adata.var[_hvg_key(out, "dispersions")] = df["dispersions"]
-    adata.var[_hvg_key(out, "dispersions_norm")] = df["dispersions_norm"].astype(
-        np.float32
-    )
-
-    if batch_key is not None:
-        adata.var[_hvg_key(out, "highly_variable_nbatches")] = df[
-            "highly_variable_nbatches"
-        ]
-        adata.var[_hvg_key(out, "highly_variable_intersection")] = df[
-            "highly_variable_intersection"
-        ]
     if subset:
         adata._inplace_subset_var(df["highly_variable"])

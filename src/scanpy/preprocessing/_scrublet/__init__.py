@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from importlib.util import find_spec
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -11,22 +11,55 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
 from ... import preprocessing as pp
-from ..._docs import doc_rng, doc_use
+from ..._docs import doc_out_multi, doc_rng, doc_use
 from ..._utils import _doc_params, own_deprecations
 from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
-from ...get._out import deprecated_copy
+from ...get._out import _out_dests, _write_dests, deprecated_copy
 from ...get._use import _get_arr, _resolve_obs
 from . import pipeline
 from .core import Scrublet
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from numpy.typing import NDArray
+
     from ..._utils.random import RNGLike, SeedLike
-    from ...get._types import RepAcc
+    from ...get._out import OutKind, Prefix
+    from ...get._types import RepAcc, VecRef, _SetRep
     from ...neighbors import _Metric, _MetricFn
 
 
+class ScrubletOut[S = NDArray[np.float64], P = NDArray[np.bool]](NamedTuple):
+    """Outputs of :func:`~scanpy.pp.scrublet`."""
+
+    doublet_score: S
+    """Doublet scores for each observed transcriptome."""
+    predicted_doublet: P
+    """Boolean indicating predicted doublet status."""
+
+
+SCRUBLET_KINDS: ScrubletOut[set[OutKind], set[OutKind]] = ScrubletOut({"obs"}, {"obs"})
+"""Where `out` can write the outputs of `pp.scrublet`."""
+
+SCRUBLET_BASES: ScrubletOut[_SetRep, _SetRep] = ScrubletOut(
+    dict(obs="doublet_score"), dict(obs="predicted_doublet")
+)
+
+
 @_accepts_legacy_random_state(0)
-@_doc_params(rng=doc_rng)
+@_doc_params(
+    rng=doc_rng,
+    out=doc_out_multi(
+        dict(
+            doublet_score="By default written to `A.obs['doublet_score']`.",
+            predicted_doublet="By default written to `A.obs['predicted_doublet']`.",
+        ),
+        example="{'doublet_score': A.obs['scrublet_score']}",
+        returns=":class:`~scanpy.pp.ScrubletOut`",
+        uns="scrublet",
+    ),
+)
 @deprecated_copy
 def scrublet(  # noqa: PLR0913
     adata: AnnData,
@@ -47,9 +80,11 @@ def scrublet(  # noqa: PLR0913
     n_neighbors: int | None = None,
     threshold: float | None = None,
     verbose: bool = True,
-    copy: bool = False,
     rng: SeedLike | RNGLike | None = None,
-) -> AnnData | None:
+    out: Mapping[str, VecRef | str] | Prefix | bool = False,
+    # deprecated
+    copy: bool = False,
+) -> AnnData | ScrubletOut | None:
     """Predict doublets using Scrublet :cite:p:`Wolock2019`.
 
     Predict cell doublets using a nearest-neighbor classifier of observed
@@ -133,14 +168,17 @@ def scrublet(  # noqa: PLR0913
         predicted doublets in a 2-D embedding.
     verbose
         If :data:`True`, log progress updates.
+    {rng}
+    {out}
     copy
         If :data:`True`, return a copy of the input ``adata`` with Scrublet results
         added. Otherwise, Scrublet results are added in place.
-    {rng}
 
     Returns
     -------
-    if ``copy=True`` it returns or else adds fields to ``adata``. Those fields:
+    Returns the outputs as a :class:`~scanpy.pp.ScrubletOut` if `out=True`
+    (without the `.uns` entry), else `None`.
+    By default sets the following fields (see `out` for others):
 
     ``.obs['doublet_score']``
         Doublet scores for each observed transcriptome
@@ -176,6 +214,15 @@ def scrublet(  # noqa: PLR0913
         )
         raise ValueError(msg)
 
+    dests = _out_dests(
+        out,
+        None,
+        dests=lambda _: SCRUBLET_BASES,
+        kinds=SCRUBLET_KINDS,
+        bases=SCRUBLET_BASES,
+        uns="scrublet",
+        default="scrublet",
+    )
     start = logg.info("Running Scrublet")
 
     adata_obs = adata.copy()
@@ -268,34 +315,31 @@ def scrublet(  # noqa: PLR0913
             )
             for batch, sub_rng in zip(batches, sub_rngs, strict=True)
         ]
-        scrubbed_obs = pd.concat([scrub["obs"] for scrub in scrubbed]).astype(
-            adata.obs.dtypes
+        scrubbed_obs = pd.concat([scrub["obs"] for scrub in scrubbed])
+        # Save the .uns from each batch separately, and record that we’ve done
+        # batched analysis, so e.g. the plotting function knows what to do.
+        uns = dict(
+            batches=dict(
+                zip(batches, [scrub["uns"] for scrub in scrubbed], strict=True)
+            ),
+            batched_by=batch_key,
         )
-
-        # Now reset the obs to get the scrublet scores
-        adata.obs = scrubbed_obs.reindex(positions).set_axis(adata.obs_names)
-
-        # Save the .uns from each batch separately
-        adata.uns["scrublet"] = {}
-        adata.uns["scrublet"]["batches"] = dict(
-            zip(batches, [scrub["uns"] for scrub in scrubbed], strict=True)
-        )
-
-        # Record that we've done batched analysis, so e.g. the plotting
-        # function knows what to do.
-        adata.uns["scrublet"]["batched_by"] = batch_key
 
     else:
         scrubbed = _run_scrublet(adata_obs, adata_sim, rng=rng)
-        scrubbed_obs = scrubbed["obs"].reindex(positions)
+        scrubbed_obs = scrubbed["obs"]
+        uns = scrubbed["uns"]
 
-        # Copy outcomes to input object from our processed version
-        adata.obs["doublet_score"] = scrubbed_obs["doublet_score"].to_numpy()
-        adata.obs["predicted_doublet"] = scrubbed_obs["predicted_doublet"].to_numpy()
-        adata.uns["scrublet"] = scrubbed["uns"]
-
+    # Copy outcomes to input object from our processed version
+    scrubbed_obs = scrubbed_obs.reindex(positions)
+    vals = ScrubletOut(*(scrubbed_obs[name].to_numpy() for name in ScrubletOut._fields))
     logg.info("    Scrublet finished", time=start)
 
+    if dests is True:
+        return vals
+    uns_key, dests = dests
+    _write_dests(adata, vals, dests)
+    adata.uns[uns_key] = uns
     return None
 
 

@@ -28,7 +28,7 @@ from ...experimental._docs import (
 from ...get._out import _legacy_out
 from ...get._use import _get_arr, _resolve_obs
 from ...preprocessing._distributed import materialize_as_ndarray
-from ...preprocessing._highly_variable_genes import _hvg_key
+from ...preprocessing._highly_variable_genes import _write_hvg
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from ...get._out import Prefix
-    from ...get._types import RepAcc
+    from ...get._types import MultiAcc, RepAcc
 
 
 @njit
@@ -144,7 +144,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     use: RepAcc | str | None,
     layer: str | None,
     subset: bool,
-    out: Prefix | bool,
+    out: MultiAcc | str | Prefix | bool,
 ) -> pd.DataFrame | None:
     view_to_actual(adata)
     use = _resolve_obs(use)
@@ -259,10 +259,15 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     df = df.loc[adata.var_names, :]
 
     if out is not True:
-        adata.uns[_hvg_key(out, "hvg")] = {
-            "flavor": "pearson_residuals",
-            "computed_on": computed_on,
-        }
+        cols = ["means", "variances", "residual_variances", "highly_variable_rank"]
+        if batch_key is not None:
+            cols += ["highly_variable_nbatches", "highly_variable_intersection"]
+        _write_hvg(
+            adata,
+            df[[*cols, "highly_variable"]],
+            out,
+            uns={"flavor": "pearson_residuals", "computed_on": computed_on},
+        )
         logg.hint(
             "added\n"
             "    'highly_variable', boolean vector (adata.var)\n"
@@ -273,11 +278,6 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
             "    'variances', float vector (adata.var)\n"
             "    'residual_variances', float vector (adata.var)"
         )
-        cols = ["means", "variances", "residual_variances", "highly_variable_rank"]
-        if batch_key is not None:
-            cols += ["highly_variable_nbatches", "highly_variable_intersection"]
-        for col in [*cols, "highly_variable"]:
-            adata.var[_hvg_key(out, col)] = df[col].array
 
         if subset:
             adata._inplace_subset_var(df["highly_variable"].to_numpy())
@@ -301,6 +301,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     use=doc_layer,
     out=doc_out_key(
         "the metrics",
+        example="A.varm['hvg']",
         default="the `.var` columns and `.uns['hvg']` listed below",
         prefixed="`.var['p_highly_variable']`, `.var['p_means']`, … and `.uns['p_hvg']`",
     ),
@@ -322,7 +323,7 @@ def highly_variable_genes(  # noqa: PLR0913
     check_values: bool = True,
     use: RepAcc | str | None = None,
     subset: bool = False,
-    out: Prefix | bool = False,
+    out: MultiAcc | str | Prefix | bool = False,
     # deprecated
     inplace: bool = True,
     layer: str | None = None,

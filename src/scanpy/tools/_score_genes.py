@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numba
 import numpy as np
@@ -12,23 +12,29 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase
-from .._docs import DEPR_RAW, doc_out, doc_rng, doc_use
+from .._docs import DEPR_RAW, doc_out, doc_out_multi, doc_rng, doc_use
 from .._settings import Default, settings
 from .._utils import _doc_params, check_use_raw, is_backed_type
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
-from ..get._out import _check_legacy, _write_out, deprecated_copy
+from ..get._out import (
+    _check_legacy,
+    _out_dests,
+    _write_dests,
+    _write_out,
+    deprecated_copy,
+)
 from ..get._use import _get_arr, _resolve_obs
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Sequence
+    from collections.abc import Callable, Generator, Mapping, Sequence
     from typing import Literal
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
 
     from .._utils.random import RNGLike, SeedLike
-    from ..get._out import Prefix
-    from ..get._types import RepAcc, VecRef
+    from ..get._out import OutKind, Prefix
+    from ..get._types import RepAcc, VecRef, _SetRep
 
 
 type _StrIdx = pd.Index[str]
@@ -332,15 +338,47 @@ def _nan_means(
     return np.nanmean(x, axis=axis, dtype=dtype)
 
 
+class CellCycleOut[V = pd.Series](NamedTuple):
+    """Outputs of :func:`~scanpy.tl.score_genes_cell_cycle`."""
+
+    s_score: V
+    """The score for S phase for each cell."""
+    g2m_score: V
+    """The score for G2M phase for each cell."""
+    phase: V
+    """The cell cycle phase (`S`, `G2M` or `G1`) for each cell."""
+
+
+CELL_CYCLE_KINDS: CellCycleOut[set[OutKind]] = CellCycleOut({"obs"}, {"obs"}, {"obs"})
+"""Where `out` can write the outputs of `tl.score_genes_cell_cycle`."""
+
+CELL_CYCLE_BASES: CellCycleOut[_SetRep] = CellCycleOut(
+    dict(obs="S_score"), dict(obs="G2M_score"), dict(obs="phase")
+)
+
+
+@_doc_params(
+    out=doc_out_multi(
+        dict(
+            s_score="By default written to `A.obs['S_score']`.",
+            g2m_score="By default written to `A.obs['G2M_score']`.",
+            phase="By default written to `A.obs['phase']`.",
+        ),
+        example="{'phase': A.obs['cc_phase']}",
+        returns=":class:`~scanpy.tl.CellCycleOut`",
+    )
+)
 @deprecated_copy
 def score_genes_cell_cycle(
     adata: AnnData,
     *,
     s_genes: Sequence[str],
     g2m_genes: Sequence[str],
+    out: Mapping[str, VecRef | str] | Prefix | bool = False,
+    # deprecated
     copy: bool = False,
     **kwargs,
-) -> AnnData | None:
+) -> AnnData | CellCycleOut | None:
     """Score cell cycle genes :cite:p:`Satija2015`.
 
     Given two lists of genes associated to S phase and G2M phase, calculates
@@ -357,6 +395,7 @@ def score_genes_cell_cycle(
         List of genes associated with S phase.
     g2m_genes
         List of genes associated with G2M phase.
+    {out}
     copy
         Copy `adata` or modify it inplace.
     **kwargs
@@ -365,7 +404,8 @@ def score_genes_cell_cycle(
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the outputs as a :class:`~scanpy.tl.CellCycleOut` if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
     `adata.obs['S_score']` : :class:`pandas.Series` (dtype `object`)
         The score for S phase for each cell.
@@ -383,24 +423,33 @@ def score_genes_cell_cycle(
     See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
 
     """
+    dests = _out_dests(
+        out,
+        None,
+        dests=lambda _: CELL_CYCLE_BASES,
+        kinds=CELL_CYCLE_KINDS,
+        bases=CELL_CYCLE_BASES,
+    )
     logg.info("calculating cell cycle phase")
 
     ctrl_size = min(len(s_genes), len(g2m_genes))
-    for genes, name in [(s_genes, "S_score"), (g2m_genes, "G2M_score")]:
-        adata.obs[name] = score_genes(
-            adata, genes, out=True, ctrl_size=ctrl_size, **kwargs
-        )
-    scores = adata.obs[["S_score", "G2M_score"]]
+    s_score, g2m_score = (
+        score_genes(adata, genes, out=True, ctrl_size=ctrl_size, **kwargs)
+        for genes in (s_genes, g2m_genes)
+    )
 
     # default phase is S
-    phase = pd.Series("S", index=scores.index)
+    phase = pd.Series("S", index=adata.obs_names)
 
     # if G2M is higher than S, it's G2M
-    phase[scores["G2M_score"] > scores["S_score"]] = "G2M"
+    phase[g2m_score > s_score] = "G2M"
 
     # if all scores are negative, it's G1...
-    phase[np.all(scores < 0, axis=1)] = "G1"
+    phase[(s_score < 0) & (g2m_score < 0)] = "G1"
 
-    adata.obs["phase"] = phase
+    vals = CellCycleOut(s_score, g2m_score, phase)
+    if dests is True:
+        return vals
+    _write_dests(adata, vals, dests[1])
     logg.hint("    'phase', cell cycle phase (adata.obs)")
     return None

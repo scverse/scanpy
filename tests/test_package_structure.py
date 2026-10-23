@@ -50,7 +50,9 @@ api_functions = [
     for mod_name, mod in api_modules.items()
     for name in sorted(mod.__all__)
     if callable(func := getattr(mod, name)) and func.__module__.startswith("scanpy.")
-    if not (isinstance(func, type) and issubclass(func, dict))  # TypedDict
+    if not (
+        isinstance(func, type) and issubclass(func, dict | tuple)
+    )  # TypedDict, NamedTuple
 ]
 
 

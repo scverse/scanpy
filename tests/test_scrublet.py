@@ -90,14 +90,6 @@ def test_scrublet_batched():
     pd.testing.assert_frame_equal(adata.obs[merged.obs.columns], merged.obs)
 
 
-def _n_genes(adata: AnnData) -> np.ndarray:
-    """`n_genes` as Scrublet’s internal preprocessing computes it."""
-    adata = adata.copy()
-    sc.pp.filter_genes(adata, min_cells=3)
-    sc.pp.filter_cells(adata, min_genes=3)
-    return adata.obs["n_genes"].to_numpy()
-
-
 @pytest.mark.filterwarnings("ignore:Observation names are not unique:UserWarning")
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["unbatched", "batched"])
 def test_scrublet_duplicate_obs_names(batch_key: str | None):
@@ -109,18 +101,25 @@ def test_scrublet_duplicate_obs_names(batch_key: str | None):
     adata.obs_names = obs_names
     assert not adata.obs_names.is_unique
 
-    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key=batch_key)
+    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key=batch_key, rng=0)
 
     assert_array_equal(adata.obs_names, obs_names)  # left untouched
     assert adata.obs["doublet_score"].notna().all()
     assert adata.obs["predicted_doublet"].dtype == bool
     if batch_key is not None:
-        # The batched path rebuilds all of `.obs`, so check that the rows line up.
-        # Use `n_genes`: unlike the scores, it’s reproducible across runs.
+        # check that the rows line up, using the sub-generators the batched path spawns
         expected = np.concatenate([
-            _n_genes(adata[adata.obs["batch"] == batch]) for batch in "ab"
+            sc.pp.scrublet(
+                adata[adata.obs["batch"] == batch].copy(),
+                use_approx_neighbors=False,
+                rng=sub_rng,
+                out=True,
+            ).doublet_score
+            for batch, sub_rng in zip(
+                "ab", np.random.default_rng(0).spawn(2), strict=True
+            )
         ])
-        assert_array_equal(adata.obs["n_genes"], expected)
+        assert_allclose(adata.obs["doublet_score"], expected)
 
 
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["unbatched", "batched"])
@@ -295,3 +294,17 @@ def test_scrublet_dtypes() -> None:
     sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key="batch")
 
     assert adata.obs["batch"].dtype == "category"
+
+
+def test_scrublet_out() -> None:
+    """`out=True` returns the columns, `sc.Prefix` names them and the `.uns` entry."""
+    adata = pbmc200()
+    res = sc.pp.scrublet(adata, use_approx_neighbors=False, out=True, rng=0)
+    assert "doublet_score" not in adata.obs
+    assert "scrublet" not in adata.uns
+    sc.pp.scrublet(adata, use_approx_neighbors=False, out=sc.Prefix("p"), rng=0)
+    np.testing.assert_array_equal(adata.obs["p_doublet_score"], res.doublet_score)
+    np.testing.assert_array_equal(
+        adata.obs["p_predicted_doublet"], res.predicted_doublet
+    )
+    assert "threshold" in adata.uns["p_scrublet"]
