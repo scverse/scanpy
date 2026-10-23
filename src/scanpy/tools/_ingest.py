@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from fast_array_utils.stats import mean
+from scverse_misc import Deprecation, deprecated_arg
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
@@ -38,6 +39,10 @@ if TYPE_CHECKING:
 
 
 @doctest_skipif(reason="illustrative short example but not runnable")
+@deprecated_arg(
+    "inplace",
+    Deprecation("1.13.0", "Copy `adata` before calling this function instead."),
+)
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
@@ -46,6 +51,7 @@ def ingest(
     embedding_method: str | Iterable[str] = ("umap", "pca"),
     labeling_method: str = "knn",
     neighbors_key: str | None = None,
+    # deprecated
     inplace: bool = True,
     **kwargs,
 ):
@@ -108,7 +114,7 @@ def ingest(
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns `None`, or a modified copy for the deprecated `inplace=False`. Sets the following fields:
 
     `adata.obs[obs]` : :class:`pandas.Series` (dtype ``category``)
         Mapped labels.

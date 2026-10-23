@@ -181,20 +181,20 @@ def test_ingest_function(adatas: tuple[sc.AnnData, sc.AnnData]) -> None:
         adata_ref,
         obs="bulk_labels",
         embedding_method=["umap", "pca"],
-        inplace=True,
     )
 
     assert "bulk_labels" in adata_new.obs
     assert "X_umap" in adata_new.obsm
     assert "X_pca" in adata_new.obsm
 
-    ad = sc.tl.ingest(
-        adata_new,
-        adata_ref,
-        obs="bulk_labels",
-        embedding_method=["umap", "pca"],
-        inplace=False,
-    )
+    with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
+        ad = sc.tl.ingest(
+            adata_new,
+            adata_ref,
+            obs="bulk_labels",
+            embedding_method=["umap", "pca"],
+            inplace=False,
+        )
 
     assert "bulk_labels" in ad.obs
     assert "X_umap" in ad.obsm

@@ -130,7 +130,7 @@ def test_qc_metrics(adata_prepared: AnnData):
         ),
     ):
         sc.pp.calculate_qc_metrics(
-            adata_prepared, qc_vars=["mito", "negative"], inplace=True
+            adata_prepared, qc_vars=["mito", "negative"], out=False
         )
     if is_csc_dask:
         return
@@ -194,11 +194,11 @@ def test_qc_metrics_idempotent(adata_prepared: AnnData):
         ),
     ):
         sc.pp.calculate_qc_metrics(
-            adata_prepared, qc_vars=["mito", "negative"], inplace=True
+            adata_prepared, qc_vars=["mito", "negative"], out=False
         )
         old_obs, old_var = adata_prepared.obs.copy(), adata_prepared.var.copy()
         sc.pp.calculate_qc_metrics(
-            adata_prepared, qc_vars=["mito", "negative"], inplace=True
+            adata_prepared, qc_vars=["mito", "negative"], out=False
         )
     if is_csc_dask:
         return
@@ -221,7 +221,7 @@ def test_qc_metrics_no_log1p(adata_prepared: AnnData):
         ),
     ):
         sc.pp.calculate_qc_metrics(
-            adata_prepared, qc_vars=["mito", "negative"], log1p=False, inplace=True
+            adata_prepared, qc_vars=["mito", "negative"], log1p=False, out=False
         )
     assert not np.any(adata_prepared.obs.columns.str.startswith("log1p_"))
     assert not np.any(adata_prepared.var.columns.str.startswith("log1p_"))
@@ -236,10 +236,10 @@ def test_dask_against_in_memory(adata, log1p):
     adata_as_dask = prepare_adata(adata_as_dask)
     with maybe_dask_process_context():
         sc.pp.calculate_qc_metrics(
-            adata_as_dask, qc_vars=["mito", "negative"], log1p=log1p, inplace=True
+            adata_as_dask, qc_vars=["mito", "negative"], log1p=log1p, out=False
         )
     sc.pp.calculate_qc_metrics(
-        adata, qc_vars=["mito", "negative"], log1p=log1p, inplace=True
+        adata, qc_vars=["mito", "negative"], log1p=log1p, out=False
     )
     assert_equal(adata, adata_as_dask)
 
@@ -261,9 +261,9 @@ def test_qc_metrics_format(
     cls, adata_mito: AnnData, qc_var_param: list[str] | str
 ) -> None:
     var = adata_mito.var.copy()
-    sc.pp.calculate_qc_metrics(adata_mito, qc_vars=qc_var_param, inplace=True)
+    sc.pp.calculate_qc_metrics(adata_mito, qc_vars=qc_var_param, out=False)
     adata = AnnData(X=cls(adata_mito.X), var=var)
-    sc.pp.calculate_qc_metrics(adata, qc_vars=qc_var_param, inplace=True)
+    sc.pp.calculate_qc_metrics(adata, qc_vars=qc_var_param, out=False)
     assert np.allclose(adata.obs, adata_mito.obs)
     for col in adata.var:  # np.allclose doesn't like mix of types
         assert np.allclose(adata.var[col], adata_mito.var[col])
@@ -304,7 +304,7 @@ def test_inner_methods(adata: AnnData):
     obs_orig, var_orig = sc.pp.calculate_qc_metrics(adata)
     assert np.all(obs_orig == describe_obs(adata))
     assert np.all(var_orig == describe_var(adata))
-    sc.pp.calculate_qc_metrics(full_inplace, inplace=True)
+    sc.pp.calculate_qc_metrics(full_inplace, out=False)
     describe_obs(partial_inplace, inplace=True)
     describe_var(partial_inplace, inplace=True)
     assert np.all(full_inplace.obs == partial_inplace.obs)

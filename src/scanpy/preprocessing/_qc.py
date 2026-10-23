@@ -16,6 +16,7 @@ from scanpy.preprocessing._distributed import materialize_as_ndarray
 
 from .._compat import CSBase, CSRBase, DaskArray, warn
 from .._docs import DEPR_RAW
+from .._settings import Default, settings
 from .._utils import _doc_params, axis_nnz
 from ._docs import (
     doc_adata_basic,
@@ -212,6 +213,9 @@ def describe_var(
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("use_raw", DEPR_RAW)
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=False` instead of `inplace=True`.")
+)
 def calculate_qc_metrics(  # noqa: PLR0913
     adata: AnnData,
     *,
@@ -220,11 +224,13 @@ def calculate_qc_metrics(  # noqa: PLR0913
     qc_vars: Collection[str] | str = (),
     percent_top: Collection[int] | None = (50, 100, 200, 500),
     use: RepAcc | str | None = None,
-    layer: str | None = None,
-    use_raw: bool = False,
-    inplace: bool = False,
+    out: bool | Default = Default(preset=("calculate_qc_metrics", "out")),
     log1p: bool = True,
     parallel: bool | None = None,
+    # deprecated
+    layer: str | None = None,
+    use_raw: bool = False,
+    inplace: bool | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame] | None:
     """Calculate quality control metrics.
 
@@ -243,14 +249,16 @@ def calculate_qc_metrics(  # noqa: PLR0913
     {doc_qc_metric_naming}
     {doc_obs_qc_args}
     {doc_expr_reps}
-    inplace
-        Whether to place calculated metrics in `adata`'s `.obs` and `.var`.
+    out
+        If :data:`True`, return the metrics instead of writing them to `adata`’s `.obs` and `.var`.
     log1p
         Set to `False` to skip computing `log1p` transformed annotations.
+    inplace
+        Whether to place calculated metrics in `adata`'s `.obs` and `.var`.
 
     Returns
     -------
-    Depending on `inplace` returns calculated metrics
+    Depending on `out` returns calculated metrics
     (as :class:`~pandas.DataFrame`) or updates `adata`'s `obs` and `var`.
 
     {doc_obs_qc_returns}
@@ -268,7 +276,7 @@ def calculate_qc_metrics(  # noqa: PLR0913
 
         pbmc = sc.datasets.pbmc3k()
         pbmc.var["mito"] = pbmc.var_names.str.startswith("MT-")
-        sc.pp.calculate_qc_metrics(pbmc, qc_vars=["mito"], inplace=True)
+        sc.pp.calculate_qc_metrics(pbmc, qc_vars=["mito"], out=False)
         sns.jointplot(
             data=pbmc.obs,
             x="log1p_total_counts",
@@ -284,6 +292,13 @@ def calculate_qc_metrics(  # noqa: PLR0913
     if parallel is not None:
         msg = "Argument `parallel` is deprecated, and currently has no effect."
         warn(msg, FutureWarning)
+    if isinstance(out, Default):
+        out = (
+            settings.preset.calculate_qc_metrics.out if inplace is None else not inplace
+        )
+    elif inplace is not None:
+        msg = "Pass either `out` or `inplace`, not both."
+        raise TypeError(msg)
     # Pass X so I only have to do it once
     x = _get_arr(adata, _resolve_obs(use), use_raw=use_raw, layer=layer)
     if isinstance(x, CSBase):
@@ -299,7 +314,7 @@ def calculate_qc_metrics(  # noqa: PLR0913
         var_type=var_type,
         qc_vars=qc_vars,
         percent_top=percent_top,
-        inplace=inplace,
+        inplace=not out,
         x=x,
         log1p=log1p,
     )
@@ -307,13 +322,14 @@ def calculate_qc_metrics(  # noqa: PLR0913
         adata,
         expr_type=expr_type,
         var_type=var_type,
-        inplace=inplace,
+        inplace=not out,
         x=x,
         log1p=log1p,
     )
 
-    if not inplace:
+    if out:
         return obs_metrics, var_metrics
+    return None
 
 
 def top_proportions(

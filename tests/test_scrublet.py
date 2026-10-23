@@ -184,10 +184,10 @@ def test_scrublet_data(rng_arg: Literal["rng", "random_state"]) -> None:
     seed = 1234
 
     # Run Scrublet and let the main function run simulations
-    adata_scrublet_auto_sim = sc.pp.scrublet(
-        pbmc200(),
+    adata_scrublet_auto_sim = pbmc200()
+    sc.pp.scrublet(
+        adata_scrublet_auto_sim,
         use_approx_neighbors=False,
-        copy=True,
         **{rng_arg: seed},
     )
 
@@ -206,11 +206,11 @@ def test_scrublet_data(rng_arg: Literal["rng", "random_state"]) -> None:
     sc.pp.normalize_total(adata_obs, target_sum=1e6)
     sc.pp.normalize_total(adata_sim, target_sum=1e6)
 
-    adata_scrublet_manual_sim = sc.pp.scrublet(
-        adata_obs,
+    adata_scrublet_manual_sim = adata_obs.copy()
+    sc.pp.scrublet(
+        adata_scrublet_manual_sim,
         adata_sim=adata_sim,
         use_approx_neighbors=False,
-        copy=True,
         **{rng_arg: seed},
     )
 
@@ -258,9 +258,8 @@ def test_scrublet_params(scrub_small: AnnData, param: str, value: Any):
 
     Check that changes to parameters change scrublet results.
     """
-    curr = sc.pp.scrublet(
-        adata=scrub_small, use_approx_neighbors=False, copy=True, **{param: value}
-    )
+    curr = scrub_small.copy()
+    sc.pp.scrublet(adata=curr, use_approx_neighbors=False, **{param: value})
     with pytest.raises(AssertionError):
         assert_equal(scrub_small, curr)
 

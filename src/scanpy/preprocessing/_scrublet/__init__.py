@@ -14,6 +14,7 @@ from ... import preprocessing as pp
 from ..._docs import doc_rng, doc_use
 from ..._utils import _doc_params, own_deprecations
 from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
+from ...get._out import deprecated_copy
 from ...get._use import _get_arr, _resolve_obs
 from . import pipeline
 from .core import Scrublet
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
 
 @_accepts_legacy_random_state(0)
 @_doc_params(rng=doc_rng)
+@deprecated_copy
 def scrublet(  # noqa: PLR0913
     adata: AnnData,
     adata_sim: AnnData | None = None,
@@ -174,9 +176,6 @@ def scrublet(  # noqa: PLR0913
         )
         raise ValueError(msg)
 
-    if copy:
-        adata = adata.copy()
-
     start = logg.info("Running Scrublet")
 
     adata_obs = adata.copy()
@@ -297,7 +296,7 @@ def scrublet(  # noqa: PLR0913
 
     logg.info("    Scrublet finished", time=start)
 
-    return adata if copy else None
+    return None
 
 
 @_accepts_legacy_random_state(0)

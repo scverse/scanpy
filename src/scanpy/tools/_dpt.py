@@ -10,6 +10,7 @@ from natsort import natsorted
 from .. import logging as logg
 from .._keys import _existing_preset_keys
 from .._utils.random import _LegacyRng
+from ..get._out import deprecated_copy
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 if TYPE_CHECKING:
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 __all__ = ["DPT", "dpt"]
 
 
+@deprecated_copy
 def dpt(
     adata: AnnData,
     n_dcs: int = 10,
@@ -112,7 +114,6 @@ def dpt(
 
     """
     # standard errors, warnings etc.
-    adata = adata.copy() if copy else adata
 
     if neighbors_key is None:
         neighbors_key = "neighbors"
@@ -188,7 +189,7 @@ def dpt(
             )
         ),
     )
-    return adata if copy else None
+    return None
 
 
 class DPT(Neighbors):

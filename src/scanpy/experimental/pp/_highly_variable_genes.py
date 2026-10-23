@@ -14,6 +14,7 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
 from ..._compat import CSBase, warn
+from ..._docs import doc_out_key
 from ..._settings import Verbosity, settings
 from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from ...experimental._docs import (
@@ -24,14 +25,17 @@ from ...experimental._docs import (
     doc_inplace,
     doc_layer,
 )
+from ...get._out import _legacy_out
 from ...get._use import _get_arr, _resolve_obs
 from ...preprocessing._distributed import materialize_as_ndarray
+from ...preprocessing._highly_variable_genes import _hvg_key
 
 if TYPE_CHECKING:
     from typing import Literal
 
     from numpy.typing import NDArray
 
+    from ...get._out import Prefix
     from ...get._types import RepAcc
 
 
@@ -140,7 +144,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     use: RepAcc | str | None,
     layer: str | None,
     subset: bool,
-    inplace: bool,
+    out: Prefix | bool,
 ) -> pd.DataFrame | None:
     view_to_actual(adata)
     use = _resolve_obs(use)
@@ -254,8 +258,11 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     df["highly_variable"] = high_var
     df = df.loc[adata.var_names, :]
 
-    if inplace:
-        adata.uns["hvg"] = {"flavor": "pearson_residuals", "computed_on": computed_on}
+    if out is not True:
+        adata.uns[_hvg_key(out, "hvg")] = {
+            "flavor": "pearson_residuals",
+            "computed_on": computed_on,
+        }
         logg.hint(
             "added\n"
             "    'highly_variable', boolean vector (adata.var)\n"
@@ -266,16 +273,11 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
             "    'variances', float vector (adata.var)\n"
             "    'residual_variances', float vector (adata.var)"
         )
-        adata.var["means"] = df["means"].array
-        adata.var["variances"] = df["variances"].array
-        adata.var["residual_variances"] = df["residual_variances"].array
-        adata.var["highly_variable_rank"] = df["highly_variable_rank"].array
+        cols = ["means", "variances", "residual_variances", "highly_variable_rank"]
         if batch_key is not None:
-            adata.var["highly_variable_nbatches"] = df["highly_variable_nbatches"].array
-            adata.var["highly_variable_intersection"] = df[
-                "highly_variable_intersection"
-            ].array
-        adata.var["highly_variable"] = df["highly_variable"].array
+            cols += ["highly_variable_nbatches", "highly_variable_intersection"]
+        for col in [*cols, "highly_variable"]:
+            adata.var[_hvg_key(out, col)] = df[col].array
 
         if subset:
             adata._inplace_subset_var(df["highly_variable"].to_numpy())
@@ -297,9 +299,17 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     genes_batch_chunk=doc_genes_batch_chunk,
     check_values=doc_check_values,
     use=doc_layer,
+    out=doc_out_key(
+        "the metrics",
+        default="the `.var` columns and `.uns['hvg']` listed below",
+        prefixed="`.var['p_highly_variable']`, `.var['p_means']`, … and `.uns['p_hvg']`",
+    ),
     inplace=doc_inplace,
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
+)
 def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
@@ -312,8 +322,9 @@ def highly_variable_genes(  # noqa: PLR0913
     check_values: bool = True,
     use: RepAcc | str | None = None,
     subset: bool = False,
-    inplace: bool = True,
+    out: Prefix | bool = False,
     # deprecated
+    inplace: bool = True,
     layer: str | None = None,
 ) -> pd.DataFrame | None:
     """Select highly variable genes using analytic Pearson residuals :cite:p:`Lause2021`.
@@ -340,12 +351,13 @@ def highly_variable_genes(  # noqa: PLR0913
     subset
         If `True`, subset the data to highly-variable genes after finding them.
         Otherwise merely indicate highly variable genes in `adata.var` (see below).
+    {out}
     {inplace}
 
     Returns
     -------
-    If `inplace=True`, `adata.var` is updated with the following fields. Otherwise,
-    returns the same fields as :class:`~pandas.DataFrame`.
+    If `out=True`, returns the following fields as :class:`~pandas.DataFrame`.
+    Otherwise, `adata.var` is updated with them (prefixed if `out` is a `sc.Prefix`).
 
     highly_variable : :class:`bool`
         boolean indicator of highly-variable genes.
@@ -369,12 +381,13 @@ def highly_variable_genes(  # noqa: PLR0913
     Experimental version of `sc.pp.highly_variable_genes()`
 
     """
+    out = _legacy_out(out, "inplace", None if inplace else True)
     logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):
         msg = (
             "`pp.highly_variable_genes` expects an `AnnData` argument, "
-            "pass `inplace=False` if you want to return a `pd.DataFrame`."
+            "pass `out=True` if you want to return a `pd.DataFrame`."
         )
         raise ValueError(msg)
 
@@ -395,7 +408,7 @@ def highly_variable_genes(  # noqa: PLR0913
             clip=clip,
             subset=subset,
             check_values=check_values,
-            inplace=inplace,
+            out=out,
         )
     else:
         msg = "This is an experimental API and only `flavor=pearson_residuals` is available."

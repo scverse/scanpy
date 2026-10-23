@@ -62,8 +62,8 @@ mask_{dim}
 def doc_use(desc: str, *, legacy: tuple[str, ...] = ("layer", "obsm")) -> str:
     """Docs for a `use` parameter and the deprecated parameters it replaces."""
     # no trailing newline: the caller’s `{use}` is followed by its own one
-    legacy_docs = "\n".join(
-        f"{name}\n"
+    legacy_docs = "".join(
+        f"\n{name}\n"
         f"    A key of :attr:`~anndata.AnnData.{attr}`,\n"
         f"    i.e. `{name}='k'` is `use=A.{attr}['k']`."
         for name in legacy
@@ -73,7 +73,7 @@ def doc_use(desc: str, *, legacy: tuple[str, ...] = ("layer", "obsm")) -> str:
 use
     {desc}
     Given by an accessor, e.g. `A.X`, `A.layers['counts']` or `A.obsm['pca']`.
-    :class:`str`\\ s are :meth:`anndata.acc.AdAcc.resolve`\\ d, e.g. `'layers.counts'`.
+    :class:`str`\\ s are :meth:`anndata.acc.AdAcc.resolve`\\ d, e.g. `'layers.counts'`.\
 {legacy_docs}\
 """
 

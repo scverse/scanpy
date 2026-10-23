@@ -5,6 +5,7 @@ import pytest
 
 from scanpy.tools import filter_rank_genes_groups, rank_genes_groups
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 NAMES_NO_REF = [
     ["CD3D", "ITM2A", "CD3D", "CCL5", "CD7", "nan", "CD79A", "nan", "NKG7", "LYZ"],
@@ -62,7 +63,13 @@ EXPECTED = {
         pytest.param("rest", True, True, id="rest-pts-abs"),
     ],
 )
-@pytest.mark.parametrize("layer", [None, "layer"], ids=["raw", "layer"])
+@pytest.mark.parametrize(
+    "layer",
+    [
+        pytest.param(None, id="raw"),
+        pytest.param("layer", marks=needs.anndata_acc, id="layer"),
+    ],
+)
 @pytest.mark.filterwarnings("ignore:.*argument layer is deprecated:FutureWarning")
 def test_filter_rank_genes_groups(
     *, reference: str, pts: bool, abs: bool, layer: str | None
@@ -72,6 +79,12 @@ def test_filter_rank_genes_groups(
         adata.layers[layer] = adata.raw.X
         del adata.X
         del adata.raw
+
+    use = None
+    if layer is not None:
+        from anndata.acc import A
+
+        use = A.layers[layer]
 
     rank_genes_groups(
         adata,
@@ -86,7 +99,7 @@ def test_filter_rank_genes_groups(
     if abs:
         filter_rank_genes_groups(
             adata,
-            layer=layer,
+            use=use,
             compare_abs=True,
             min_in_group_fraction=-1,
             max_out_group_fraction=1,
@@ -95,7 +108,7 @@ def test_filter_rank_genes_groups(
     else:
         filter_rank_genes_groups(
             adata,
-            layer=layer,
+            use=use,
             min_in_group_fraction=0.25,
             min_fold_change=1,
             max_out_group_fraction=0.5,

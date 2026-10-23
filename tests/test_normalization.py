@@ -259,13 +259,12 @@ def test_normalize_pearson_residuals_pca(
         )
 
     # inplace=False
-    adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata.copy(), inplace=False, n_comps=n_comps, **params
-    )
-    # inplace=True modifies the input adata object
-    sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata, inplace=True, n_comps=n_comps, **params
-    )
+    with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
+        adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
+            adata.copy(), inplace=False, n_comps=n_comps, **params
+        )
+    # by default, modifies the input adata object
+    sc.experimental.pp.normalize_pearson_residuals_pca(adata, n_comps=n_comps, **params)
 
     for ad, n_var_ret in (
         (adata_pca, n_var_copy),
@@ -300,9 +299,10 @@ def test_normalize_pearson_residuals_recipe(
     ### inplace = False ###
     # outputs the (potentially hvg-restricted) adata_pca object
     # PCA on all genes
-    adata_pca, hvg = sc.experimental.pp.recipe_pearson_residuals(
-        adata.copy(), inplace=False, n_comps=n_comps, n_top_genes=n_hvgs
-    )
+    with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
+        adata_pca, hvg = sc.experimental.pp.recipe_pearson_residuals(
+            adata.copy(), inplace=False, n_comps=n_comps, n_top_genes=n_hvgs
+        )
 
     # check PCA fields
     _check_pearson_pca_fields(adata_pca, n_cells, n_comps)
@@ -326,7 +326,7 @@ def test_normalize_pearson_residuals_recipe(
     # modifies the input adata object
     # PCA on all genes
     sc.experimental.pp.recipe_pearson_residuals(
-        adata, inplace=True, n_comps=n_comps, n_top_genes=n_hvgs
+        adata, n_comps=n_comps, n_top_genes=n_hvgs
     )
 
     # check PCA fields and output shape

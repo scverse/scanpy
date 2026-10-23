@@ -38,7 +38,14 @@ from .._utils import (
     view_to_actual,
 )
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
-from ..get._out import Prefix, _dest, _use_dest, _write_out, deprecated_copy
+from ..get._out import (
+    Prefix,
+    _dest,
+    _legacy_out,
+    _use_dest,
+    _write_out,
+    deprecated_copy,
+)
 from ..get._use import _check_mask, _get_arr, _resolve_obs
 from ._distributed import materialize_as_ndarray
 
@@ -54,6 +61,9 @@ if TYPE_CHECKING:
     from ..get._types import Mask, RepAcc
 
 
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
+)
 def filter_cells(
     data: AnnData | CSBase | np.ndarray | DaskArray,
     *,
@@ -61,8 +71,10 @@ def filter_cells(
     min_genes: int | None = None,
     max_counts: int | None = None,
     max_genes: int | None = None,
-    inplace: bool = True,
+    out: bool = False,
     copy: bool = False,
+    # deprecated
+    inplace: bool = True,
 ) -> AnnData | tuple[np.ndarray, np.ndarray] | None:
     """Filter cell outliers based on counts and numbers of genes expressed.
 
@@ -86,12 +98,17 @@ def filter_cells(
         Maximum number of counts required for a cell to pass filtering.
     max_genes
         Maximum number of genes expressed required for a cell to pass filtering.
+    out
+        If :data:`True`, return the mask and counts (see below)
+        instead of subsetting `data` and annotating its `.obs`.
+    copy
+        Return a filtered copy instead of subsetting `data` in place.
     inplace
         Perform computation inplace or return result.
 
     Returns
     -------
-    Depending on `inplace`, returns the following arrays or directly subsets
+    Depending on `out`, returns the following arrays or directly subsets
     and annotates the data matrix:
 
     cells_subset
@@ -137,8 +154,7 @@ def filter_cells(
     3
 
     """
-    if copy:
-        logg.warning("`copy` is deprecated, use `inplace` instead.")
+    out = _legacy_out(out, "inplace", None if inplace else True)
     n_given_options = sum(
         option is not None for option in [min_genes, min_counts, max_genes, max_counts]
     )
@@ -160,7 +176,7 @@ def filter_cells(
                 max_genes=max_genes,
             ),
         )
-        if not inplace:
+        if out:
             return cell_subset, number
         if min_genes is None and max_genes is None:
             adata.obs["n_counts"] = number
@@ -200,6 +216,9 @@ def filter_cells(
     return cell_subset, number_per_cell
 
 
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
+)
 def filter_genes(
     data: AnnData | CSBase | np.ndarray | DaskArray,
     *,
@@ -207,8 +226,10 @@ def filter_genes(
     min_cells: int | None = None,
     max_counts: int | None = None,
     max_cells: int | None = None,
-    inplace: bool = True,
+    out: bool = False,
     copy: bool = False,
+    # deprecated
+    inplace: bool = True,
 ) -> AnnData | tuple[np.ndarray, np.ndarray] | None:
     """Filter genes based on number of cells or counts.
 
@@ -234,12 +255,17 @@ def filter_genes(
         Maximum number of counts required for a gene to pass filtering.
     max_cells
         Maximum number of cells expressed required for a gene to pass filtering.
+    out
+        If :data:`True`, return the mask and counts (see below)
+        instead of subsetting `data` and annotating its `.var`.
+    copy
+        Return a filtered copy instead of subsetting `data` in place.
     inplace
         Perform computation inplace or return result.
 
     Returns
     -------
-    Depending on `inplace`, returns the following arrays or directly subsets
+    Depending on `out`, returns the following arrays or directly subsets
     and annotates the data matrix
 
     gene_subset
@@ -250,8 +276,7 @@ def filter_genes(
         `n_counts` or `n_cells` per gene.
 
     """
-    if copy:
-        logg.warning("`copy` is deprecated, use `inplace` instead.")
+    out = _legacy_out(out, "inplace", None if inplace else True)
     n_given_options = sum(
         option is not None for option in [min_cells, min_counts, max_cells, max_counts]
     )
@@ -274,7 +299,7 @@ def filter_genes(
                 max_counts=max_counts,
             )
         )
-        if not inplace:
+        if out:
             return gene_subset, number
         if min_cells is None and max_cells is None:
             adata.var["n_counts"] = number
@@ -476,12 +501,20 @@ def log1p_anndata(
     return None
 
 
+@_doc_params(
+    use=doc_use("Which matrix to take the square root of.", legacy=()),
+    out=doc_out("sqrt"),
+)
+@deprecated_copy
 def sqrt(
     data: AnnData | CSBase | np.ndarray,
     *,
-    copy: bool = False,
+    use: RepAcc | str | None = None,
+    out: RepAcc | str | Prefix | bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
+    # deprecated
+    copy: bool = False,
 ) -> AnnData | CSBase | np.ndarray | None:
     r"""Take square root of the data matrix.
 
@@ -492,30 +525,37 @@ def sqrt(
     data
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
-    copy
-        If an :class:`~anndata.AnnData` object is passed,
-        determines whether a copy is returned.
+    {use}
+    {out}
     chunked
         Process the data matrix in chunks, which will save memory.
         Applies only to :class:`~anndata.AnnData`.
     chunk_size
         `n_obs` of the chunks to process the data in.
+    copy
+        Whether to return a modified copy instead of modifying `adata` in place.
 
     Returns
     -------
-    Returns or updates `data`, depending on `copy`.
+    Returns `None` if the result was written, else the square-rooted matrix.
 
     """
-    if isinstance(data, AnnData):
-        adata = data.copy() if copy else data
-        if chunked:
-            for chunk, start, end in adata.chunked_X(chunk_size):
-                adata.X[start:end] = sqrt(chunk)
-        else:
-            adata.X = sqrt(data.X)
-        return adata if copy else None
-    x = data  # proceed with data matrix
-    return x.sqrt() if isinstance(x, CSBase) else np.sqrt(x)
+    if not isinstance(data, AnnData):
+        check_array_function_arguments(use=use)
+        if out is not False:
+            msg = "Argument `out` is only valid if an AnnData object is passed."
+            raise TypeError(msg)
+        return data.sqrt() if isinstance(data, CSBase) else np.sqrt(data)
+    use = _resolve_obs(use)
+    if chunked:
+        if use is not None or out is not False:
+            msg = "Currently cannot perform chunked operations with `use` or `out`."
+            raise NotImplementedError(msg)
+        for chunk, start, end in data.chunked_X(chunk_size):
+            data.X[start:end] = sqrt(chunk)
+        return None
+    x = sqrt(_get_arr(data, use))
+    return _write_out(data, x, out=out, base="sqrt", use=use)
 
 
 @njit
@@ -900,7 +940,12 @@ def sample(  # noqa: PLR0912
 
 
 @_accepts_legacy_random_state(0)
-@_doc_params(rng=doc_rng)
+@_doc_params(
+    rng=doc_rng,
+    use=doc_use("Which count matrix to downsample.", legacy=()),
+    out=doc_out("downsampled"),
+)
+@deprecated_copy
 def downsample_counts(
     adata: AnnData,
     counts_per_cell: int | Collection[int] | None = None,
@@ -908,8 +953,11 @@ def downsample_counts(
     *,
     rng: SeedLike | RNGLike | None = None,
     replace: bool = False,
+    use: RepAcc | str | None = None,
+    out: RepAcc | str | Prefix | bool = False,
+    # deprecated
     copy: bool = False,
-) -> AnnData | None:
+) -> AnnData | np.ndarray | CSBase | None:
     """Downsample counts from count matrix.
 
     If `counts_per_cell` is specified, each cell will downsampled.
@@ -933,34 +981,31 @@ def downsample_counts(
     {rng}
     replace
         Whether to sample the counts with replacement.
+    {use}
+    {out}
     copy
-        Determines whether a copy of `adata` is returned.
+        Whether to return a modified copy instead of modifying `adata` in place.
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
-
-    `adata.X` : :class:`~numpy.ndarray` | :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` (dtype `float`)
-        Downsampled counts matrix.
+    Returns `None` if the result was written, else the downsampled count matrix.
 
     """
-    raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
+    use = _resolve_obs(use)
+    x = _get_arr(adata, use)
+    raise_not_implemented_error_if_backed_type(x, "downsample_counts")
     # This logic is all dispatch
     rng = np.random.default_rng(rng)
     if (total_counts is not None) is (counts_per_cell is not None):
         msg = "Must specify exactly one of `total_counts` or `counts_per_cell`."
         raise ValueError(msg)
-    if copy:
-        adata = adata.copy()
+    if out is not False:  # downsampling is in-place, so leave the source alone
+        x = x.copy()
     if total_counts is not None:
-        adata.X = _downsample_total_counts(
-            adata.X, total_counts, rng=rng, replace=replace
-        )
+        x = _downsample_total_counts(x, total_counts, rng=rng, replace=replace)
     elif counts_per_cell is not None:
-        adata.X = _downsample_per_cell(
-            adata.X, counts_per_cell, rng=rng, replace=replace
-        )
-    return adata if copy else None
+        x = _downsample_per_cell(x, counts_per_cell, rng=rng, replace=replace)
+    return _write_out(adata, x, out=out, base="downsampled", use=use)
 
 
 def _downsample_per_cell[T: (np.ndarray, CSBase)](

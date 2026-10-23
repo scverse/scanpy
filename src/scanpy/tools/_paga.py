@@ -9,6 +9,7 @@ from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
 from .. import logging as logg
+from ..get._out import deprecated_copy
 from ..neighbors import Neighbors
 
 if TYPE_CHECKING:
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
 _AVAIL_MODELS = {"v1.0", "v1.2"}
 
 
+@deprecated_copy
 def paga(
     adata: AnnData,
     groups: str | None = None,
@@ -125,7 +127,6 @@ def paga(
         msg = f"`groups` key {groups!r} not found in `adata.obs`."
         raise KeyError(msg)
 
-    adata = adata.copy() if copy else adata
     _utils.sanitize_anndata(adata)
     start = logg.info("running PAGA")
     paga = PAGA(adata, groups, model=model, neighbors_key=neighbors_key)
@@ -155,7 +156,7 @@ def paga(
             "    'paga/connectivities_tree', connectivities subtree (adata.uns)"
         ),
     )
-    return adata if copy else None
+    return None
 
 
 class PAGA:

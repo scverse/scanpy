@@ -5,15 +5,22 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from numpy import linalg as la
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase
-from .._utils import sanitize_anndata
+from .._docs import doc_out, doc_use
+from .._utils import _doc_params, sanitize_anndata
+from ..get._out import _legacy_out, _write_out
+from ..get._use import _get_arr, _resolve_obs
 
 if TYPE_CHECKING:
     from collections.abc import Collection
 
     from anndata import AnnData
+
+    from ..get._out import Prefix
+    from ..get._types import RepAcc
 
 
 def _design_matrix(
@@ -131,11 +138,18 @@ def _standardize_data(
     return s_data, design, var_pooled, stand_mean
 
 
+@_doc_params(use=doc_use("Which matrix to correct.", legacy=()), out=doc_out("combat"))
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
+)
 def combat(  # noqa: PLR0915
     adata: AnnData,
     key: str = "batch",
     *,
     covariates: Collection[str] | None = None,
+    use: RepAcc | str | None = None,
+    out: RepAcc | str | Prefix | bool = False,
+    # deprecated
     inplace: bool = True,
 ) -> np.ndarray | None:
     """ComBat function for batch effect correction :cite:p:`Johnson2006,Leek2012,Pedersen2012`.
@@ -162,17 +176,18 @@ def combat(  # noqa: PLR0915
         the original combat function in the sva R package.
         Note that not including covariates may introduce bias or lead to the
         removal of biological signal in unbalanced designs.
+    {use}
+    {out}
     inplace
         Whether to replace adata.X or to return the corrected data
 
     Returns
     -------
-    Returns :class:`numpy.ndarray` if `inplace=False`, else returns `None` and sets the following field in the `adata` object:
-
-    `adata.X` : :class:`numpy.ndarray` (dtype `float`)
-        Corrected data matrix.
+    Returns the corrected matrix (a :class:`numpy.ndarray`) if `out=True`, else `None`.
 
     """
+    out = _legacy_out(out, "inplace", None if inplace else True)
+    use = _resolve_obs(use)
     # check the input
     if key not in adata.obs:
         msg = f"Could not find the key {key!r} in adata.obs"
@@ -194,8 +209,9 @@ def combat(  # noqa: PLR0915
             raise ValueError(msg)
 
     # only works on dense matrices so far
-    x = adata.X.toarray().T if isinstance(adata.X, CSBase) else adata.X.T
-    data = pd.DataFrame(data=x, index=adata.var_names, columns=adata.obs_names)
+    x = _get_arr(adata, use)
+    x = x.toarray().T if isinstance(x, CSBase) else x.T
+    data = pd.DataFrame(data=x, columns=adata.obs_names)
 
     sanitize_anndata(adata)
 
@@ -283,10 +299,7 @@ def combat(  # noqa: PLR0915
 
     # put back into the adata object or return
     x = bayesdata.to_numpy().transpose()
-    if inplace:
-        adata.X = x
-        return None
-    return x
+    return _write_out(adata, x, out=out, base="combat", use=use)
 
 
 def _it_sol(

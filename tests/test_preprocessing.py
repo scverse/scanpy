@@ -553,22 +553,22 @@ def test_downsample_counts_per_cell(
     with pytest.raises(ValueError, match=r"Must specify exactly one"):
         sc.pp.downsample_counts(adata, replace=replace)
     initial_totals = np.ravel(adata.X.sum(axis=1))
-    adata = sc.pp.downsample_counts(
-        adata, counts_per_cell=target, replace=replace, copy=True
+    res = sc.pp.downsample_counts(
+        adata, counts_per_cell=target, replace=replace, out=True
     )
-    new_totals = np.ravel(adata.X.sum(axis=1))
-    if isinstance(adata.X, CSBase):
-        assert all(adata.X.toarray()[x == 0] == 0)
+    new_totals = np.ravel(res.sum(axis=1))
+    if isinstance(res, CSBase):
+        assert all(res.toarray()[x == 0] == 0)
     else:
-        assert all(adata.X[x == 0] == 0)
+        assert all(res[x == 0] == 0)
     assert all(new_totals <= target)
     assert all(initial_totals >= new_totals)
     assert all(
         initial_totals[initial_totals <= target] == new_totals[initial_totals <= target]
     )
     if not replace:
-        assert np.all(x >= adata.X)
-    assert x.dtype == adata.X.dtype
+        assert np.all(x >= res)
+    assert x.dtype == res.dtype
 
 
 @pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
@@ -583,14 +583,14 @@ def test_downsample_counts_per_cell_multiple_targets(
     initial_totals = np.ravel(adata.X.sum(axis=1))
     with pytest.raises(ValueError, match=r"counts_per_cell.*length as number of obs"):
         sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
-    adata = sc.pp.downsample_counts(
-        adata, counts_per_cell=targets, replace=replace, copy=True
+    res = sc.pp.downsample_counts(
+        adata, counts_per_cell=targets, replace=replace, out=True
     )
-    new_totals = np.ravel(adata.X.sum(axis=1))
-    if isinstance(adata.X, CSBase):
-        assert all(adata.X.toarray()[x == 0] == 0)
+    new_totals = np.ravel(res.sum(axis=1))
+    if isinstance(res, CSBase):
+        assert all(res.toarray()[x == 0] == 0)
     else:
-        assert all(adata.X[x == 0] == 0)
+        assert all(res[x == 0] == 0)
     assert all(new_totals <= targets)
     assert all(initial_totals >= new_totals)
     assert all(
@@ -598,8 +598,8 @@ def test_downsample_counts_per_cell_multiple_targets(
         == new_totals[initial_totals <= targets]
     )
     if not replace:
-        assert np.all(x >= adata.X)
-    assert x.dtype == adata.X.dtype
+        assert np.all(x >= res)
+    assert x.dtype == res.dtype
 
 
 @pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
@@ -613,23 +613,23 @@ def test_downsample_total_counts(
     total = x.sum()
     target = np.floor_divide(total, 10)
     initial_totals = np.ravel(adata_orig.X.sum(axis=1))
-    adata = sc.pp.downsample_counts(
-        adata_orig, total_counts=target, replace=replace, copy=True
+    res = sc.pp.downsample_counts(
+        adata_orig, total_counts=target, replace=replace, out=True
     )
-    new_totals = np.ravel(adata.X.sum(axis=1))
-    if isinstance(adata.X, CSBase):
-        assert all(adata.X.toarray()[x == 0] == 0)
+    new_totals = np.ravel(res.sum(axis=1))
+    if isinstance(res, CSBase):
+        assert all(res.toarray()[x == 0] == 0)
     else:
-        assert all(adata.X[x == 0] == 0)
-    assert adata.X.sum() == target
+        assert all(res[x == 0] == 0)
+    assert res.sum() == target
     assert all(initial_totals >= new_totals)
     if not replace:
-        assert np.all(x >= adata.X)
-        adata = sc.pp.downsample_counts(
-            adata_orig, total_counts=total + 10, replace=False, copy=True
+        assert np.all(x >= res)
+        res = sc.pp.downsample_counts(
+            adata_orig, total_counts=total + 10, replace=False, out=True
         )
-        assert (x == adata.X).all()
-    assert x.dtype == adata.X.dtype
+        assert (x == res).all()
+    assert x.dtype == res.dtype
 
 
 def test_recipe_weinreb():
@@ -660,14 +660,15 @@ def test_sqrt(count_matrix_format: _MatrixFormat, *, chunked: bool) -> None:
         pytest.param(sc.pp.filter_genes, "var", "min_cells", "n_cells", id="genes"),
     ],
 )
-def test_filter_inplace_false(
-    filter_func: Callable, attr: str, arg: str, col: str
-) -> None:
-    """`inplace=False` returns the mask and counts without touching `adata`."""
+def test_filter_out_true(filter_func: Callable, attr: str, arg: str, col: str) -> None:
+    """`out=True` returns the mask and counts without touching `adata`."""
     adata = pbmc68k_reduced().raw.to_adata()
     orig = adata.copy()
 
-    mask, number = filter_func(adata, **{arg: 3}, inplace=False)
+    mask, number = filter_func(adata, **{arg: 3}, out=True)
+    with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
+        mask_legacy, _ = filter_func(adata, **{arg: 3}, inplace=False)
+    np.testing.assert_array_equal(mask, mask_legacy)
 
     assert_equal(adata, orig)
     filter_func(adata, **{arg: 3})

@@ -76,6 +76,10 @@ class Default:
         return getattr(params, param)
 
 
+class QcMetricsPreset(NamedTuple):
+    out: bool
+
+
 class HVGPreset(NamedTuple):
     flavor: HVGFlavor
     return_df: bool
@@ -186,6 +190,14 @@ class Preset(enum.StrEnum):
     - change all functions using `igraph` to no longer create duplicate edges,
       slightly changing community detection and modularity scores.
     """
+
+    @preset_property
+    def calculate_qc_metrics() -> Mapping[Preset, QcMetricsPreset]:
+        """Whether :func:`~scanpy.pp.calculate_qc_metrics` returns its metrics (`out=True`) or writes them."""
+        return {
+            Preset.ScanpyV1: QcMetricsPreset(out=True),
+            Preset.ScanpyV2Preview: QcMetricsPreset(out=False),
+        }
 
     @preset_property
     def highly_variable_genes() -> Mapping[Preset, HVGPreset]:

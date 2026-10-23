@@ -191,7 +191,7 @@ def _pca_kwargs_dests(
 ) -> tuple[str | Default | None, PcaOut[_SetRep | None, _SetRep | None]]:
     """Where `pca(**kwargs_pca)` writes, see `_write_pca_from`."""
     if kwargs_pca.get("out") is True:
-        msg = "`kwargs_pca['out']=True` is not supported, use `inplace=False` instead."
+        msg = "`kwargs_pca['out']=True` is not supported."
         raise ValueError(msg)
     return _out_dests(
         kwargs_pca.get("out", False),
@@ -232,6 +232,10 @@ def _write_pca_from(
 )
 @_accepts_legacy_random_state(0)
 @deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
+@deprecated_arg(
+    "inplace",
+    Deprecation("1.13.0", "Copy `adata` before calling this function instead."),
+)
 def normalize_pearson_residuals_pca(
     adata: AnnData,
     *,
@@ -242,8 +246,8 @@ def normalize_pearson_residuals_pca(
     kwargs_pca: Mapping[str, Any] = frozendict({}),
     mask: Mask | Default | None = Default("adata.var.get('highly_variable')"),
     check_values: bool = True,
-    inplace: bool = True,
     # deprecated
+    inplace: bool = True,
     mask_var: Mask | None = None,
 ) -> AnnData | None:
     """Apply analytic Pearson residual normalization and PCA, based on :cite:t:`Lause2021`.

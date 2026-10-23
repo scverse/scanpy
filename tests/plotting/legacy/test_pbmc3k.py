@@ -83,7 +83,7 @@ def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
     filter_result = sc.pp.highly_variable_genes(
-        adata, min_mean=0.0125, max_mean=3, min_disp=0.5, inplace=False
+        adata, min_mean=0.0125, max_mean=3, min_disp=0.5, out=True
     )
     assert filter_result is not None
 

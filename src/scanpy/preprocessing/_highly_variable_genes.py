@@ -15,7 +15,7 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, warn
-from .._docs import doc_use
+from .._docs import doc_out_key, doc_use
 from .._settings import Default, Verbosity, settings
 from .._utils import (
     _doc_params,
@@ -25,6 +25,7 @@ from .._utils import (
     sanitize_anndata,
 )
 from ..get import aggregate
+from ..get._out import Prefix, _legacy_out
 from ..get._use import _get_arr, _resolve_obs
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
@@ -131,7 +132,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     check_values: bool = True,
     span: float = 0.3,
     subset: bool = False,
-    inplace: bool = True,
+    out: Prefix | bool = False,
 ) -> pd.DataFrame | None:
     """See `highly_variable_genes`.
 
@@ -139,7 +140,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
 
     Returns
     -------
-    Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`) or
+    Depending on `out` returns calculated metrics (:class:`~pd.DataFrame`) or
     updates `.var` with the following fields:
 
     highly_variable : :class:`bool`
@@ -286,8 +287,8 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     df["highly_variable"] = False
     df.loc[sorted_index[: int(n_top_genes)], "highly_variable"] = True
 
-    if inplace:
-        adata.uns["hvg"] = {"flavor": flavor}
+    if out is not True:
+        adata.uns[_hvg_key(out, "hvg")] = {"flavor": flavor}
         logg.hint(
             "added\n"
             "    'highly_variable', boolean vector (adata.var)\n"
@@ -302,12 +303,12 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             "means",
             "variances",
         ]:
-            adata.var[to_numpy_key] = df[to_numpy_key].to_numpy()
-        adata.var["variances_norm"] = (
+            adata.var[_hvg_key(out, to_numpy_key)] = df[to_numpy_key].to_numpy()
+        adata.var[_hvg_key(out, "variances_norm")] = (
             df["variances_norm"].to_numpy().astype("float64", copy=False)
         )
         if batch_key is not None:
-            adata.var["highly_variable_nbatches"] = df[
+            adata.var[_hvg_key(out, "highly_variable_nbatches")] = df[
                 "highly_variable_nbatches"
             ].to_numpy()
         if subset:
@@ -320,6 +321,11 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
 
         return df
     return None
+
+
+def _hvg_key(out: Prefix | bool, name: str) -> str:  # noqa: FBT001
+    """Name an output of `highly_variable_genes`, prefixed if `out` is a `Prefix`."""
+    return f"{out.prefix}_{name}" if isinstance(out, Prefix) else name
 
 
 @dataclass
@@ -398,9 +404,7 @@ def _highly_variable_genes_single_batch(
     if filter_unexpressed_genes:
         with settings.override(verbosity=Verbosity.error):
             # TODO use groupby or so instead of materialize_as_ndarray
-            filt, _ = materialize_as_ndarray(
-                filter_genes(x, min_cells=1, inplace=False)
-            )
+            filt, _ = materialize_as_ndarray(filter_genes(x, min_cells=1))
     else:
         filt = np.ones(x.shape[1], dtype=bool)
 
@@ -643,9 +647,17 @@ def _highly_variable_genes_batched(
 
 
 @_doc_params(
-    use=doc_use("Which matrix to use for expression values.", legacy=("layer",))
+    use=doc_use("Which matrix to use for expression values.", legacy=("layer",)),
+    out=doc_out_key(
+        "the metrics",
+        default="the `.var` columns and `.uns['hvg']` listed below",
+        prefixed="`.var['p_highly_variable']`, `.var['p_means']`, … and `.uns['p_hvg']`",
+    ),
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
+)
 def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
@@ -660,10 +672,12 @@ def highly_variable_genes(  # noqa: PLR0913
     n_bins: int = 20,
     flavor: HVGFlavor | Default = Default(preset=("highly_variable_genes", "flavor")),
     subset: bool = False,
-    inplace: bool = True,
     batch_key: str | None = None,
     filter_unexpressed_genes: bool | None = None,
     check_values: bool = True,
+    out: Prefix | bool = False,
+    # deprecated
+    inplace: bool = True,
 ) -> pd.DataFrame | None:
     """Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
 
@@ -736,8 +750,6 @@ def highly_variable_genes(  # noqa: PLR0913
     subset
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
-    inplace
-        Whether to place calculated metrics in `.var` or return them.
     batch_key
         If specified, highly-variable genes are selected within each batch separately and merged.
         This simple process avoids the selection of batch-specific genes and acts as a
@@ -751,10 +763,14 @@ def highly_variable_genes(  # noqa: PLR0913
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
         Only used if `flavor='seurat_v3'`/`'seurat_v3_paper'`.
+    {out}
+    inplace
+        Whether to place calculated metrics in `.var` or return them.
 
     Returns
     -------
-    Returns a :class:`pandas.DataFrame` with calculated metrics if `inplace=False`, else returns an `AnnData` object where it sets the following field:
+    Returns a :class:`pandas.DataFrame` with calculated metrics if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
     `adata.var['highly_variable']` : :class:`pandas.Series` (dtype `bool`)
         boolean indicator of highly-variable genes
@@ -783,13 +799,14 @@ def highly_variable_genes(  # noqa: PLR0913
 
         flavor = settings.preset.highly_variable_genes.flavor
 
+    out = _legacy_out(out, "inplace", None if inplace else True)
     start = logg.info("extracting highly variable genes")
     use = _resolve_obs(use)
 
     if not isinstance(adata, AnnData):
         msg = (
             "`pp.highly_variable_genes` expects an `AnnData` argument, "
-            "pass `inplace=False` if you want to return a `pd.DataFrame`."
+            "pass `out=True` if you want to return a `pd.DataFrame`."
         )
         raise ValueError(msg)
 
@@ -807,7 +824,7 @@ def highly_variable_genes(  # noqa: PLR0913
             check_values=check_values,
             span=span,
             subset=subset,
-            inplace=inplace,
+            out=out,
         )
 
     cutoff = _Cutoffs.validate(
@@ -846,13 +863,13 @@ def highly_variable_genes(  # noqa: PLR0913
 
     logg.info("    finished", time=start)
 
-    if not inplace:
+    if out is True:
         if subset:
             df = df.loc[df["highly_variable"]]
 
         return df
 
-    adata.uns["hvg"] = {"flavor": flavor}
+    adata.uns[_hvg_key(out, "hvg")] = {"flavor": flavor}
     logg.hint(
         "added\n"
         "    'highly_variable', boolean vector (adata.var)\n"
@@ -860,13 +877,19 @@ def highly_variable_genes(  # noqa: PLR0913
         "    'dispersions', float vector (adata.var)\n"
         "    'dispersions_norm', float vector (adata.var)"
     )
-    adata.var["highly_variable"] = df["highly_variable"]
-    adata.var["means"] = df["means"]
-    adata.var["dispersions"] = df["dispersions"]
-    adata.var["dispersions_norm"] = df["dispersions_norm"].astype(np.float32)
+    adata.var[_hvg_key(out, "highly_variable")] = df["highly_variable"]
+    adata.var[_hvg_key(out, "means")] = df["means"]
+    adata.var[_hvg_key(out, "dispersions")] = df["dispersions"]
+    adata.var[_hvg_key(out, "dispersions_norm")] = df["dispersions_norm"].astype(
+        np.float32
+    )
 
     if batch_key is not None:
-        adata.var["highly_variable_nbatches"] = df["highly_variable_nbatches"]
-        adata.var["highly_variable_intersection"] = df["highly_variable_intersection"]
+        adata.var[_hvg_key(out, "highly_variable_nbatches")] = df[
+            "highly_variable_nbatches"
+        ]
+        adata.var[_hvg_key(out, "highly_variable_intersection")] = df[
+            "highly_variable_intersection"
+        ]
     if subset:
         adata._inplace_subset_var(df["highly_variable"])

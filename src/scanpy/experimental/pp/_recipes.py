@@ -7,6 +7,8 @@ if sys.version_info < (3, 15):
     from types import MappingProxyType as frozendict  # noqa: N813
 
 
+from scverse_misc import Deprecation, deprecated_arg
+
 from ... import experimental
 from ..._keys import _embedding_keys
 from ..._utils import _doc_params
@@ -41,6 +43,10 @@ if TYPE_CHECKING:
     inplace=doc_inplace,
 )
 @_accepts_legacy_random_state(0)
+@deprecated_arg(
+    "inplace",
+    Deprecation("1.13.0", "Copy `adata` before calling this function instead."),
+)
 def recipe_pearson_residuals(  # noqa: PLR0913
     adata: AnnData,
     *,
@@ -135,11 +141,11 @@ def recipe_pearson_residuals(  # noqa: PLR0913
     )
 
     if inplace:
-        experimental.pp.highly_variable_genes(adata, **hvg_args, inplace=True)
+        experimental.pp.highly_variable_genes(adata, **hvg_args)
         # TODO: are these copies needed?
         adata_pca = adata[:, adata.var["highly_variable"]].copy()
     else:
-        hvg = experimental.pp.highly_variable_genes(adata, **hvg_args, inplace=False)
+        hvg = experimental.pp.highly_variable_genes(adata, **hvg_args, out=True)
         # TODO: are these copies needed?
         adata_pca = adata[:, hvg["highly_variable"]].copy()
 
