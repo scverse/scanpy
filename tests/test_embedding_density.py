@@ -51,3 +51,28 @@ def test_embedding_density_plot():
     adata = pbmc68k_reduced()
     sc.tl.embedding_density(adata, "umap")
     sc.pl.embedding_density(adata, "umap", key="umap_density", show=False)
+
+
+@pytest.mark.parametrize(
+    "small",
+    [
+        pytest.param([[0, 0]], id="1 cell"),
+        pytest.param([[0, 0], [1, 1]], id="2 cells"),
+        pytest.param([[0, 0], [1, 1], [2, 2]], id="3 collinear"),
+        pytest.param([[1, 1], [1, 1], [1, 1]], id="3 identical"),
+    ],
+)
+def test_embedding_density_groupby_degenerate_group(small: list[list[int]]) -> None:
+    """Groups a 2D KDE cannot handle get NaN instead of raising (#2043)."""
+    rng = np.random.default_rng(0)
+    big = rng.normal(size=(30, 2))
+    adata = AnnData(np.ones((30 + len(small), 1)))
+    adata.obs["group"] = pd.Categorical(["a"] * 30 + ["b"] * len(small))
+    adata.obsm["X_umap"] = np.vstack([big, small])
+
+    with pytest.warns(UserWarning, match=r"'b'"):
+        sc.tl.embedding_density(adata, groupby="group")
+
+    density = adata.obs["umap_density_group"]
+    assert density[adata.obs["group"] == "b"].isna().all()
+    assert density[adata.obs["group"] == "a"].between(0, 1).all()
