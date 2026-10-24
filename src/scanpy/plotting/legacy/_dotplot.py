@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
 from matplotlib import colormaps
+from scipy.sparse import SparseEfficiencyWarning
 
 from ... import logging as logg
-from ..._compat import set_module, warn
+from ..._compat import CSBase, set_module, warn
 from ..._settings import Default, settings
 from ..._utils import _doc_params
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
@@ -228,35 +230,29 @@ class DotPlot(BasePlot):
 
         Refactored to helper to satisfy complexity checks.
         """
-        # for if category defined by groupby (if any) compute for each var_name
-        # 1. the fraction of cells in the category having a value >expression_cutoff
-        # 2. the mean value over the category
+        with warnings.catch_warnings():
+            # A negative cutoff makes zeros count as expressed, so scipy warns that
+            # the comparison is inefficient; the result is still what we want.
+            warnings.simplefilter("ignore", SparseEfficiencyWarning)
+            expressed = self._plot_data > self.expression_cutoff
 
-        # 1. compute fraction of cells having value > expression_cutoff
-        # transform obs_tidy into boolean matrix using the expression_cutoff
-        obs_bool = self.obs_tidy > self.expression_cutoff
-
-        # compute the sum per group which in the boolean matrix this is the number
-        # of values >expression_cutoff, and divide the result by the total number of
-        # values in the group (given by `count()`)
         if dot_size_df is None:
-            dot_size_df = (
-                obs_bool.groupby(level=0, observed=True).sum()
-                / obs_bool.groupby(level=0, observed=True).count()
-            )
+            dot_size_df = self._aggregate("mean", data=expressed)
 
         if dot_color_df is None:
-            # 2. compute mean expression value value
             if self.mean_only_expressed:
-                dot_color_df = (
-                    self.obs_tidy
-                    .mask(~obs_bool)
-                    .groupby(level=0, observed=True)
-                    .mean()
-                    .fillna(0)
+                expressed_values = (
+                    self._plot_data.multiply(expressed)
+                    if isinstance(self._plot_data, CSBase)
+                    else np.where(expressed, self._plot_data, 0)
                 )
+                expressed_sum = self._aggregate("sum", data=expressed_values)
+                expressed_count = self._aggregate("sum", data=expressed)
+                dot_color_df = expressed_sum.div(expressed_count).fillna(0)
+                if np.issubdtype(self._plot_data.dtype, np.floating):
+                    dot_color_df = dot_color_df.astype(self._plot_data.dtype)
             else:
-                dot_color_df = self.obs_tidy.groupby(level=0, observed=True).mean()
+                dot_color_df = self._aggregate("mean")
 
             if self.standard_scale == "group":
                 dot_color_df = dot_color_df.sub(dot_color_df.min(axis=1), axis=0)
