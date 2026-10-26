@@ -184,8 +184,8 @@ def dsb(  # noqa: PLR0912, PLR0913, PLR0915
         adata = adata.copy()
     else:
         view_to_actual(adata)
-    adata.var.drop(columns=[k for k in _VAR_KEYS if k in adata.var], inplace=True)
-    adata.obs.drop(columns=[k for k in _OBS_KEYS if k in adata.obs], inplace=True)
+    adata.var = adata.var.drop(columns=[k for k in _VAR_KEYS if k in adata.var])
+    adata.obs = adata.obs.drop(columns=[k for k in _OBS_KEYS if k in adata.obs])
     norm = _log_counts(_get_arr(adata, layer=layer), pseudocount, "adata")
 
     if adata_empty is not None:
