@@ -71,6 +71,7 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
     gprofiler = "gprofiler-official"
     leidenalg = auto()
     louvain = auto()
+    networkit = auto()
     openpyxl = auto()
     igraph = auto()
     pybiomart = auto()
