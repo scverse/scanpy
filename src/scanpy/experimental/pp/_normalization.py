@@ -26,23 +26,23 @@ from ...experimental._docs import (
     doc_pca_chunk,
 )
 from ...get._out import (
+    _dest,
+    _dest_key,
     _legacy_out,
     _out_dests,
-    _out_uns_key,
     _write_dests,
     _write_out,
     deprecated_copy,
 )
 from ...get._use import _check_mask, _get_arr, _mask_arg, _mask_hvg, _resolve_obs
 from ...preprocessing._docs import doc_mask_var
-from ...preprocessing._pca import PCA_KINDS, PcaOut, _pca_bases, _pca_dests, pca
+from ...preprocessing._pca import PCA_KINDS, PcaOut, _pca_dests, pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any
 
     from ..._utils.random import RNGLike, SeedLike
-    from ...get._out import Prefix
     from ...get._types import LayerAcc, Mask, RepAcc, _SetRep
 
 
@@ -93,7 +93,7 @@ def _pearson_residuals(
     dist_params=doc_dist_params,
     check_values=doc_check_values,
     use=doc_input_matrix,
-    out=doc_out("pearson_residuals"),
+    out=doc_out(),
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
@@ -108,7 +108,7 @@ def normalize_pearson_residuals(
     clip: float | None = None,
     check_values: bool = True,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Prefix | bool = False,
+    out: RepAcc | str | bool = False,
     # deprecated
     layer: str | None = None,
     obsm: str | None = None,
@@ -141,7 +141,7 @@ def normalize_pearson_residuals(
     Otherwise, writes them to `out` (by default where `use` reads from),
     and updates `adata.uns` with the following fields.
     That `.uns` entry is named after the key `out` writes to
-    (e.g. `'k'` for `out=A.layers['k']`, `'p_pearson_residuals'` for `out=sc.Prefix('p')`),
+    (e.g. `'k'` for `out=A.layers['k']`),
     and `'pearson_residuals_normalization'` by default.
     The deprecated `inplace=False` returns these fields as dictionary with the
     normalized values in `results_dict['X']`.
@@ -174,15 +174,13 @@ def normalize_pearson_residuals(
         adata,
         residuals,
         out=out,
-        base="pearson_residuals",
         use=use,
         layer=layer,
         obsm=obsm,
     )
-    uns_key = _out_uns_key(
-        out, base="pearson_residuals", default="pearson_residuals_normalization"
-    )
-    adata.uns[uns_key] = settings_dict
+    # the `.uns` entry follows the output’s key, like other outputs do (see `_out_dests`)
+    key = None if out is False else _dest_key(_dest(out))
+    adata.uns[key or "pearson_residuals_normalization"] = settings_dict
     return None
 
 
@@ -198,8 +196,7 @@ def _pca_kwargs_dests(
         kwargs_pca.get("key_added"),
         dests=_pca_dests,
         kinds=PCA_KINDS,
-        bases=_pca_bases(),
-        uns="pca",
+        uns=True,
         default=Default(),
     )
 

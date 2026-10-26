@@ -62,13 +62,10 @@ def test_leiden_basic(
             resolution=resolution,
             n_iterations=n_iterations,
             directed=(flavor == "leidenalg"),
-            out=sc.Prefix("custom"),
         )
-    assert "custom_leiden" in adata_neighbors.obs
-    assert adata_neighbors.uns["custom_leiden"]["params"]["resolution"] == resolution
-    assert (
-        adata_neighbors.uns["custom_leiden"]["params"]["n_iterations"] == n_iterations
-    )
+    assert "leiden" in adata_neighbors.obs
+    assert adata_neighbors.uns["leiden"]["params"]["resolution"] == resolution
+    assert adata_neighbors.uns["leiden"]["params"]["n_iterations"] == n_iterations
 
 
 @needs.leidenalg
@@ -270,15 +267,6 @@ def test_leiden_out_acc(adata_neighbors: AnnData) -> None:
     )
     assert "leiden" in adata_neighbors.obs
     assert "leiden_R" not in adata_neighbors.obs
-    # neither is a prefixed one
-    sc.tl.leiden(
-        adata_neighbors,
-        flavor="igraph",
-        restrict_to=("mine", ["0"]),
-        out=sc.Prefix("p"),
-    )
-    assert "p_leiden" in adata_neighbors.obs
-    assert "p_leiden" in adata_neighbors.uns
 
 
 @needs.igraph

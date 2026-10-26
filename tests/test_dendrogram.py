@@ -7,25 +7,23 @@ from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 n_neighbors = 5
 key = "test"
 
 
 @pytest.mark.parametrize("groupby", ["bulk_labels", ["bulk_labels", "phase"]])
-@pytest.mark.parametrize("prefix", [None, "custom"])
-def test_dendrogram_prefix(groupby, prefix):
+@pytest.mark.parametrize("key_added", [None, "custom"])
+def test_dendrogram_key_added(groupby, key_added):
     adata = pbmc68k_reduced()
-    sc.tl.dendrogram(
-        adata, groupby=groupby, out=False if prefix is None else sc.Prefix(prefix)
-    )
-    if isinstance(groupby, list):
+    sc.tl.dendrogram(adata, groupby=groupby, key_added=key_added)
+    if key_added is not None:
+        key = key_added
+    elif isinstance(groupby, list):
         key = f"dendrogram_{'_'.join(groupby)}"
     else:
         key = f"dendrogram_{groupby}"
-
-    if prefix is not None:
-        key = f"{prefix}_{key}"
     assert key in adata.uns
 
 
@@ -40,9 +38,6 @@ def test_dendrogram_out_true():
 
 def test_dendrogram_deprecated_args():
     adata = pbmc68k_reduced()
-    with pytest.warns(FutureWarning, match=r"argument key_added is deprecated"):
-        sc.tl.dendrogram(adata, groupby="bulk_labels", key_added="k")
-    assert "k" in adata.uns
     with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
         dat = sc.tl.dendrogram(adata, groupby="bulk_labels", inplace=False)
     assert "dendrogram_info" in dat
@@ -96,3 +91,13 @@ def test_dendrogram_cor():
         obsm=dict(X_pca=REP_PCA),
     )
     sc.tl.dendrogram(rep, groupby="leiden")
+
+
+@needs.anndata_acc
+def test_dendrogram_groupby_ref():
+    """`groupby` takes references like `A.obs['bulk_labels']`."""
+    from anndata.acc import A
+
+    adata = pbmc68k_reduced()
+    sc.tl.dendrogram(adata, groupby=[A.obs["bulk_labels"], "phase"])
+    assert "dendrogram_bulk_labels_phase" in adata.uns

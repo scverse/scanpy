@@ -1232,7 +1232,8 @@ def rank_genes_groups_violin(  # noqa: PLR0913
             _gene_names = gene_names
         if isinstance(_gene_names, np.ndarray):
             _gene_names = _gene_names.tolist()
-        df = obs_df(adata, _gene_names, use_raw=use_raw, gene_symbols=gene_symbols)
+        with own_deprecations():  # `anndata.acc` is optional, so no `use`
+            df = obs_df(adata, _gene_names, use_raw=use_raw, gene_symbols=gene_symbols)
         new_gene_names = df.columns
         df["hue"] = adata.obs[groups_key].astype(str).array
         if reference == "rest":
@@ -1439,7 +1440,7 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
         sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.umap(adata)
-        sc.tl.embedding_density(adata, basis='umap', groupby='phase')
+        sc.tl.embedding_density(adata, 'umap', groupby='phase')
 
     Plot all categories be default
 

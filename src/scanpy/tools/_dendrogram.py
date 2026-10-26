@@ -9,11 +9,12 @@ from pandas.api.types import CategoricalDtype
 from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
-from .._docs import DEPR_KEY_ADDED, DEPR_RAW, doc_out_key
+from .._docs import DEPR_RAW, doc_out_key
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from ..get._out import _legacy_out, _out_key
+from ..get._types import AdRef
 from ..get._uns import _use_to_uns
-from ..get._use import _resolve_obs
+from ..get._use import _obs_col, _resolve_obs
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation_compat
 
@@ -23,7 +24,6 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..get._out import Prefix
     from ..get._types import RepAcc
 
 
@@ -33,19 +33,20 @@ if TYPE_CHECKING:
     out=doc_out_key(
         "the dendrogram information",
         default="`.uns[f'dendrogram_{{groupby}}']` (with `groupby` joined by `_`)",
-        prefixed="`.uns[f'p_dendrogram_{{groupby}}']`",
-        key_added="`key_added='k'` wrote to `.uns['k']`.",
+        key_added=(
+            "Name of the :attr:`~anndata.AnnData.uns` entry to write to instead "
+            "(until there are `.uns` accessors)."
+        ),
     ),
 )
 @deprecated_arg("use_rep", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("use_raw", DEPR_RAW)
-@deprecated_arg("key_added", DEPR_KEY_ADDED)
 @deprecated_arg(
     "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
 )
 def dendrogram(  # noqa: PLR0913
     adata: AnnData,
-    groupby: str | Sequence[str],
+    groupby: AdRef | str | Sequence[AdRef | str],
     *,
     n_pcs: int | None = None,
     use: RepAcc | str | None = None,
@@ -54,13 +55,13 @@ def dendrogram(  # noqa: PLR0913
     cor_method: str = "pearson",
     linkage_method: str = "complete",
     optimal_ordering: bool = False,
-    out: Prefix | bool = False,
+    out: bool = False,
+    key_added: str | None = None,
     # deprecated
     use_rep: str | None = None,
-    key_added: str | None = None,
     inplace: bool = True,
 ) -> dict[str, Any] | None:
-    """Compute a hierarchical clustering for the given `groupby` categories.
+    r"""Compute a hierarchical clustering for the given `groupby` categories.
 
     By default, the PCA representation is used unless `.X`
     has less than 50 variables.
@@ -87,6 +88,10 @@ def dendrogram(  # noqa: PLR0913
     ----------
     adata
         Annotated data matrix
+    groupby
+        The observations grouping(s) to cluster.
+        Given by references like `A.obs['leiden']`, or by column names
+        (:class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d with :attr:`~scanpy.Preset.ScanpyV2Preview`).
     {n_pcs}
     {use_rep}
     var_names
@@ -128,11 +133,11 @@ def dendrogram(  # noqa: PLR0913
 
     """
     out = _legacy_out(out, "inplace", None if inplace else True)
-    if isinstance(groupby, str):
-        # if not a list, turn into a list
+    if isinstance(groupby, str | AdRef):
         groupby = [groupby]
+    groupby = [_obs_col(g, param="groupby") for g in groupby]
     default = f"dendrogram_{'_'.join(groupby)}"
-    key = _out_key(out, key_added, kind="uns", base=default, default=default)
+    key = _out_key(out, key_added, kind="uns", default=default)
     raise_not_implemented_error_if_backed_type(adata.X, "dendrogram")
     if use is not None:
         use = _resolve_obs(use, rep=True)

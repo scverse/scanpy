@@ -42,9 +42,7 @@ if TYPE_CHECKING:
     from .._compat import CSBase
     from .._settings.presets import LeidenFlavor
     from .._utils.random import RNGLike, SeedLike
-    from ..get._out import Prefix
     from ..get._types import GraphAcc, VecRef
-    from ..neighbors._common import NeighborsUse
 
     try:  # sphinx-autodoc-typehints + optional dependency
         from leidenalg.VertexPartition import MutableVertexPartition
@@ -63,12 +61,11 @@ if TYPE_CHECKING:
     adjacency=doc_adjacency,
     neighbors_key=doc_neighbors_key.format(method="leiden"),
     obsp=doc_obsp,
-    use=doc_use_neighbors(graph=True),
+    use=doc_use_neighbors(),
     rng=doc_rng,
     out=doc_out_key(
         "the cluster labels",
         example="A.obs['clusters']",
-        prefixed="`.obs['p_leiden']` and `.uns['p_leiden']`",
         key_added="`key_added='k'` is `out=A.obs['k']`.",
         default=(
             "`.obs['leiden']` and `.uns['leiden']` "
@@ -93,8 +90,8 @@ def leiden(  # noqa: PLR0913
     n_iterations: int = -1,
     partition_type: type[MutableVertexPartition] | None = None,
     flavor: LeidenFlavor | Default = Default(preset=("leiden", "flavor")),
-    use: NeighborsUse | GraphAcc | str = None,
-    out: VecRef | Prefix | bool = False,
+    use: GraphAcc | str | None = None,
+    out: VecRef | bool = False,
     # deprecated
     adjacency: CSBase | None = None,
     neighbors_key: str | None = None,
@@ -179,7 +176,7 @@ def leiden(  # noqa: PLR0913
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
 
-    key = _out_key(out, key_added, kind="obs", base="leiden", default="leiden")
+    key = _out_key(out, key_added, kind="obs", default="leiden")
     # like `key_added`, the default key gets a suffix, keys from `out` are literal
     if restrict_to is not None and key == "leiden" and out is False:
         key += "_R"

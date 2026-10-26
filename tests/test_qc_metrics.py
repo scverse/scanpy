@@ -313,17 +313,19 @@ def test_inner_methods(adata: AnnData):
     assert np.all(partial_inplace.var[var_orig.columns] == var_orig)
 
 
-def test_qc_metrics_out_prefix(adata: AnnData) -> None:
-    """`sc.Prefix` prefixes every column, keeping their dtypes."""
+@needs.anndata_acc
+def test_qc_metrics_out_acc(adata: AnnData) -> None:
+    """A single accessor writes both tables as whole DataFrames named after it."""
+    from anndata.acc import A
+
     adata = prepare_adata(adata)
     obs, var = sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], out=True)
-    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], out=sc.Prefix("p"))
-    pd.testing.assert_frame_equal(
-        adata.obs[[f"p_{c}" for c in obs.columns]], obs.add_prefix("p_")
-    )
-    pd.testing.assert_frame_equal(
-        adata.var[[f"p_{c}" for c in var.columns]], var.add_prefix("p_")
-    )
+    obs_cols, var_cols = set(adata.obs), set(adata.var)
+    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], out=A.obsm["qc"])
+    pd.testing.assert_frame_equal(adata.obsm["qc"], obs)
+    pd.testing.assert_frame_equal(adata.varm["qc"], var)
+    assert set(adata.obs) == obs_cols
+    assert set(adata.var) == var_cols
 
 
 @needs.anndata_acc

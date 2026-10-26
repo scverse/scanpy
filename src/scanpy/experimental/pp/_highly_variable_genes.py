@@ -36,8 +36,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from ...get._out import Prefix
-    from ...get._types import AdRef, MultiAcc, RepAcc
+    from ...get._types import AdRef, RepAcc
 
 
 @njit
@@ -145,7 +144,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     use: RepAcc | str | None,
     layer: str | None,
     subset: bool,
-    out: MultiAcc | str | Prefix | bool,
+    out: bool,
 ) -> pd.DataFrame | None:
     view_to_actual(adata)
     use = _resolve_obs(use)
@@ -266,7 +265,6 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
         _write_hvg(
             adata,
             df[[*cols, "highly_variable"]],
-            out,
             uns={"flavor": "pearson_residuals", "computed_on": computed_on},
         )
         logg.hint(
@@ -302,9 +300,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     use=doc_layer,
     out=doc_out_key(
         "the metrics",
-        example="A.varm['hvg']",
         default="the `.var` columns and `.uns['hvg']` listed below",
-        prefixed="`.var['p_highly_variable']`, `.var['p_means']`, … and `.uns['p_hvg']`",
     ),
     inplace=doc_inplace,
     batch_key=doc_batch_key,
@@ -326,7 +322,7 @@ def highly_variable_genes(  # noqa: PLR0913
     check_values: bool = True,
     use: RepAcc | str | None = None,
     subset: bool = False,
-    out: MultiAcc | str | Prefix | bool = False,
+    out: bool = False,
     # deprecated
     inplace: bool = True,
     batch_key: str | None = None,
@@ -363,7 +359,7 @@ def highly_variable_genes(  # noqa: PLR0913
     Returns
     -------
     If `out=True`, returns the following fields as :class:`~pandas.DataFrame`.
-    Otherwise, `adata.var` is updated with them (prefixed if `out` is a `sc.Prefix`).
+    Otherwise, `adata.var` is updated with them.
 
     highly_variable : :class:`bool`
         boolean indicator of highly-variable genes.

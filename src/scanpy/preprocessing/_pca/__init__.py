@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
     from ..._utils.random import RNGLike, SeedLike
-    from ...get._out import OutKind, Prefix
+    from ...get._out import OutKind
     from ...get._types import ArrAcc, Mask, RepAcc, _SetRep
 
 
@@ -88,11 +88,6 @@ def _pca_dests(
     return PcaOut(dict(obsm=keys.obsm), None if multi else dict(varm=keys.varm))
 
 
-def _pca_bases(*, multi: bool = False) -> PcaOut[_SetRep | None, _SetRep | None]:
-    """Default names of the outputs of `pp.pca`, see `_pca_dests`."""
-    return PcaOut(dict(obsm="pca"), None if multi else dict(varm="pca"))
-
-
 @_doc_params(
     mask=doc_mask_var,
     rng=doc_rng,
@@ -103,21 +98,19 @@ def _pca_bases(*, multi: bool = False) -> PcaOut[_SetRep | None, _SetRep | None]
                 "The PCA representation. "
                 "By default written to `A.obsm['X_pca']` "
                 "(`A.obsm['pca']` if :attr:`scanpy.settings.preset` is "
-                ":attr:`~scanpy.Preset.ScanpyV2Preview`), "
-                "with `sc.Prefix('p')` to `A.obsm['p_pca']`."
+                ":attr:`~scanpy.Preset.ScanpyV2Preview`)."
             ),
             loadings=(
                 "The principal components containing the loadings. "
                 "By default written to `A.varm['PCs']` "
                 "(`A.varm['pca']` if :attr:`scanpy.settings.preset` is "
-                ":attr:`~scanpy.Preset.ScanpyV2Preview`), "
-                "with `sc.Prefix('p')` to `A.varm['p_pca']`. "
+                ":attr:`~scanpy.Preset.ScanpyV2Preview`). "
                 "If `use` points to `.obsm`, stored in the `.uns` entry instead."
             ),
         ),
         example="{'embedding': A.obsm['pca']}",
         returns=":class:`~scanpy.pp.PcaOut`",
-        uns="pca",
+        uns=True,
         key_added=(
             "`key_added='k'` is `out={'embedding': A.obsm['k'], 'loadings': A.varm['k']}`."
         ),
@@ -142,7 +135,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     return_info: bool = False,
     mask: Mask | Default | None = Default("adata.var.get('highly_variable')"),
     dtype: DTypeLike = "float32",
-    out: Mapping[str, ArrAcc | str] | Prefix | bool = False,
+    out: Mapping[str, ArrAcc | str] | bool = False,
     # deprecated
     key_added: str | None = None,
     copy: bool = False,
@@ -303,8 +296,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             key_added,
             dests=partial(_pca_dests, multi=multi),
             kinds=PCA_KINDS,
-            bases=_pca_bases(multi=multi),
-            uns="pca",
+            uns=True,
             default=Default(),
         )
         adata = data

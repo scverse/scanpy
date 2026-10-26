@@ -29,7 +29,6 @@ if TYPE_CHECKING:
 
     from .._compat import SpBase
     from ..get._types import GraphAcc
-    from ..neighbors._common import NeighborsUse
 
 
 def confusion_matrix(
@@ -123,20 +122,20 @@ def modularity(
     /,
     labels: str | AnyArrayLike = "leiden",
     *,
-    use: NeighborsUse | GraphAcc | str = None,
+    use: GraphAcc | str | None = None,
     mode: Literal["calculate", "update", "retrieve"] = "calculate",
     neighbors_key: str | None = None,
 ) -> float: ...
 
 
-@_doc_params(use=doc_use_neighbors(graph=True))
+@_doc_params(use=doc_use_neighbors())
 @deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
 def modularity(
     adata_or_connectivities: AnnData | AnyArrayLike | SpBase,
     /,
     labels: str | AnyArrayLike = "leiden",
     *,
-    use: NeighborsUse | GraphAcc | str = None,
+    use: GraphAcc | str | None = None,
     is_directed: bool | None = None,
     mode: Literal["calculate", "update", "retrieve"] = "calculate",
     # deprecated
@@ -194,7 +193,7 @@ def modularity_adata(
     /,
     *,
     labels: str | AnyArrayLike,
-    use: NeighborsUse | GraphAcc | str,
+    use: GraphAcc | str | None,
     neighbors_key: str | None,
     mode: Literal["calculate", "update", "retrieve"],
 ) -> float:

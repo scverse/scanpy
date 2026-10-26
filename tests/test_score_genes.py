@@ -315,5 +315,17 @@ def test_score_genes_cell_cycle(array_type: Callable[[np.ndarray], object]) -> N
     np.testing.assert_array_equal(adata.obs["phase"], phases)
     np.testing.assert_array_equal(adata.obs["S_score"], res.s_score)
 
-    sc.tl.score_genes_cell_cycle(adata, **kw, out=sc.Prefix("p"))
-    assert {"p_S_score", "p_G2M_score", "p_phase"} <= set(adata.obs.columns)
+
+@needs.anndata_acc
+def test_score_genes_cell_cycle_out() -> None:
+    """A mapping writes only the outputs it names, a single accessor isn’t enough."""
+    from anndata.acc import A
+
+    adata = AnnData(np.ones((30, 40)))
+    kw = dict(s_genes=adata.var_names[:10], g2m_genes=adata.var_names[10:20], rng=0)
+    res = sc.tl.score_genes_cell_cycle(adata, **kw, out=True)
+    sc.tl.score_genes_cell_cycle(adata, **kw, out=dict(phase=A.obs["p"]))
+    assert list(adata.obs.columns) == ["p"]
+    np.testing.assert_array_equal(adata.obs["p"], res.phase)
+    with pytest.raises(TypeError, match=r"must be a `bool` or a mapping"):
+        sc.tl.score_genes_cell_cycle(adata, **kw, out=A.obs["x"])

@@ -10,6 +10,7 @@ import importlib.util
 import inspect
 import re
 import warnings
+from collections.abc import Mapping
 from contextlib import contextmanager, suppress
 from functools import partial, reduce, singledispatch, wraps
 from operator import mul, or_, truediv
@@ -37,7 +38,7 @@ from .._compat import CSBase, DaskArray, SpBase, warn
 from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable, KeysView, Mapping
+    from collections.abc import Callable, Generator, Iterable, KeysView
     from typing import Any
 
     from anndata import AnnData
@@ -928,6 +929,34 @@ class NeighborsView:
             self._conns_key,
             self._dists_key,
         )
+
+    @classmethod
+    def from_graph(cls, adata: AnnData, graph: str) -> NeighborsView:
+        """View the neighbors whose connectivities are `.obsp[graph]`.
+
+        Uses the `.uns` entry of the :func:`~scanpy.pp.neighbors` call that wrote them, if any:
+        `out=A.obsp[graph]` names it `graph`, the default is `'neighbors'`,
+        and other entries are found by their `connectivities_key`.
+        Without one, the distances are where `out=A.obsp[graph]` would put them, if they exist.
+        """
+        candidates = dict.fromkeys([graph, "neighbors", *adata.uns])
+        for key in candidates:
+            entry = adata.uns.get(key)
+            default = "connectivities" if key == "neighbors" else None
+            if (
+                isinstance(entry, Mapping)
+                and entry.get("connectivities_key", default) == graph
+            ):
+                return cls(adata, key)
+        self = cls.__new__(cls)
+        self._neighbors_dict = {}
+        self._conns_key = graph
+        self._dists_key = (
+            "distances" if graph == "connectivities" else f"{graph}_distances"
+        )
+        self._connectivities = adata.obsp[graph]
+        self._distances = adata.obsp.get(self._dists_key)
+        return self
 
     @overload
     def __getitem__(self, key: Literal["distances", "connectivities"]) -> CSRBase: ...

@@ -10,10 +10,11 @@ from scverse_misc import Deprecation, deprecated, deprecated_arg
 from .. import _utils
 from .. import logging as logg
 from .._docs import DEPR_NEIGHBORS_KEY, doc_out_key
-from .._utils import _doc_params
-from ..get._out import Prefix, _out_key, deprecated_copy
+from .._utils import _doc_params, own_deprecations
+from ..get._out import _out_key, deprecated_copy
+from ..get._use import _obs_col
 from ..neighbors import Neighbors
-from ..neighbors._common import _neighbors_key
+from ..neighbors._common import _neighbors_view
 from ._docs import doc_use_neighbors
 
 if TYPE_CHECKING:
@@ -21,34 +22,33 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..neighbors._common import NeighborsUse
+    from ..get._types import AdRef, GraphAcc
 
 _AVAIL_MODELS = {"v1.0", "v1.2"}
 
 
 @_doc_params(
-    use=doc_use_neighbors(),
+    use=doc_use_neighbors(meta=True),
     out=doc_out_key(
         "the abstracted graph",
         default="`.uns['paga']` (and the group sizes to `.uns[f'{{groups}}_sizes']`)",
-        prefixed="`.uns['p_paga']` (and `.uns[f'p_{{groups}}_sizes']`)",
     ),
 )
 @deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
 @deprecated_copy
 def paga(
     adata: AnnData,
-    groups: str | None = None,
+    groups: AdRef | str | None = None,
     *,
     use_rna_velocity: bool = False,
     model: Literal["v1.2", "v1.0"] = "v1.2",
-    use: NeighborsUse = None,
-    out: Prefix | bool = False,
+    use: GraphAcc | str | None = None,
+    out: bool = False,
     # deprecated
     neighbors_key: str | None = None,
     copy: bool = False,
 ) -> AnnData | dict[str, Any] | None:
-    """Map out the coarse-grained connectivity structures of complex manifolds :cite:p:`Wolf2019`.
+    r"""Map out the coarse-grained connectivity structures of complex manifolds :cite:p:`Wolf2019`.
 
     By quantifying the connectivity of partitions (groups, clusters) of the
     single-cell graph, partition-based graph abstraction (PAGA) generates a much
@@ -81,6 +81,8 @@ def paga(
         Key for categorical in `adata.obs`. You can pass your predefined groups
         by choosing any categorical annotation of observations. Default:
         The first present key of `'leiden'` or `'louvain'`.
+        Given by a reference like `A.obs['leiden']`, or by column name
+        (:class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d with :attr:`~scanpy.Preset.ScanpyV2Preview`).
     use_rna_velocity
         Use RNA velocity to orient edges in the abstracted graph and estimate
         transitions. Requires that `adata.uns` contains a directed single-cell
@@ -129,11 +131,10 @@ def paga(
     pl.paga_compare
 
     """
-    neighbors_key = _neighbors_key(use, neighbors_key)
-    check_neighbors = "neighbors" if neighbors_key is None else neighbors_key
-    if check_neighbors not in adata.uns:
+    if _neighbors_view(adata, use, neighbors_key) is None:
         msg = "You need to run `pp.neighbors` first to compute a neighborhood graph."
         raise ValueError(msg)
+    groups = _obs_col(groups, param="groups")
     if groups is None:
         for k in ("leiden", "louvain"):
             if k in adata.obs.columns:
@@ -149,10 +150,10 @@ def paga(
         msg = f"`groups` key {groups!r} not found in `adata.obs`."
         raise KeyError(msg)
 
-    key = _out_key(out, None, kind="uns", base="paga", default="paga")
+    key = _out_key(out, None, kind="uns", default="paga")
     _utils.sanitize_anndata(adata)
     start = logg.info("running PAGA")
-    paga = PAGA(adata, groups, model=model, neighbors_key=neighbors_key)
+    paga = PAGA(adata, groups, model=model, use=use, neighbors_key=neighbors_key)
     # connectivities and transitions are computed in separate calls, so merge them
     res = {} if key is True else adata.uns.setdefault(key, {})
     if not use_rna_velocity:
@@ -164,8 +165,7 @@ def paga(
         if key is True:
             res["sizes"] = sizes
         else:
-            prefix = f"{out.prefix}_" if isinstance(out, Prefix) else ""
-            adata.uns[f"{prefix}{groups}_sizes"] = sizes
+            adata.uns[f"{groups}_sizes"] = sizes
     else:
         paga.compute_transitions()
         res["transitions_confidence"] = paga.transitions_confidence
@@ -187,10 +187,11 @@ def paga(
 
 
 class PAGA:
-    def __init__(self, adata, groups, model="v1.2", neighbors_key=None):
+    def __init__(self, adata, groups, model="v1.2", use=None, neighbors_key=None):
         assert groups in adata.obs.columns
         self._adata = adata
-        self._neighbors = Neighbors(adata, neighbors_key=neighbors_key)
+        with own_deprecations():  # `paga` handles `neighbors_key`’s deprecation
+            self._neighbors = Neighbors(adata, use=use, neighbors_key=neighbors_key)
         self._model = model
         self._groups_key = groups
 

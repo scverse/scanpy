@@ -10,7 +10,6 @@ import pytest
 from anndata import AnnData, read_h5ad
 from scipy.stats import pearsonr
 
-from scanpy import Prefix
 from scanpy.preprocessing import harmony_integrate
 from scanpy.preprocessing._harmony.core import (
     _SUPPRESS_PENALTY,
@@ -601,12 +600,12 @@ def test_harmony2_ircolitis_reference(
 
 @needs.anndata_acc
 def test_harmony_out() -> None:
-    """`out=True` returns the embedding, `sc.Prefix` names it `p_pca_harmony`."""
+    """`out=True` returns the embedding, an accessor names where it goes."""
     adata = pbmc68k_reduced()
     res = harmony_integrate(adata, "obs.bulk_labels", out=True, rng=0)
     assert "pca_harmony" not in adata.obsm
-    harmony_integrate(adata, "obs.bulk_labels", out=Prefix("p"), rng=0)
-    np.testing.assert_allclose(adata.obsm["p_pca_harmony"], res)
+    harmony_integrate(adata, "obs.bulk_labels", out="obsm.p", rng=0)
+    np.testing.assert_allclose(adata.obsm["p"], res)
 
 
 @needs.anndata_acc

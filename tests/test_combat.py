@@ -148,9 +148,9 @@ def test_use_out() -> None:
     adata = sc.datasets.blobs()
     adata.layers["counts"] = adata.X.copy()
     expected = sc.pp.combat(adata, "blobs", out=True)
-    sc.pp.combat(adata, "blobs", use=A.layers["counts"], out=sc.Prefix("p"))
+    sc.pp.combat(adata, "blobs", use=A.layers["counts"], out=A.layers["p"])
     np.testing.assert_array_equal(adata.X, adata.layers["counts"])
-    np.testing.assert_allclose(adata.layers["p_combat"], expected)
+    np.testing.assert_allclose(adata.layers["p"], expected)
 
 
 def test_inplace_deprecated() -> None:

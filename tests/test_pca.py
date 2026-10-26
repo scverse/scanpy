@@ -303,13 +303,18 @@ def test_pca_shapes():
 
 
 @pytest.mark.parametrize(
-    ("prefix", "keys"),
+    ("out", "keys"),
     [
         pytest.param(None, _PcaKeys("pca", "X_pca", "PCs"), id="None"),
-        pytest.param("custom", _PcaKeys(*(["custom_pca"] * 3)), id="prefix"),
+        pytest.param(
+            "obsm.custom",
+            _PcaKeys(*(["custom"] * 3)),
+            id="acc",
+            marks=[needs.anndata_acc],
+        ),
     ],
 )
-def test_pca_sparse(prefix: str | None, keys: _PcaKeys):
+def test_pca_sparse(out: str | None, keys: _PcaKeys):
     """Tests implicitly centered pca on sparse arrays.
 
     Checks if it returns equivalent results to explicit centering on dense arrays.
@@ -323,7 +328,7 @@ def test_pca_sparse(prefix: str | None, keys: _PcaKeys):
     explicit = _pca_copy(
         pbmc_dense,
         dtype=np.float64,
-        out=False if prefix is None else sc.Prefix(prefix),
+        out=False if out is None else out,
     )
 
     np.testing.assert_allclose(

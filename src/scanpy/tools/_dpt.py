@@ -21,8 +21,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from ..get._out import Prefix
-    from ..get._types import MultiAcc, VecRef
+    from ..get._types import GraphAcc, MultiAcc, VecRef
 
 
 __all__ = ["DPT", "DptOut", "dpt"]
@@ -63,7 +62,7 @@ DPT_BASES: DptOut = DptOut(
         ),
         example="{'pseudotime': A.obs['pt']}",
         returns=":class:`~scanpy.tl.DptOut`",
-        uns="dpt",
+        uns=True,
     )
 )
 @deprecated_arg(
@@ -82,8 +81,8 @@ def dpt(
     n_branchings: int = 0,
     min_group_size: float = 0.01,
     allow_kendall_tau_shift: bool = True,
-    use: MultiAcc | str | Prefix | None = None,
-    out: Mapping[str, VecRef | str] | Prefix | bool = False,
+    use: MultiAcc | str | None = None,
+    out: Mapping[str, VecRef | str] | bool = False,
     # deprecated
     neighbors_key: str | None = None,
     copy: bool = False,
@@ -144,9 +143,9 @@ def dpt(
         .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances,
         respectively.
     use
-        Where :func:`~scanpy.tl.diffmap` wrote its results, i.e. the `out` passed to it:
-        `None` for the default places, `sc.Prefix('p')` for `A.obsm['p_diffmap']`,
-        or an accessor like `A.obsm['k']`.
+        Where :func:`~scanpy.tl.diffmap` wrote its results, i.e. the `out` passed to it,
+        e.g. `A.obsm['k']` (with its `.uns` entry `'k'`).
+        If :data:`None`, the default places.
     {out}
     copy
         Copy instance before computation and return a copy.
@@ -177,9 +176,9 @@ def dpt(
         None,
         dests=lambda _: DPT_BASES,
         kinds=DPT_KINDS,
-        bases=DPT_BASES,
-        uns="dpt",
+        uns=True,
         default="dpt",
+        primary=False,
     )
     # standard errors, warnings etc.
 
@@ -279,12 +278,18 @@ class DPT(Neighbors):
         min_group_size: float = 0.01,
         n_branchings: int = 0,
         allow_kendall_tau_shift: bool = False,
+        use: GraphAcc | str | None = None,
         neighbors_key: str | None = None,
-        diffmap: MultiAcc | str | Prefix | None = None,
+        diffmap: MultiAcc | str | None = None,
     ):
-        super().__init__(
-            adata, n_dcs=n_dcs, neighbors_key=neighbors_key, diffmap=diffmap
-        )
+        with own_deprecations():  # callers handle `neighbors_key`’s deprecation
+            super().__init__(
+                adata,
+                n_dcs=n_dcs,
+                use=use,
+                neighbors_key=neighbors_key,
+                diffmap=diffmap,
+            )
         self.n_branchings = n_branchings
         self.min_group_size = (
             min_group_size

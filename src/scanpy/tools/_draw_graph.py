@@ -17,7 +17,7 @@ from .._docs import (
 )
 from .._keys import _embedding_keys
 from .._settings import Default
-from .._utils import _choose_graph, _doc_params, get_literal_vals
+from .._utils import _doc_params, get_literal_vals
 from .._utils.random import (
     _accepts_legacy_random_state,
     _if_legacy_apply_global,
@@ -27,7 +27,7 @@ from .._utils.random import (
 from ..get._out import _out_key, deprecated_copy
 from ..get._types import MultiAcc
 from ..get._use import _resolve_ref
-from ..neighbors._common import _graph_args
+from ..neighbors._common import _use_graph
 from ._docs import doc_use_neighbors
 from ._utils import get_init_pos_from_paga
 
@@ -40,9 +40,7 @@ if TYPE_CHECKING:
 
     from .._compat import CSBase
     from .._utils.random import RNGLike, SeedLike
-    from ..get._out import Prefix
     from ..get._types import GraphAcc
-    from ..neighbors._common import NeighborsUse
 
 
 type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
@@ -50,11 +48,10 @@ type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular",
 
 @_doc_params(
     rng=doc_rng,
-    use=doc_use_neighbors(graph=True),
+    use=doc_use_neighbors(),
     out=doc_out_key(
         "the embedding",
         example="A.obsm['fa']",
-        prefixed="`.obsm['p_graph_{layout}']` and `.uns['p_graph_{layout}']`",
         default=(
             "`.obsm['X_draw_graph_{layout}']` and `.uns['draw_graph']` "
             "(`.obsm['graph_{layout}']` if :attr:`scanpy.settings.preset` is "
@@ -75,8 +72,8 @@ def draw_graph(  # noqa: PLR0912, PLR0913
     root: int | None = None,
     rng: SeedLike | RNGLike | None = None,
     n_jobs: int | None = None,
-    use: NeighborsUse | GraphAcc | str = None,
-    out: MultiAcc | str | Prefix | bool = False,
+    use: GraphAcc | str | None = None,
+    out: MultiAcc | str | bool = False,
     # deprecated
     adjacency: CSBase | None = None,
     neighbors_key: str | None = None,
@@ -165,7 +162,6 @@ def draw_graph(  # noqa: PLR0912, PLR0913
         out,
         None,
         kind="obsm",
-        base=f"graph_{layout}",
         default=Default(),
     )
     if isinstance(key, str):
@@ -184,12 +180,9 @@ def draw_graph(  # noqa: PLR0912, PLR0913
     if layout not in (layouts := get_literal_vals(_Layout)):
         msg = f"Provide a valid layout, one of {layouts}."
         raise ValueError(msg)
-    if adjacency is None:
-        obsp, neighbors_key = _graph_args(use, obsp=obsp, neighbors_key=neighbors_key)
-        adjacency = _choose_graph(adata, obsp, neighbors_key)
-    elif use is not None:
-        msg = "Pass either `use` or `adjacency`, not both."
-        raise TypeError(msg)
+    adjacency = _use_graph(
+        adata, use, adjacency=adjacency, obsp=obsp, neighbors_key=neighbors_key
+    )
     # init coordinates
     if isinstance(init_pos, str) and init_pos != "paga":
         init_pos = _resolve_ref(init_pos, vec=False)

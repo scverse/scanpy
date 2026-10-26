@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from scverse_misc import deprecated_arg
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._docs import DEPR_KEY_ADDED, doc_out_key
@@ -14,15 +14,13 @@ from .._settings import Default
 from .._utils import _doc_params, _get_basis_key, sanitize_anndata
 from ..get._out import _out_key
 from ..get._types import MultiAcc
-from ..get._use import _resolve_ref
+from ..get._use import _obs_col, _resolve_ref
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from anndata import AnnData
     from anndata.acc import AdRef
-
-    from ..get._out import Prefix
 
 
 def _calc_density(x: np.ndarray, y: np.ndarray):
@@ -46,20 +44,21 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
     out=doc_out_key(
         "the densities",
         example="A.obs['density']",
-        prefixed="`.obs['p_[basis]_density_[groupby]']` and `.uns['p_[basis]_density_[groupby]_params']`",
         key_added="`key_added='k'` is `out=A.obs['k']`.",
         default="`.obs['[basis]_density_[groupby]']` and `.uns['[basis]_density_[groupby]_params']`",
     ).replace("are stored under the same key", "are named after its key")
 )
 @deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_arg("basis", Deprecation("1.13.0", "Use `use` instead."))
 def embedding_density(  # noqa: PLR0912, PLR0915
     adata: AnnData,
-    basis: MultiAcc | str | Default = Default("'umap'"),
+    use: MultiAcc | str | Default = Default("'umap'"),
     *,
-    groupby: str | None = None,
+    groupby: AdRef | str | None = None,
     components: str | Sequence[str] | None = None,
-    out: AdRef | str | Prefix | bool = False,
+    out: AdRef | str | bool = False,
     # deprecated
+    basis: MultiAcc | str | None = None,
     key_added: str | None = None,
 ) -> np.ndarray | None:
     r"""Calculate the density of cells in an embedding (per condition).
@@ -85,7 +84,7 @@ def embedding_density(  # noqa: PLR0912, PLR0915
     ----------
     adata
         The annotated data matrix.
-    basis
+    use
         The embedding over which the density will be calculated,
         e.g. `A.obsm['umap']`.
         If :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`,
@@ -94,12 +93,16 @@ def embedding_density(  # noqa: PLR0912, PLR0915
         (or `adata.obsm['[basis]']`).
         By default, the UMAP embedding.
     groupby
-        Key for categorical observation/cell annotation for which densities
+        Categorical observation/cell annotation for which densities
         are calculated per category.
+        Given by a reference like `A.obs['phase']`, or by column name
+        (:class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d with :attr:`~scanpy.Preset.ScanpyV2Preview`).
     components
         The embedding dimensions over which the density should be calculated.
         This is limited to two components.
     {out}
+    basis
+        The deprecated name of `use`.
 
     Returns
     -------
@@ -119,7 +122,7 @@ def embedding_density(  # noqa: PLR0912, PLR0915
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.umap(adata)
-        sc.tl.embedding_density(adata, basis='umap', groupby='phase')
+        sc.tl.embedding_density(adata, 'umap', groupby='phase')
         sc.pl.embedding_density(
             adata, basis='umap', key='umap_density_phase', group='G1'
         )
@@ -137,6 +140,13 @@ def embedding_density(  # noqa: PLR0912, PLR0915
     pl.embedding_density
 
     """
+    if basis is not None:
+        if not isinstance(use, Default):
+            msg = "Pass either `use` or `basis`, not both."
+            raise TypeError(msg)
+        use = basis
+    basis = use
+    groupby = _obs_col(groupby, param="groupby")
     if isinstance(basis, Default):
         basis = "umap"  # found in `X_umap` or `umap`
     elif isinstance(basis, str):
@@ -149,7 +159,7 @@ def embedding_density(  # noqa: PLR0912, PLR0915
             basis = "draw_graph_fa"
         basis_key = _get_basis_key(adata, basis)
     default = f"{basis}_density" + ("" if groupby is None else f"_{groupby}")
-    key = _out_key(out, key_added, kind="obs", base=default, default=default)
+    key = _out_key(out, key_added, kind="obs", default=default)
     # to ensure that newly created covariates are categorical
     # to test for category numbers
     if key is not True:

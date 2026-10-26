@@ -10,13 +10,12 @@ from .._compat import warn
 from .._settings import settings
 from .._utils import get_literal_vals
 from .._utils.random import _rng_kwds
-from ..get._out import Prefix, _dest_key, _out_dests
+from ..get._out import _dest_key
 from ..get._types import GraphAcc
 from ..get._use import _resolve_obs
 from ._types import NeighborsDict, NeighborsOut, _KnownTransformer
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
     from typing import Unpack
 
     from anndata import AnnData
@@ -24,6 +23,7 @@ if TYPE_CHECKING:
 
     from .._compat import CSBase, CSRBase
     from .._settings import Default
+    from .._utils import NeighborsView
     from ..get._out import OutKind
     from ..get._types import _SetRep
     from ._types import (
@@ -292,58 +292,36 @@ def _get_indices_distances_from_rect_matrix(
     )
 
 
-type NeighborsUse = Mapping[str, GraphAcc | str] | Prefix | None
-"""What `pp.neighbors`’ `out` was, to find its outputs (`None` for the default)."""
+def _graph_key(use: GraphAcc | str) -> str:
+    """Get the `.obsp` key of a graph given as `use`."""
+    graph = _resolve_obs(use)
+    if not isinstance(graph, GraphAcc):
+        msg = f"`use` must point to `.obsp`, was {use!r}"
+        raise TypeError(msg)
+    return graph.k
 
 
-def _neighbors_key(use: NeighborsUse, neighbors_key: str | None = None) -> str | None:
-    """Find the `.uns` key `pp.neighbors(out=use)` wrote, or pass through the deprecated `neighbors_key`."""
-    if neighbors_key is not None:
-        if use is not None:
+def _neighbors_view(
+    adata: AnnData, use: GraphAcc | str | None, neighbors_key: str | None = None
+) -> NeighborsView | None:
+    """View the neighbors around the graph `use`, or the deprecated `neighbors_key`’s.
+
+    Returns `None` if there are no neighbors at the default place.
+    """
+    from .._utils import NeighborsView
+
+    if use is not None:
+        if neighbors_key is not None:
             msg = "Pass either `use` or `neighbors_key`, not both."
             raise TypeError(msg)
-        return neighbors_key
-    if use is None:
-        return None
-    key, _ = _out_dests(
-        use,
-        None,
-        dests=_neighbors_dests,
-        kinds=NEIGHBORS_KINDS,
-        bases=_neighbors_dests(None),
-        uns="neighbors",
-    )
-    return key
-
-
-def _graph_args(
-    use: NeighborsUse | GraphAcc | str,
-    *,
-    obsp: str | None,
-    neighbors_key: str | None,
-) -> tuple[str | None, str | None]:
-    """Translate the `use` of a function only using connectivities into `(obsp, neighbors_key)`.
-
-    Such functions also accept a single `A.obsp[...]`, replacing the deprecated `obsp`.
-    """
-    if isinstance(use, str | GraphAcc):
-        if obsp is not None or neighbors_key is not None:
-            msg = "Pass either `use` or `obsp`/`neighbors_key`, not both."
-            raise TypeError(msg)
-        graph = _resolve_obs(use)
-        if not isinstance(graph, GraphAcc):
-            msg = f"`use` must point to `.obsp`, was {use!r}"
-            raise TypeError(msg)
-        return graph.k, None
-    if use is not None and obsp is not None:
-        msg = "Pass either `use` or `obsp`, not both."
-        raise TypeError(msg)
-    return obsp, _neighbors_key(use, neighbors_key)
+        return NeighborsView.from_graph(adata, _graph_key(use))
+    key = neighbors_key or "neighbors"
+    return NeighborsView(adata, key) if key in adata.uns else None
 
 
 def _use_graph(
     adata: AnnData,
-    use: NeighborsUse | GraphAcc | str,
+    use: GraphAcc | str | None,
     *,
     adjacency: CSBase | None = None,
     obsp: str | None = None,
@@ -352,10 +330,14 @@ def _use_graph(
     """Choose the connectivities from `use`, or the deprecated `adjacency`/`obsp`/`neighbors_key`."""
     from .._utils import _choose_graph
 
-    if adjacency is None:
-        obsp, neighbors_key = _graph_args(use, obsp=obsp, neighbors_key=neighbors_key)
-        return _choose_graph(adata, obsp, neighbors_key)
-    if use is not None:
-        msg = "Pass either `use` or `adjacency`, not both."
+    if (adjacency is not None) + (obsp is not None) + (use is not None) > 1:
+        msg = "Pass only one of `use`, `obsp`, or `adjacency`."
         raise TypeError(msg)
-    return adjacency
+    if adjacency is not None:
+        return adjacency
+    if use is not None:
+        if neighbors_key is not None:
+            msg = "Pass either `use` or `neighbors_key`, not both."
+            raise TypeError(msg)
+        return adata.obsp[_graph_key(use)]
+    return _choose_graph(adata, obsp, neighbors_key)

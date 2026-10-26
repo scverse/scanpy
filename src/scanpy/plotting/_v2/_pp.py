@@ -5,18 +5,17 @@ from typing import TYPE_CHECKING
 import holoviews as hv
 from hv_anndata import A
 
-from ...get._out import Prefix, _out_dests, _out_key
+from ...get._out import _out_dests
 from ...preprocessing._scrublet import SCRUBLET_BASES, SCRUBLET_KINDS
 from .._common import highest_expr_genes as _highest_expr_genes
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    import pandas as pd
     from anndata import AnnData
     from anndata.acc import AdRef
 
-    from ...get._types import MultiAcc, RepAcc, VecRef
+    from ...get._types import RepAcc, VecRef
 
 
 def highest_expr_genes(
@@ -65,32 +64,13 @@ def highest_expr_genes(
     )
 
 
-def _hvg_table(
-    adata: AnnData, use: MultiAcc | str | Prefix | None
-) -> tuple[pd.DataFrame, dict]:
-    """Find what `pp.highly_variable_genes` wrote, given its `out` (`None` for the default)."""
-    if use is None or isinstance(use, Prefix):
-        prefix = "" if use is None else f"{use.prefix}_"
-        cols = [c for c in adata.var.columns if c.startswith(prefix)]
-        table = adata.var[cols].rename(columns=lambda c: c.removeprefix(prefix))
-        return table, adata.uns[f"{prefix}hvg"]
-    key = _out_key(use, None, kind="varm", base="hvg")
-    return adata.varm[key], adata.uns[key]
-
-
-def highly_variable_genes(
-    adata: AnnData, *, use: MultiAcc | str | Prefix | None = None
-) -> hv.Layout:
+def highly_variable_genes(adata: AnnData) -> hv.Layout:
     """Plot dispersions used to identify highly variable genes.
 
     Parameters
     ----------
     adata
         The AnnData object.
-    use
-        Where :func:`~scanpy.pp.highly_variable_genes` wrote its results, i.e. the `out` passed to it:
-        `None` for the default places, `sc.Prefix('p')` for the `p_`-prefixed columns,
-        or an accessor like `A.varm['hvg']`.
 
     Returns
     -------
@@ -112,7 +92,7 @@ def highly_variable_genes(
         sc.pl.highly_variable_genes(adata)
 
     """
-    table, info = _hvg_table(adata, use)
+    table, info = adata.var, adata.uns["hvg"]
     d1, d2 = (
         ("variances", "variances_norm")
         if info["flavor"].startswith("seurat_v3")
@@ -140,7 +120,7 @@ def highly_variable_genes(
 
 
 def scrublet_score_distribution(
-    adata: AnnData, *, use: Mapping[str, VecRef | str] | Prefix | None = None
+    adata: AnnData, *, use: Mapping[str, VecRef | str] | None = None
 ) -> hv.Layout:
     """Plot the doublet score distribution.
 
@@ -153,8 +133,7 @@ def scrublet_score_distribution(
         The AnnData object.
     use
         Where :func:`~scanpy.pp.scrublet` wrote its results, i.e. the `out` passed to it:
-        `None` for the default places, `sc.Prefix('p')` for the `p_`-prefixed ones,
-        or a mapping like `{'doublet_score': A.obs['score']}`.
+        `None` for the default places, or a mapping like `{'doublet_score': A.obs['score']}`.
 
     Returns
     -------
@@ -181,9 +160,9 @@ def scrublet_score_distribution(
         None,
         dests=lambda _: SCRUBLET_BASES,
         kinds=SCRUBLET_KINDS,
-        bases=SCRUBLET_BASES,
-        uns="scrublet",
+        uns=True,
         default="scrublet",
+        primary=False,
     )
     score = A.obs[dests.doublet_score["obs"]]
     labels = dict(

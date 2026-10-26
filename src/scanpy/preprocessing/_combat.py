@@ -20,7 +20,6 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..get._out import Prefix
     from ..get._types import AdRef, RepAcc
 
 
@@ -141,7 +140,7 @@ def _standardize_data(
 
 @_doc_params(
     use=doc_use("Which matrix to correct.", legacy=()),
-    out=doc_out("combat"),
+    out=doc_out(),
     ref=doc_ref_compat,
 )
 @deprecated_arg(
@@ -154,7 +153,7 @@ def combat(  # noqa: PLR0915
     *,
     covariates: Collection[AdRef | str] | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Prefix | bool = False,
+    out: RepAcc | str | bool = False,
     # deprecated
     inplace: bool = True,
     key: str | None = None,
@@ -308,7 +307,7 @@ def combat(  # noqa: PLR0915
 
     # put back into the adata object or return
     x = bayesdata.to_numpy().transpose()
-    return _write_out(adata, x, out=out, base="combat", use=use)
+    return _write_out(adata, x, out=out, use=use)
 
 
 def _it_sol(

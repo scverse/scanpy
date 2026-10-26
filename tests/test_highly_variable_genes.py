@@ -777,33 +777,21 @@ def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     assert_frame_equal(output_mem, output_dask, atol=1e-4)
 
 
-@needs.anndata_acc
 @pytest.mark.parametrize("flavor", ["seurat", "seurat_v3"])
 def test_hvg_out(flavor: str) -> None:
-    """`out` can prefix the `.var` columns or write the whole table to `.varm`."""
-    from anndata.acc import A
-
+    """`out=True` returns the table, `out=False` writes the `.var` columns."""
     adata = pbmc3k()
     sc.pp.filter_genes(adata, min_cells=3)
     if flavor == "seurat":
         sc.pp.log1p(adata)
     var_before = set(adata.var)
     df = sc.pp.highly_variable_genes(adata, flavor=flavor, n_top_genes=100, out=True)
-
-    sc.pp.highly_variable_genes(
-        adata, flavor=flavor, n_top_genes=100, out=A.varm["hvg"]
-    )
     assert set(adata.var) == var_before
-    np.testing.assert_array_equal(
-        adata.varm["hvg"]["highly_variable"], df["highly_variable"]
-    )
-    assert adata.uns["hvg"]["flavor"] == flavor
+    assert "hvg" not in adata.uns
 
-    sc.pp.highly_variable_genes(
-        adata, flavor=flavor, n_top_genes=100, out=sc.Prefix("p")
-    )
-    np.testing.assert_array_equal(adata.var["p_highly_variable"], df["highly_variable"])
-    assert "p_hvg" in adata.uns
+    sc.pp.highly_variable_genes(adata, flavor=flavor, n_top_genes=100)
+    np.testing.assert_array_equal(adata.var["highly_variable"], df["highly_variable"])
+    assert adata.uns["hvg"]["flavor"] == flavor
 
 
 @needs.anndata_acc

@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
     from ..._utils.random import RNGLike, SeedLike
-    from ...get._out import Prefix
     from ...get._types import MultiAcc
 
 
@@ -47,7 +46,6 @@ class Stopping(_Stopping, enum.Enum):
     out=doc_out_key(
         "the adjusted embedding",
         example="A.obsm['pca_harmony']",
-        prefixed="`.obsm['p_pca_harmony']`",
         default="`.obsm['pca_harmony']`",
     ),
 )
@@ -56,7 +54,7 @@ def harmony_integrate(  # noqa: PLR0913
     batch: AdRef | str | Sequence[AdRef | str],
     *,
     use: MultiAcc | str | None = None,
-    out: MultiAcc | str | Prefix | bool = False,
+    out: MultiAcc | str | bool = False,
     dtype: DTypeLike = np.float64,
     flavor: Literal["harmony2", "harmony1"] = "harmony2",
     n_clusters: int | None = None,
@@ -237,7 +235,7 @@ def harmony_integrate(  # noqa: PLR0913
     input_data = (
         adata.obsm[_embedding_keys("pca").obsm] if use is None else _get_arr(adata, use)
     )
-    dest = _out_key(out, None, kind="obsm", base="pca_harmony", default="pca_harmony")
+    dest = _out_key(out, None, kind="obsm", default="pca_harmony")
 
     # Convert to numpy array with specified dtype
     try:

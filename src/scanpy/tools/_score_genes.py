@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
 
     from .._utils.random import RNGLike, SeedLike
-    from ..get._out import OutKind, Prefix
+    from ..get._out import OutKind
     from ..get._types import RepAcc, VecRef, _SetRep
 
 
@@ -105,7 +105,7 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
 @_doc_params(
     rng=doc_rng,
     use=doc_use("Which matrix to score on.", legacy=("layer",)),
-    out=doc_out("score", default="`.obs['score']`"),
+    out=doc_out(default="`.obs['score']`"),
 )
 @_accepts_legacy_random_state(0)
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
@@ -121,7 +121,7 @@ def score_genes(  # noqa: PLR0913
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
     use: RepAcc | str | None = None,
-    out: VecRef | str | Prefix | bool = False,
+    out: VecRef | str | bool = False,
     rng: SeedLike | RNGLike | None = None,
     # deprecated
     score_name: str | None = None,
@@ -245,9 +245,7 @@ def score_genes(  # noqa: PLR0913
             f"    {len(control_genes)} total control genes are used."
         ),
     )
-    if (
-        unwritten := _write_out(adata, scores, out=out, base="score", obs=key)
-    ) is not None:
+    if (unwritten := _write_out(adata, scores, out=out, obs=key)) is not None:
         return unwritten
     return None
 
@@ -374,7 +372,7 @@ def score_genes_cell_cycle(
     *,
     s_genes: Sequence[str],
     g2m_genes: Sequence[str],
-    out: Mapping[str, VecRef | str] | Prefix | bool = False,
+    out: Mapping[str, VecRef | str] | bool = False,
     # deprecated
     copy: bool = False,
     **kwargs,
@@ -428,7 +426,7 @@ def score_genes_cell_cycle(
         None,
         dests=lambda _: CELL_CYCLE_BASES,
         kinds=CELL_CYCLE_KINDS,
-        bases=CELL_CYCLE_BASES,
+        primary=False,
     )
     logg.info("calculating cell cycle phase")
 

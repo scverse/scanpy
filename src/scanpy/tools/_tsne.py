@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from anndata.acc import MultiAcc
 
     from .._utils.random import RNGLike, SeedLike
-    from ..get._out import Prefix
     from ..get._types import RepAcc
 
 
@@ -35,7 +34,6 @@ if TYPE_CHECKING:
     out=doc_out_key(
         "the embedding",
         example="A.obsm['tsne']",
-        prefixed="`.obsm['p_tsne']` and `.uns['p_tsne']`",
         key_added="`key_added='k'` is `out=A.obsm['k']`.",
         default=(
             "`.obsm['X_tsne']` and `.uns['tsne']` "
@@ -60,7 +58,7 @@ def tsne(  # noqa: PLR0913
     rng: SeedLike | RNGLike | None = None,
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
-    out: MultiAcc | str | Prefix | bool = False,
+    out: MultiAcc | str | bool = False,
     # deprecated
     key_added: str | None = None,
     copy: bool = False,
@@ -129,7 +127,7 @@ def tsne(  # noqa: PLR0913
     start = logg.info("computing tSNE")
     if use is not None:
         use = _resolve_obs(use, rep=True)
-    key = _out_key(out, key_added, kind="obsm", base="tsne", default=Default())
+    key = _out_key(out, key_added, kind="obsm", default=Default())
     x = _choose_representation_compat(adata, use=use, use_rep=use_rep, n_pcs=n_pcs)
     raise_not_implemented_error_if_backed_type(x, "tsne")
     # params for sklearn

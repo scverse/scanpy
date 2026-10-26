@@ -13,15 +13,23 @@ from scverse_misc import Deprecation, deprecated, deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
-from .._docs import DEPR_KEY_ADDED, doc_out_key
-from .._utils import _choose_graph, _doc_params
+from .._docs import (
+    DEPR_ADJACENCY,
+    DEPR_KEY_ADDED,
+    DEPR_NEIGHBORS_KEY,
+    DEPR_OBSP_GRAPH,
+    doc_out_key,
+)
+from .._utils import _doc_params
 from ..get._out import _out_key, deprecated_copy
+from ..neighbors._common import _use_graph
 from ._docs import (
     doc_adata,
     doc_adjacency,
     doc_neighbors_key,
     doc_obsp,
     doc_restrict_to,
+    doc_use_neighbors,
 )
 from ._utils_clustering import rename_groups, restrict_adjacency
 
@@ -33,8 +41,7 @@ if TYPE_CHECKING:
 
     from .._compat import CSBase
     from .._utils.random import _LegacyRandom
-    from ..get._out import Prefix
-    from ..get._types import VecRef
+    from ..get._types import GraphAcc, VecRef
 
     try:  # sphinx-autodoc-typehints + optional dependency
         from louvain.VertexPartition import MutableVertexPartition
@@ -52,10 +59,10 @@ if TYPE_CHECKING:
     adjacency=doc_adjacency,
     neighbors_key=doc_neighbors_key.format(method="louvain"),
     obsp=doc_obsp,
+    use=doc_use_neighbors(),
     out=doc_out_key(
         "the cluster labels",
         example="A.obs['clusters']",
-        prefixed="`.obs['p_louvain']` and `.uns['p_louvain']`",
         key_added="`key_added='k'` is `out=A.obs['k']`.",
         default=(
             "`.obs['louvain']` and `.uns['louvain']` "
@@ -64,6 +71,9 @@ if TYPE_CHECKING:
     ),
 )
 @deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_arg("adjacency", DEPR_ADJACENCY)
+@deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
+@deprecated_arg("obsp", DEPR_OBSP_GRAPH)
 @deprecated_copy
 def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
@@ -71,16 +81,17 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     *,
     random_state: _LegacyRandom = 0,
     restrict_to: tuple[str, Sequence[str]] | None = None,
-    adjacency: CSBase | None = None,
     flavor: Literal["vtraag", "igraph"] = "vtraag",
     directed: bool = True,
     use_weights: bool = False,
     partition_type: type[MutableVertexPartition] | None = None,
     partition_kwargs: Mapping[str, Any] = frozendict({}),
+    use: GraphAcc | str | None = None,
+    out: VecRef | bool = False,
+    # deprecated
+    adjacency: CSBase | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
-    out: VecRef | Prefix | bool = False,
-    # deprecated
     key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | pd.Categorical | None:
@@ -107,7 +118,6 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     random_state
         Change the initialization of the optimization.
     {restrict_to}
-    {adjacency}
     flavor
         Choose between to packages for computing the clustering.
 
@@ -125,9 +135,11 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     partition_kwargs
         Key word arguments to pass to partitioning,
         if ``vtraag`` method is being used.
+    {use}
+    {out}
+    {adjacency}
     {neighbors_key}
     {obsp}
-    {out}
     copy
         Copy adata or modify it inplace.
 
@@ -144,7 +156,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
         and `n_iterations`.
 
     """
-    key = _out_key(out, key_added, kind="obs", base="louvain", default="louvain")
+    key = _out_key(out, key_added, kind="obs", default="louvain")
     # like `key_added`, the default key gets a suffix, keys from `out` are literal
     if restrict_to is not None and key == "louvain" and out is False:
         key += "_R"
@@ -153,8 +165,9 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     if (flavor != "vtraag") and (partition_type is not None):
         msg = '`partition_type` is only a valid argument when `flavour` is "vtraag"'
         raise ValueError(msg)
-    if adjacency is None:
-        adjacency = _choose_graph(adata, obsp, neighbors_key)
+    adjacency = _use_graph(
+        adata, use, adjacency=adjacency, obsp=obsp, neighbors_key=neighbors_key
+    )
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
         adjacency, restrict_indices = restrict_adjacency(

@@ -585,20 +585,30 @@ def test_mean_in_log_space(
 
 
 def test_rank_genes_groups_out() -> None:
-    """`out=True` returns what would be stored, `Prefix`/`key_added` rename it."""
+    """`out=True` returns what would be stored, `key_added` renames it."""
     pbmc = pbmc68k_reduced()
     before = set(pbmc.uns)
     res = rank_genes_groups(pbmc, "bulk_labels", n_genes=3, out=True)
     assert set(pbmc.uns) == before
     assert {"params", "names", "scores"} <= res.keys()
 
-    rank_genes_groups(pbmc, "bulk_labels", n_genes=3, out=sc.Prefix("p"))
-    np.testing.assert_array_equal(
-        pbmc.uns["p_rank_genes_groups"]["names"], res["names"]
-    )
-    with pytest.warns(FutureWarning, match=r"argument key_added is deprecated"):
-        rank_genes_groups(pbmc, "bulk_labels", n_genes=3, key_added="k")
+    rank_genes_groups(pbmc, "bulk_labels", n_genes=3)
+    np.testing.assert_array_equal(pbmc.uns["rank_genes_groups"]["names"], res["names"])
+    # not deprecated until there are `.uns` accessors
+    rank_genes_groups(pbmc, "bulk_labels", n_genes=3, key_added="k")
     np.testing.assert_array_equal(pbmc.uns["k"]["names"], res["names"])
 
-    with pytest.raises(TypeError, match=r"`out` must be a `bool` or `sc.Prefix`"):
+    with pytest.raises(TypeError, match=r"`out` must be a `bool`"):
         rank_genes_groups(pbmc, "bulk_labels", out="obs.x")
+
+
+@needs.anndata_acc
+def test_rank_genes_groups_groupby_ref() -> None:
+    """`groupby` takes a reference like `A.obs['bulk_labels']`."""
+    from anndata.acc import A
+
+    pbmc = pbmc68k_reduced()
+    expected = rank_genes_groups(pbmc, "bulk_labels", n_genes=3, out=True)
+    res = rank_genes_groups(pbmc, A.obs["bulk_labels"], n_genes=3, out=True)
+    np.testing.assert_array_equal(res["names"], expected["names"])
+    assert res["params"]["groupby"] == "bulk_labels"

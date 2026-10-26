@@ -18,6 +18,8 @@ from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from scanpy._compat import CSRBase
+
 pytestmark = needs.anndata_acc
 
 
@@ -44,12 +46,8 @@ TRANSFORMS: dict[str, Callable[..., object]] = {
     ),
     "regress_out": lambda adata, **kw: sc.pp.regress_out(adata, "batch", **kw),
 }
-# transforms with several outputs, whose `out` is a mapping (name of the matrix output)
+# transforms with several outputs: `out=True` returns them all (name of the matrix output)
 MULTI = {"scale": "scaled", "normalize_total": "normalized"}
-
-
-def _out(name: str, acc: object) -> object:
-    return {MULTI[name]: acc} if name in MULTI else acc
 
 
 @pytest.mark.filterwarnings("ignore:zero-centering a sparse:UserWarning")
@@ -63,7 +61,7 @@ def test_out_writes_elsewhere(
 
     adata.layers["counts"] = array_type(adata.layers["counts"])
     before = _orig(adata).copy()
-    TRANSFORMS[name](adata, use=A.layers["counts"], out=_out(name, A.layers["result"]))
+    TRANSFORMS[name](adata, use=A.layers["counts"], out=A.layers["result"])
     assert "result" in adata.layers
     np.testing.assert_array_equal(_orig(adata), before)
     assert not np.allclose(asarray(adata.layers["result"]), before)
@@ -107,10 +105,8 @@ def test_use_str_is_resolved(adata: AnnData, name: str) -> None:
     from anndata.acc import A
 
     expected = adata.copy()
-    TRANSFORMS[name](
-        expected, use=A.layers["counts"], out=_out(name, A.layers["result"])
-    )
-    TRANSFORMS[name](adata, use="layers.counts", out=_out(name, "layers.result"))
+    TRANSFORMS[name](expected, use=A.layers["counts"], out=A.layers["result"])
+    TRANSFORMS[name](adata, use="layers.counts", out="layers.result")
     np.testing.assert_allclose(adata.layers["result"], expected.layers["result"])
 
 
@@ -260,13 +256,13 @@ def test_normalize_total_inplace_deprecated(
 
 
 def test_pca_use(adata: AnnData) -> None:
-    """`pca` takes `use`, and `sc.Prefix` names all of obsm, varm and uns."""
+    """`pca` takes `use`, and an accessor for the embedding names the loadings and `.uns` too."""
     from anndata.acc import A
 
-    sc.pp.pca(adata, n_comps=2, use=A.layers["counts"], out=sc.Prefix("mine"))
-    assert "mine_pca" in adata.obsm
-    assert "mine_pca" in adata.varm
-    assert "mine_pca" in adata.uns
+    sc.pp.pca(adata, n_comps=2, use=A.layers["counts"], out=A.obsm["mine"])
+    assert set(adata.obsm) == {"mine"}
+    assert set(adata.varm) == {"mine"}
+    assert "mine" in adata.uns
 
 
 @pytest.fixture
@@ -283,12 +279,6 @@ def test_out_single_acc(adata_neighbors: AnnData) -> None:
     assert "mine" in adata_neighbors.obsm
     assert "params" in adata_neighbors.uns["mine"]
     assert set(adata_neighbors.obsm) == {"mine"}  # nothing at the default key
-
-
-def test_out_single_prefix(adata_neighbors: AnnData) -> None:
-    sc.tl.umap(adata_neighbors, out=sc.Prefix("mine"))
-    assert "mine_umap" in adata_neighbors.obsm
-    assert "mine_umap" in adata_neighbors.uns
 
 
 def test_out_single_true(adata_neighbors: AnnData) -> None:
@@ -315,59 +305,93 @@ def test_out_multi_mapping(adata: AnnData) -> None:
     assert set(adata.obsp) == {"c"}
     assert adata.uns["c"]["connectivities_key"] == "c"
     assert "distances_key" not in adata.uns["c"]
-    sc.tl.umap(adata, use=dict(connectivities=A.obsp["c"]))  # readers find it
+    sc.tl.umap(adata, use=A.obsp["c"])  # readers find it
 
 
-def test_out_multi_prefix(adata: AnnData) -> None:
-    sc.pp.neighbors(adata, n_neighbors=3, out=sc.Prefix("p"))
-    assert set(adata.obsp) == {"p_connectivities", "p_distances"}
-    assert "p" not in adata.uns
-    assert adata.uns["p_neighbors"]["connectivities_key"] == "p_connectivities"
-    assert adata.uns["p_neighbors"]["distances_key"] == "p_distances"
+def test_out_multi_primary(adata: AnnData) -> None:
+    """A single accessor names the primary output, the others follow its key."""
+    from anndata.acc import A
+
+    sc.pp.neighbors(adata, n_neighbors=3, out=A.obsp["p"])
+    assert set(adata.obsp) == {"p", "p_distances"}  # distances share `.obsp`
+    assert "neighbors" not in adata.uns
+    assert adata.uns["p"]["connectivities_key"] == "p"
+    assert adata.uns["p"]["distances_key"] == "p_distances"
+
+
+@pytest.mark.parametrize(
+    ("call", "out"),
+    [
+        pytest.param(
+            lambda a, **kw: sc.pp.neighbors(a, n_neighbors=3, **kw),
+            lambda acc: dict(
+                connectivities=acc.obsp["connectivities"],
+                distances=acc.obsp["distances"],
+            ),
+            id="neighbors",
+        ),
+        pytest.param(
+            lambda a, **kw: sc.pp.pca(a, n_comps=2, **kw),
+            lambda acc: dict(embedding=acc.obsm["X_pca"], loadings=acc.varm["PCs"]),
+            id="pca",
+        ),
+        pytest.param(
+            lambda a, **kw: sc.pp.pca(a, n_comps=2, **kw),
+            lambda acc: acc.obsm["X_pca"],
+            id="pca-single",
+        ),
+    ],
+)
+def test_out_default_places_is_default(
+    adata: AnnData, call: Callable[..., object], out: Callable[[object], object]
+) -> None:
+    """Naming the default places in `out` does exactly what `out=False` does."""
+    from anndata.acc import A
+
+    expected = adata.copy()
+    call(expected)
+    call(adata, out=out(A))
+    for attr in ("obsm", "varm", "obsp", "uns"):
+        assert getattr(adata, attr).keys() == getattr(expected, attr).keys(), attr
 
 
 @pytest.mark.parametrize(
     ("call", "expected"),
     [
-        pytest.param(sc.pp.log1p, dict(layers={"p_log1p"}), id="log1p"),
+        pytest.param(sc.pp.log1p, dict(layers={"p"}), id="log1p"),
         pytest.param(
             lambda a, **kw: sc.pp.scale(a, zero_center=True, **kw),
-            dict(layers={"p_scaled"}, var={"p_mean", "p_std"}),
+            # several outputs share `.var`, so they’re named `p_{name}`
+            dict(layers={"p"}, var={"p_mean", "p_std"}),
             id="scale",
         ),
         pytest.param(
             lambda a, **kw: sc.pp.normalize_total(a, target_sum=1, **kw),
-            dict(layers={"p_normalized"}, obs={"p_norm_factor"}),
+            dict(layers={"p"}),  # `norm_factor` isn’t written by default
             id="normalize_total",
-        ),
-        pytest.param(
-            lambda a, **kw: sc.tl.score_genes(a, list(a.var_names[:2]), **kw),
-            dict(obs={"p_score"}),
-            id="score_genes",
         ),
     ],
 )
 @pytest.mark.parametrize("use", ["X", "obsm"])
-def test_out_transform_prefix(
+def test_out_transform_primary(
     adata: AnnData,
     call: Callable[..., object],
     expected: dict[str, set[str]],
     use: str,
 ) -> None:
-    """`sc.Prefix('p')` names each output `p_{default name}`, matrices follow `use`’s kind."""
+    """A single accessor names the matrix, the other outputs follow its key."""
     from anndata.acc import A
 
-    adata.var_names = [f"g{i}" for i in range(adata.n_vars)]
     kw = {}
+    out = A.layers["p"]
     if use == "obsm":
-        if "layers" not in expected:
-            pytest.skip("no matrix output")
         adata.obsm["m"] = np.asarray(adata.X).copy()
         kw["use"] = A.obsm["m"]
+        out = A.obsm["p"]
         expected = dict(expected, obsm=expected["layers"] | {"m"}, layers=set())
     x_before = np.asarray(adata.X).copy()
     obs_before, var_before = set(adata.obs), set(adata.var)
-    call(adata, **kw, out=sc.Prefix("p"))
+    call(adata, **kw, out=out)
     assert set(adata.layers) - {None, "counts"} == expected.get("layers", set())
     assert set(adata.obsm) == expected.get("obsm", set())
     assert set(adata.obs) - obs_before == expected.get("obs", set())
@@ -387,7 +411,14 @@ def test_out_multi_true(adata: AnnData) -> None:
     ("out", "match"),
     [
         pytest.param(
-            "obsp.c", r"`out` must be a `bool`, `sc.Prefix`, or a mapping", id="bare"
+            "obsm.c",
+            r"Output 'connectivities' must be written to one of \['obsp'\]",
+            id="single-kind",
+        ),
+        pytest.param(
+            1,
+            r"`out` must be a `bool`, an accessor for the primary output, or a mapping",
+            id="type",
         ),
         pytest.param(
             dict(nope="obsp.c"), r"Unknown output\(s\) \['nope'\]", id="unknown"
@@ -415,7 +446,10 @@ def test_out_multi_invalid(adata: AnnData, out: object, match: str) -> None:
         pytest.param(sc.tl.umap, lambda a: a.obsm["k"], id="umap"),
         pytest.param(
             lambda a, **kw: sc.pp.neighbors(a, n_neighbors=3, **kw),
-            lambda a: sc.Prefix("k"),
+            lambda a: dict(
+                connectivities=a.obsp["k_connectivities"],
+                distances=a.obsp["k_distances"],
+            ),
             id="neighbors",
         ),
         pytest.param(
@@ -442,8 +476,8 @@ def test_key_added_deprecated(
     expected = adata_neighbors.copy()
     call(expected, out=equiv(A))
     if request.node.callspec.id == "neighbors":
-        # the only difference: `key_added` names the `.uns` entry `k`, not `k_neighbors`
-        expected.uns["k"] = expected.uns.pop("k_neighbors")
+        # the only difference: `key_added` names the `.uns` entry `k`, not `k_connectivities`
+        expected.uns["k"] = expected.uns.pop("k_connectivities")
     with pytest.warns(FutureWarning, match=r"argument key_added is deprecated"):
         call(adata_neighbors, key_added="k")
     assert adata_neighbors.uns.keys() == expected.uns.keys()
@@ -502,19 +536,23 @@ def test_normalize_total_out(adata: AnnData) -> None:
     np.testing.assert_allclose(adata.obs["nf"], res.norm_factor)
     np.testing.assert_array_equal(adata.X, _orig(adata))  # `X` not named
 
-    sc.pp.normalize_total(adata, target_sum=1, out=sc.Prefix("p"))
-    np.testing.assert_allclose(adata.obs["p_norm_factor"], res.norm_factor)
-    np.testing.assert_allclose(adata.layers["p_normalized"], res.normalized)
+    sc.pp.normalize_total(
+        adata, target_sum=1, out=dict(normalized=A.layers["p"], norm_factor=A.obs["p"])
+    )
+    np.testing.assert_allclose(adata.obs["p"], res.norm_factor)
+    np.testing.assert_allclose(adata.layers["p"], res.normalized)
     np.testing.assert_array_equal(adata.X, _orig(adata))
 
 
-def test_normalize_total_bare_acc_rejected(adata: AnnData) -> None:
+def test_normalize_total_single_acc(adata: AnnData) -> None:
+    """Like for one-output transforms, a single accessor names the matrix."""
     from anndata.acc import A
 
-    with pytest.raises(
-        TypeError, match=r"`out` must be a `bool`, `sc.Prefix`, or a mapping"
-    ):
-        sc.pp.normalize_total(adata, out=A.layers["x"])
+    obs_before = set(adata.obs)
+    sc.pp.normalize_total(adata, target_sum=1, out=A.layers["x"])
+    np.testing.assert_allclose(asarray(adata.layers["x"]).sum(axis=1), 1, rtol=1e-6)
+    np.testing.assert_array_equal(adata.X, _orig(adata))
+    assert set(adata.obs) == obs_before
 
 
 def test_scale_out_true_writes_nothing(adata: AnnData) -> None:
@@ -564,30 +602,26 @@ def test_pearson_residuals_pca_kwargs_out(adata: AnnData) -> None:
 
 
 # Every function writing an accompanying `.uns` entry next to its primary output,
-# as (call, `out` naming the primary output `k`, `.uns` key that should follow it,
-# `.uns` key for `out=sc.Prefix('p')`).
+# as (call, `out` naming the primary output `k`, `.uns` key that should follow it).
 # When adding an explicit `.uns` slot to `out`, extend these: they list all such functions.
 UNS_FOLLOWS_OUT = [
-    pytest.param(sc.tl.umap, "obsm.k", "k", "p_umap", id="umap"),
+    pytest.param(sc.tl.umap, "obsm.k", "k", id="umap"),
     pytest.param(
         lambda a, **kw: sc.tl.tsne(a, perplexity=5, **kw),
         "obsm.k",
         "k",
-        "p_tsne",
         id="tsne",
     ),
     pytest.param(
         lambda a, **kw: sc.tl.diffmap(a, n_comps=3, **kw),
         "obsm.k",
         "k",
-        "p_diffmap",
         id="diffmap",
     ),
     pytest.param(
         lambda a, **kw: sc.tl.draw_graph(a, layout="fr", **kw),
         "obsm.k",
         "k",
-        "p_graph_fr",
         id="draw_graph",
         marks=needs.igraph,
     ),
@@ -595,48 +629,51 @@ UNS_FOLLOWS_OUT = [
         lambda a, **kw: sc.tl.leiden(a, flavor="igraph", **kw),
         "obs.k",
         "k",
-        "p_leiden",
         id="leiden",
         marks=needs.igraph,
     ),
     pytest.param(
-        lambda a, **kw: sc.tl.embedding_density(a, basis="umap", **kw),
+        lambda a, **kw: sc.tl.embedding_density(a, "umap", **kw),
         "obs.k",
         "k_params",
-        "p_umap_density_params",
         id="embedding_density",
     ),
     pytest.param(
         sc.experimental.pp.normalize_pearson_residuals,
         "layers.k",
         "k",
-        "p_pearson_residuals",
         id="normalize_pearson_residuals",
     ),
     pytest.param(
         lambda a, **kw: sc.pp.pca(a, n_comps=2, **kw),
         dict(embedding="obsm.k"),
         "k",
-        "p_pca",
-        id="pca",
+        id="pca-mapping",
+    ),
+    pytest.param(
+        lambda a, **kw: sc.pp.pca(a, n_comps=2, **kw), "obsm.k", "k", id="pca"
     ),
     pytest.param(
         lambda a, **kw: sc.pp.neighbors(a, n_neighbors=3, **kw),
         dict(connectivities="obsp.k"),
         "k",
-        "p_neighbors",
+        id="neighbors-mapping",
+    ),
+    pytest.param(
+        lambda a, **kw: sc.pp.neighbors(a, n_neighbors=3, **kw),
+        "obsp.k",
+        "k",
         id="neighbors",
     ),
 ]
 
 
-@pytest.mark.parametrize(("call", "out", "uns_key", "uns_key_prefix"), UNS_FOLLOWS_OUT)
+@pytest.mark.parametrize(("call", "out", "uns_key"), UNS_FOLLOWS_OUT)
 def test_uns_follows_out(
     adata_neighbors: AnnData,
     call: Callable[..., object],
     out: str | dict[str, str],
     uns_key: str,
-    uns_key_prefix: str,
 ) -> None:
     """The accompanying `.uns` entry is named after the key `out` gives the primary output."""
     sc.tl.umap(adata_neighbors)  # for `embedding_density`
@@ -644,13 +681,6 @@ def test_uns_follows_out(
     before = set(adata.uns)
     call(adata, out=out)
     assert set(adata.uns) - before == {uns_key}
-
-    adata = adata_neighbors.copy()
-    before = set(adata.uns)
-    call(adata, out=sc.Prefix("p"))
-    assert {k for k in set(adata.uns) - before if k.startswith("p_")} == {
-        uns_key_prefix
-    }
 
 
 @pytest.mark.parametrize(
@@ -660,7 +690,6 @@ def test_uns_follows_out(
         pytest.param(dict(out="X"), True, id="out_X"),
         pytest.param(dict(use="layers.counts"), False, id="layer_in_place"),
         pytest.param(dict(out="layers.log"), False, id="out_layer"),
-        pytest.param(dict(out=sc.Prefix("p")), False, id="prefix"),
         pytest.param(dict(use="layers.counts", out="X"), True, id="layer_to_X"),
     ],
 )
@@ -670,3 +699,116 @@ def test_log1p_marks_only_x(
     """`.uns['log1p']` says `.X` is log-transformed, so it’s only set when writing `.X`."""
     sc.pp.log1p(adata, base=2, **kwargs)
     assert ("log1p" in adata.uns) is marks_x
+
+
+@pytest.fixture
+def adata_graph() -> AnnData:
+    # more variables than `settings.N_PCS`, so `pp.neighbors` uses the PCA by default
+    x = np.random.default_rng(0).normal(size=(60, 60)).astype("float32")
+    adata = AnnData(x)
+    sc.pp.pca(adata, n_comps=10)
+    return adata
+
+
+# (producer writing to `out`, consumer reading via `use`, what to compare),
+# where `out`/`use` is the same accessor and the result has to match the default places’.
+ROUND_TRIPS = [
+    pytest.param(
+        lambda a, **kw: sc.pp.neighbors(a, n_neighbors=5, **kw),
+        "obsp.nn",
+        lambda a, **kw: sc.tl.umap(a, rng=0, maxiter=10, out=True, **kw),
+        id="neighbors-umap",
+    ),
+    pytest.param(
+        lambda a, **kw: sc.pp.neighbors(a, n_neighbors=5, **kw),
+        "obsp.nn",
+        lambda a, **kw: sc.tl.diffmap(a, n_comps=3, rng=0, out=True, **kw),
+        id="neighbors-diffmap",
+    ),
+    pytest.param(
+        lambda a, **kw: sc.pp.neighbors(a, n_neighbors=5, **kw),
+        "obsp.nn",
+        lambda a, **kw: np.asarray(
+            sc.tl.leiden(a, flavor="igraph", n_iterations=2, rng=0, out=True, **kw)
+        ),
+        id="neighbors-leiden",
+        marks=needs.igraph,
+    ),
+    pytest.param(
+        lambda a, **kw: sc.pp.pca(a, n_comps=3, **kw),
+        "obsm.p",
+        lambda a, **kw: sc.pp.neighbors(
+            a, n_neighbors=5, out=True, **kw
+        ).distances.toarray(),
+        id="pca-neighbors",
+    ),
+    pytest.param(
+        lambda a, **kw: sc.pp.pca(a, n_comps=3, **kw),
+        "obsm.p",
+        lambda a, **kw: sc.get.pca(a, **kw).var["variance"].to_numpy(),
+        id="pca-get",
+    ),
+    pytest.param(
+        lambda a, **kw: (
+            sc.pp.neighbors(a, n_neighbors=5),
+            sc.tl.diffmap(a, n_comps=4, rng=0, **kw),
+        ),
+        "obsm.d",
+        lambda a, **kw: sc.tl.dpt(a, n_dcs=3, out=True, **kw).pseudotime,
+        id="diffmap-dpt",
+    ),
+]
+
+
+@pytest.mark.parametrize(("produce", "acc", "consume"), ROUND_TRIPS)
+def test_round_trip(
+    adata_graph: AnnData,
+    produce: Callable[..., object],
+    acc: str,
+    consume: Callable[..., object],
+) -> None:
+    """A consumer’s `use` takes what was passed to its producer’s `out`."""
+    adata_graph.uns["iroot"] = 0  # for `dpt`
+    expected_adata = adata_graph.copy()
+    produce(expected_adata)
+    expected = consume(expected_adata)
+
+    produce(adata_graph, out=acc)
+    actual = consume(adata_graph, use=acc)
+    if np.issubdtype(np.asarray(expected).dtype, np.number):
+        np.testing.assert_allclose(actual, expected, rtol=1e-5)
+    else:
+        np.testing.assert_array_equal(actual, expected)
+
+
+def _components_graph(n_components: int) -> CSRBase:
+    """Make a graph of `n_components` connected rings of 20 nodes."""
+    ring = np.arange(20)
+    block = sparse.coo_matrix((np.ones(20), (ring, (ring + 1) % 20)), shape=(20, 20))
+    return sparse.block_diag([block + block.T] * n_components, format="csr")
+
+
+@pytest.mark.parametrize("n_components", [1, 4])
+def test_umap_graph_only(n_components: int) -> None:
+    """With at most `2 * n_components` components, UMAP doesn’t need data."""
+    from anndata.acc import A
+
+    adata = AnnData(np.zeros((20 * n_components, 2), dtype="float32"))
+    adata.obsp["g"] = _components_graph(n_components)
+    emb = sc.tl.umap(adata, use=A.obsp["g"], rng=0, maxiter=10, out=True)
+    assert emb.shape == (adata.n_obs, 2)
+
+
+def test_umap_graph_needs_rep() -> None:
+    """With more components, UMAP needs data, and doesn’t silently guess."""
+    from anndata.acc import A
+
+    adata = AnnData(np.zeros((20 * 5, 2), dtype="float32"))
+    adata.obsp["g"] = _components_graph(5)
+    adata.obsm["r"] = np.random.default_rng(0).normal(size=(adata.n_obs, 3))
+    with pytest.raises(ValueError, match=r"5 connected components"):
+        sc.tl.umap(adata, use=A.obsp["g"], out=True)
+    emb = sc.tl.umap(
+        adata, use=dict(graph=A.obsp["g"], rep=A.obsm["r"]), rng=0, maxiter=10, out=True
+    )
+    assert emb.shape == (adata.n_obs, 2)

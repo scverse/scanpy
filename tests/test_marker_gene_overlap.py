@@ -68,7 +68,7 @@ def test_marker_overlap_out():
 
     test_data, marker_genes = generate_test_data()
     with pytest.raises(NotImplementedError):
-        sc.tl.marker_gene_overlap(test_data, marker_genes, out=sc.Prefix("x"))
+        sc.tl.marker_gene_overlap(test_data, marker_genes, out=False)
     with (
         pytest.warns(FutureWarning, match=r"argument inplace is deprecated"),
         pytest.raises(NotImplementedError),

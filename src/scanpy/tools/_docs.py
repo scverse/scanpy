@@ -34,19 +34,22 @@ obsp
 """
 
 
-def doc_use_neighbors(*, graph: bool = False) -> str:
-    """Docs for a `use` parameter finding what :func:`~scanpy.pp.neighbors` wrote.
+def doc_use_neighbors(*, meta: bool = False, extra: str = "") -> str:
+    """Docs for a `use` parameter choosing a neighborhood graph.
 
-    With `graph`, the function only needs the connectivities, so `use` can also be an `.obsp` accessor.
+    With `meta`, the function also uses what :func:`~scanpy.pp.neighbors` stored alongside it.
+    `extra` is appended as a separate paragraph.
     """
-    graph_doc = (
-        "\n    Or any graph, given by an accessor like `A.obsp['my_graph']`."
-        if graph
+    meta_doc = (
+        "\n    Distances and parameters are used from where :func:`~scanpy.pp.neighbors` "
+        "stored them alongside it, if they exist."
+        if meta
         else ""
     )
     return f"""\
 use
-    Where :func:`~scanpy.pp.neighbors` wrote its results, i.e. the `out` passed to it:
-    `None` for the default places, `sc.Prefix('p')` for the `p_`-prefixed ones,
-    or a mapping like `{{'connectivities': A.obsp['conns'], 'distances': A.obsp['dists']}}`.{graph_doc}\
+    The neighborhood graph (connectivities) to use, e.g. `A.obsp['k']`
+    after `sc.pp.neighbors(adata, out=A.obsp['k'])`, or any other graph.
+    :class:`str`\\ s are :meth:`~anndata.acc.AdAcc.resolve`\\ d, e.g. `'obsp.k'`.
+    If :data:`None`, the one :func:`~scanpy.pp.neighbors` wrote by default.{meta_doc}{extra}\
 """

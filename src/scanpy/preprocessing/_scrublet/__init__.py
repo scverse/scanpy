@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from ..._utils.random import RNGLike, SeedLike
-    from ...get._out import OutKind, Prefix
+    from ...get._out import OutKind
     from ...get._types import AdRef, LayerAcc, RepAcc, VecRef, _SetRep
     from ...neighbors import _Metric, _MetricFn
 
@@ -59,7 +59,7 @@ SCRUBLET_BASES: ScrubletOut[_SetRep, _SetRep] = ScrubletOut(
         ),
         example="{'doublet_score': A.obs['scrublet_score']}",
         returns=":class:`~scanpy.pp.ScrubletOut`",
-        uns="scrublet",
+        uns=True,
     ),
 )
 @deprecated_arg("batch_key", DEPR_BATCH_KEY)
@@ -85,7 +85,7 @@ def scrublet(  # noqa: PLR0913, PLR0915
     verbose: bool = True,
     rng: SeedLike | RNGLike | None = None,
     use: LayerAcc | str | None = None,
-    out: Mapping[str, VecRef | str] | Prefix | bool = False,
+    out: Mapping[str, VecRef | str] | bool = False,
     # deprecated
     copy: bool = False,
     batch_key: str | None = None,
@@ -227,9 +227,9 @@ def scrublet(  # noqa: PLR0913, PLR0915
         None,
         dests=lambda _: SCRUBLET_BASES,
         kinds=SCRUBLET_KINDS,
-        bases=SCRUBLET_BASES,
-        uns="scrublet",
+        uns=True,
         default="scrublet",
+        primary=False,
     )
     start = logg.info("Running Scrublet")
 

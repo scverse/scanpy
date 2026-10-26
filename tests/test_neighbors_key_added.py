@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 n_neighbors = 5
 key = "test"
-uns_key = f"{key}_neighbors"
 
 
 @pytest.fixture(scope="session")
@@ -32,17 +31,22 @@ def adata(adata_session: sc.AnnData) -> sc.AnnData:
     return adata_session.copy()
 
 
+@needs.anndata_acc
 @pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
 def test_neighbors_key_added(
     adata: sc.AnnData, rng_arg: Literal["rng", "random_state"]
 ) -> None:
+    """`out=A.obsp[k]` writes `.obsp[k]`, `.obsp[f'{k}_distances']` and `.uns[k]`."""
+    from anndata.acc import A
+
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, **{rng_arg: 0})
-    sc.pp.neighbors(adata, n_neighbors=n_neighbors, **{rng_arg: 0}, out=sc.Prefix(key))
+    sc.pp.neighbors(adata, n_neighbors=n_neighbors, **{rng_arg: 0}, out=A.obsp[key])
 
-    conns_key = adata.uns[uns_key]["connectivities_key"]
-    dists_key = adata.uns[uns_key]["distances_key"]
+    conns_key = adata.uns[key]["connectivities_key"]
+    dists_key = adata.uns[key]["distances_key"]
+    assert (conns_key, dists_key) == (key, f"{key}_distances")
 
-    assert adata.uns["neighbors"]["params"] == adata.uns[uns_key]["params"]
+    assert adata.uns["neighbors"]["params"] == adata.uns[key]["params"]
     assert np.allclose(
         adata.obsp["connectivities"].toarray(), adata.obsp[conns_key].toarray()
     )
@@ -63,7 +67,7 @@ def test_neighbors_pca_keys_added_without_previous_pca_run(adata: sc.AnnData) ->
 
 
 LEGACY = pytest.mark.filterwarnings(
-    "ignore:.*argument (neighbors_key|obsp) is deprecated:FutureWarning"
+    "ignore:.*argument (neighbors_key|obsp|key_added) is deprecated:FutureWarning"
 )
 
 
@@ -71,8 +75,8 @@ LEGACY = pytest.mark.filterwarnings(
 @pytest.mark.parametrize(
     "field",
     [
-        pytest.param("prefix", id="use-prefix"),
-        pytest.param("obsp_acc", marks=needs.anndata_acc, id="use-obsp"),
+        pytest.param("out_acc", marks=needs.anndata_acc, id="use-out"),
+        pytest.param("obsp_acc", marks=[needs.anndata_acc, LEGACY], id="use-obsp"),
         pytest.param("neighbors_key", marks=LEGACY, id="legacy-neighbors_key"),
         pytest.param("obsp", marks=LEGACY, id="legacy-obsp"),
     ],
@@ -81,29 +85,34 @@ LEGACY = pytest.mark.filterwarnings(
 def test_neighbors_key_obsp(
     subtests: pytest.Subtests,
     adata: AnnData,
-    field: Literal["prefix", "obsp_acc", "neighbors_key", "obsp"],
+    field: Literal["out_acc", "obsp_acc", "neighbors_key", "obsp"],
     rng_arg: Literal["rng", "random_state"],
 ) -> None:
     """Functions using the neighbors graph find a non-default one via `use` (or the legacy args)."""
     adata1 = adata.copy()
 
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, **{rng_arg: 0})
-    sc.pp.neighbors(adata1, n_neighbors=n_neighbors, **{rng_arg: 0}, out=sc.Prefix(key))
-    conns_key = adata1.uns[uns_key]["connectivities_key"]
+    if field == "out_acc":
+        from anndata.acc import A
+
+        sc.pp.neighbors(
+            adata1, n_neighbors=n_neighbors, **{rng_arg: 0}, out=A.obsp[key]
+        )
+    else:  # the legacy way to write a non-default graph
+        sc.pp.neighbors(adata1, n_neighbors=n_neighbors, **{rng_arg: 0}, key_added=key)
+    conns_key = adata1.uns[key]["connectivities_key"]
 
     match field:
-        case "prefix":
-            arg = dict(use=sc.Prefix(key))
-        case "obsp_acc":
+        case "out_acc" | "obsp_acc":
             from anndata.acc import A
 
             arg = dict(use=A.obsp[conns_key])
         case "neighbors_key":
-            arg = dict(neighbors_key=uns_key)
+            arg = dict(neighbors_key=key)
         case "obsp":
             arg = dict(obsp=conns_key)
-    # `umap` and `paga` need the `.uns` entry, not just a graph
-    uns_arg = None if field in {"obsp_acc", "obsp"} else arg
+    # `umap` and `paga` don’t take the legacy `obsp`
+    uns_arg = None if field == "obsp" else arg
 
     sc.tl.draw_graph(adata, layout="fr", **{rng_arg: 1})
     sc.tl.draw_graph(adata1, layout="fr", **{rng_arg: 1}, **arg)

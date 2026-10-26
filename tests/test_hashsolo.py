@@ -133,16 +133,15 @@ def test_out_true(adata: AnnData) -> None:
 
 
 @needs.anndata_acc
-def test_out_prefix_mapping(adata: AnnData) -> None:
-    sc.pp.hashsolo(adata, A.obs[HASHES], out=sc.Prefix("hs"))
-    assert "hs_hashsolo" in adata.obs
-    assert "hs_hashsolo" in adata.obsm
+def test_out_acc_mapping(adata: AnnData) -> None:
+    """A single accessor names both outputs after it, a mapping writes only what it names."""
+    sc.pp.hashsolo(adata, A.obs[HASHES], out=A.obs["hs"])
+    assert "hs" in adata.obs
+    assert "hs" in adata.obsm
 
     sc.pp.hashsolo(adata, A.obs[HASHES], out=dict(classification=A.obs["cls"]))
-    pd.testing.assert_series_equal(
-        adata.obs["cls"], adata.obs["hs_hashsolo"], check_names=False
-    )
-    assert set(adata.obsm) == {"hs_hashsolo"}
+    pd.testing.assert_series_equal(adata.obs["cls"], adata.obs["hs"], check_names=False)
+    assert set(adata.obsm) == {"hs"}
 
 
 @needs.anndata_acc

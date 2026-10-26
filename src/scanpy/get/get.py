@@ -10,16 +10,15 @@ from anndata import AnnData
 from scverse_misc import Deprecation, deprecated_arg
 
 from .._compat import CSBase
-from .._docs import doc_use_rank_genes_groups
-from .._utils import _doc_params
-from ._out import _uns_use
-from ._use import _get_arr
+from .._docs import DEPR_RAW
+from ._types import LayerAcc
+from ._use import _get_arr, _resolve_obs
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
     from typing import Literal
 
-    from ._out import Prefix
+    from ._types import MultiAcc
 
 
 # --------------------------------------------------------------------------------
@@ -28,25 +27,15 @@ if TYPE_CHECKING:
 
 
 # TODO: implement diffxpy method, make singledispatch
-@_doc_params(use=doc_use_rank_genes_groups)
-@deprecated_arg(
-    "key",
-    Deprecation(
-        "1.13.0",
-        "Use `use` instead, e.g. `use=sc.Prefix('p')` for `key='p_rank_genes_groups'`.",
-    ),
-)
 def rank_genes_groups_df(
     adata: AnnData,
     group: str | Iterable[str] | None,
     *,
-    use: Prefix | None = None,
+    key: str = "rank_genes_groups",
     pval_cutoff: float | None = None,
     log2fc_min: float | None = None,
     log2fc_max: float | None = None,
     gene_symbols: str | None = None,
-    # deprecated
-    key: str | None = None,
 ) -> pd.DataFrame:
     """Get :func:`scanpy.tl.rank_genes_groups` results in the form of a :class:`~pandas.DataFrame`.
 
@@ -58,7 +47,8 @@ def rank_genes_groups_df(
         Which group (as in :func:`scanpy.tl.rank_genes_groups`'s `groupby`
         argument) to return results from. Can be a list. All groups are
         returned if groups is `None`.
-    {use}
+    key
+        Key differential expression groups were stored under.
     pval_cutoff
         Return only adjusted p-values below the  cutoff.
     log2fc_min
@@ -68,8 +58,6 @@ def rank_genes_groups_df(
     gene_symbols
         Column name in `.var` DataFrame that stores gene symbols. Specifying
         this will add that column to the returned dataframe.
-    key
-        Key differential expression groups were stored under.
 
     Example
     -------
@@ -79,7 +67,6 @@ def rank_genes_groups_df(
     >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")
 
     """
-    key = _uns_use(use, key, base="rank_genes_groups")
     if isinstance(group, str):
         group = [group]
     if group is None:
@@ -232,16 +219,20 @@ def _get_array_values(
     return matrix
 
 
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
 def obs_df(
     adata: AnnData,
     keys: Collection[str] = (),
     obsm_keys: Iterable[tuple[str, int]] = (),
     *,
-    layer: str | None = None,
+    use: LayerAcc | str | None = None,
     gene_symbols: str | None = None,
+    # deprecated
+    layer: str | None = None,
     use_raw: bool = False,
 ) -> pd.DataFrame:
-    """Return values for observations in adata.
+    r"""Return values for observations in adata.
 
     Params
     ------
@@ -251,8 +242,9 @@ def obs_df(
         Keys from either `.var_names`, `.var[gene_symbols]`, or `.obs.columns`.
     obsm_keys
         Tuples of `(key from obsm, column index of obsm[key])`.
-    layer
-        Layer of `adata` to use as expression values.
+    use
+        Which layer of `adata` to use as expression values, e.g. `A.layers['counts']`.
+        :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d, e.g. `'layers.counts'`.
     gene_symbols
         Column of `adata.var` to search for `keys` in.
     use_raw
@@ -312,7 +304,7 @@ def obs_df(
     # add var values
     if len(var_idx_keys) > 0:
         matrix = _get_array_values(
-            _get_arr(adata, layer=layer, use_raw=use_raw),
+            _get_arr(adata, _resolve_layer(use), layer=layer, use_raw=use_raw),
             var.index,
             var_idx_keys,
             axis=1,
@@ -344,14 +336,17 @@ def obs_df(
     return df
 
 
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 def var_df(
     adata: AnnData,
     keys: Collection[str] = (),
     varm_keys: Iterable[tuple[str, int]] = (),
     *,
+    use: LayerAcc | str | None = None,
+    # deprecated
     layer: str | None = None,
 ) -> pd.DataFrame:
-    """Return values for observations in adata.
+    r"""Return values for observations in adata.
 
     Params
     ------
@@ -361,8 +356,9 @@ def var_df(
         Keys from either `.obs_names`, or `.var.columns`.
     varm_keys
         Tuples of `(key from varm, column index of varm[key])`.
-    layer
-        Layer of `adata` to use as expression values.
+    use
+        Which layer of `adata` to use as expression values, e.g. `A.layers['counts']`.
+        :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d, e.g. `'layers.counts'`.
 
     Returns
     -------
@@ -382,7 +378,7 @@ def var_df(
 
     if len(obs_idx_keys) > 0:
         matrix = _get_array_values(
-            _get_arr(adata, layer=layer),
+            _get_arr(adata, _resolve_layer(use), layer=layer),
             adata.obs_names,
             obs_idx_keys,
             axis=0,
@@ -413,8 +409,15 @@ def var_df(
     return df
 
 
-def pca(adata: AnnData, *, use: Prefix | None = None) -> AnnData:
-    """Return PCA results as an :class:`~anndata.AnnData` indexed by component.
+def _resolve_layer(use: LayerAcc | str | None) -> LayerAcc | None:
+    if (use := _resolve_obs(use)) is not None and not isinstance(use, LayerAcc):
+        msg = f"`use` must be a layer (e.g. `A.X` or `A.layers[...]`), was {use!r}"
+        raise TypeError(msg)
+    return use
+
+
+def pca(adata: AnnData, *, use: MultiAcc | str | None = None) -> AnnData:
+    r"""Return PCA results as an :class:`~anndata.AnnData` indexed by component.
 
     The principal components (not the genes) become the variables,
     so per-component quantities like the variance ratio become `.var` columns.
@@ -426,8 +429,10 @@ def pca(adata: AnnData, *, use: Prefix | None = None) -> AnnData:
     adata
         Annotated data matrix with PCA computed, e.g. via :func:`~scanpy.pp.pca`.
     use
-        Where :func:`~scanpy.pp.pca` wrote its results:
-        `None` for the default places, `sc.Prefix('p')` for `A.obsm['p_pca']` and `.uns['p_pca']`.
+        Where :func:`~scanpy.pp.pca` wrote the embedding, i.e. the `out` passed to it,
+        e.g. `A.obsm['p']` (with its `.uns` entry `'p'`).
+        :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d.
+        If :data:`None`, the default places.
 
     Returns
     -------
@@ -453,10 +458,16 @@ def pca(adata: AnnData, *, use: Prefix | None = None) -> AnnData:
         sc.get.pca(adata)
 
     """
-    from .._keys import _embedding_keys
+    from .._keys import _embedding_keys, _EmbeddingKeys
     from .._settings import Default
+    from ._out import _dest, _dest_key
+    from ._use import _resolve_obs
 
-    keys = _embedding_keys("pca", Default() if use is None else f"{use.prefix}_pca")
+    keys = (
+        _embedding_keys("pca", Default())
+        if use is None
+        else _EmbeddingKeys(*[_dest_key(_dest(_resolve_obs(use, rep=True)))] * 2)
+    )
     info = adata.uns[keys.uns]
     x = adata.obsm[keys.obsm]
     n_comps = x.shape[1]

@@ -97,10 +97,10 @@ def test_bbknn_representation(adata: AnnData) -> None:
 
     reps = dict(X=A.X, pca=A.obsm["pca"])
     for name in (used, unused):
-        sc.pp.bbknn(adata, 3, batches="obs.batch", use=reps[name], out=sc.Prefix(name))
+        sc.pp.bbknn(adata, 3, batches="obs.batch", use=reps[name], out=A.obsp[name])
 
     # stored like `use_rep` for readers like `tl.umap`
-    assert adata.uns["pca_neighbors"]["params"]["use_rep"] == "pca"
+    assert adata.uns["pca"]["params"]["use_rep"] == "pca"
 
     np.testing.assert_allclose(
         dists.toarray(), adata.obsp[f"{used}_distances"].toarray()
@@ -121,11 +121,11 @@ def test_bbknn_is_batch_balanced(adata: AnnData) -> None:
 
 def test_bbknn_connects_batches(adata: AnnData) -> None:
     """Unlike `pp.neighbors`, `pp.bbknn` connects the (strongly separated) batches."""
-    sc.pp.neighbors(adata, n_neighbors=9, out=sc.Prefix("knn"))
-    sc.pp.bbknn(adata, 3, batches="obs.batch", out=sc.Prefix("bbknn"))
+    sc.pp.neighbors(adata, n_neighbors=9, out=A.obsp["knn"])
+    sc.pp.bbknn(adata, 3, batches="obs.batch", out=A.obsp["bbknn"])
 
     def n_cross_batch(key: str) -> int:
-        i, j = adata.obsp[f"{key}_connectivities"].nonzero()
+        i, j = adata.obsp[key].nonzero()
         return int((BATCHES[i] != BATCHES[j]).sum())
 
     assert n_cross_batch("knn") == 0
@@ -196,8 +196,8 @@ def test_bbknn_trim(adata: AnnData, trim: int | None) -> None:
         assert n_per_row(conns).max() >= trim
         assert (conns != conns.T).nnz == 0
     # trimming only ever removes edges
-    sc.pp.bbknn(adata, 3, batches="obs.batch", trim=0, out=sc.Prefix("untrimmed"))
-    untrimmed = adata.obsp["untrimmed_connectivities"]
+    sc.pp.bbknn(adata, 3, batches="obs.batch", trim=0, out=A.obsp["untrimmed"])
+    untrimmed = adata.obsp["untrimmed"]
     assert conns.nnz <= untrimmed.nnz
     assert (conns != conns.multiply(untrimmed != 0)).nnz == 0
 
@@ -274,16 +274,17 @@ def test_bbknn_duplicate_cells() -> None:
     assert adata.obsp["distances"].diagonal().sum() == 0
 
 
-def test_bbknn_prefix(adata: AnnData) -> None:
+def test_bbknn_out_acc(adata: AnnData) -> None:
+    """`out=A.obsp[k]` names the other outputs after `k`."""
     sc.pp.bbknn(adata, 3, batches="obs.batch")
-    sc.pp.bbknn(adata, 3, batches="obs.batch", out=sc.Prefix("test"))
+    sc.pp.bbknn(adata, 3, batches="obs.batch", out=A.obsp["test"])
 
-    assert adata.uns["neighbors"]["params"] == adata.uns["test_neighbors"]["params"]
-    assert adata.uns["test_neighbors"]["distances_key"] == "test_distances"
-    assert adata.uns["test_neighbors"]["connectivities_key"] == "test_connectivities"
-    for key in ("distances", "connectivities"):
+    assert adata.uns["neighbors"]["params"] == adata.uns["test"]["params"]
+    assert adata.uns["test"]["distances_key"] == "test_distances"
+    assert adata.uns["test"]["connectivities_key"] == "test"
+    for key, key_test in [("distances", "test_distances"), ("connectivities", "test")]:
         np.testing.assert_allclose(
-            adata.obsp[key].toarray(), adata.obsp[f"test_{key}"].toarray()
+            adata.obsp[key].toarray(), adata.obsp[key_test].toarray()
         )
 
 

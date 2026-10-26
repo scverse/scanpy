@@ -302,18 +302,23 @@ def test_scrublet_dtypes() -> None:
     assert adata.obs["batch"].dtype == "category"
 
 
+@needs.anndata_acc
 def test_scrublet_out() -> None:
-    """`out=True` returns the columns, `sc.Prefix` names them and the `.uns` entry."""
+    """`out=True` returns the columns, a mapping names them and the `.uns` entry."""
+    from anndata.acc import A
+
     adata = pbmc200()
     res = sc.pp.scrublet(adata, use_approx_neighbors=False, out=True, rng=0)
     assert "doublet_score" not in adata.obs
     assert "scrublet" not in adata.uns
-    sc.pp.scrublet(adata, use_approx_neighbors=False, out=sc.Prefix("p"), rng=0)
-    np.testing.assert_array_equal(adata.obs["p_doublet_score"], res.doublet_score)
-    np.testing.assert_array_equal(
-        adata.obs["p_predicted_doublet"], res.predicted_doublet
-    )
-    assert "threshold" in adata.uns["p_scrublet"]
+    out = dict(doublet_score=A.obs["p"], predicted_doublet=A.obs["p_doublet"])
+    sc.pp.scrublet(adata, use_approx_neighbors=False, out=out, rng=0)
+    np.testing.assert_array_equal(adata.obs["p"], res.doublet_score)
+    np.testing.assert_array_equal(adata.obs["p_doublet"], res.predicted_doublet)
+    assert "threshold" in adata.uns["p"]
+
+    with pytest.raises(TypeError, match=r"must be a `bool` or a mapping"):
+        sc.pp.scrublet(adata, use_approx_neighbors=False, out=A.obs["x"], rng=0)
 
 
 @needs.anndata_acc

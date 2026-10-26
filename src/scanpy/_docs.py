@@ -25,7 +25,6 @@ __all__ = [
     "doc_ref_compat",
     "doc_rng",
     "doc_use",
-    "doc_use_rank_genes_groups",
 ]
 
 DEPR_COPY: Final = Deprecation(
@@ -34,7 +33,7 @@ DEPR_COPY: Final = Deprecation(
 """For functions that gained an `out` parameter, making `copy` redundant."""
 
 DEPR_KEY_ADDED: Final = Deprecation("1.13.0", "Use `out` instead.")
-"""For `key_added` parameters, replaced by `out` (e.g. `out=sc.Prefix(key_added)`)."""
+"""For `key_added` parameters, replaced by `out` (e.g. `out=A.obsm[key_added]`)."""
 
 DEPR_RAW: Final = Deprecation(
     "1.13.0",
@@ -49,9 +48,9 @@ DEPR_BATCH_KEY: Final = Deprecation(
 
 DEPR_NEIGHBORS_KEY: Final = Deprecation(
     "1.13.0",
-    "Use `use` instead, e.g. `use=sc.Prefix('p')` for `neighbors_key='p_neighbors'`.",
+    "Use `use` instead, e.g. `use=A.obsp['k_connectivities']` for `neighbors_key='k'`.",
 )
-"""For `neighbors_key` parameters, replaced by a `use` mirroring `pp.neighbors`’ `out`."""
+"""For `neighbors_key` parameters, replaced by a `use` pointing to the graph."""
 
 DEPR_OBSP_GRAPH: Final = Deprecation("1.13.0", "Use `use=A.obsp[...]` instead.")
 """For `obsp` parameters naming a graph, replaced by a `use` accessor."""
@@ -102,18 +101,12 @@ use
 """
 
 
-def doc_out(base: str, *, default: str = "the place `use` reads from") -> str:
-    """Docs for an `out` parameter of a function with one output, e.g. a matrix.
-
-    `base` is the output’s name, which `sc.Prefix('p')` prefixes:
-    a matrix then goes to `A.layers['p_{base}']` (or `.obsm` if `use` points there),
-    other outputs to the same kind of place as `default`.
-    """
+def doc_out(*, default: str = "the place `use` reads from") -> str:
+    """Docs for an `out` parameter of a function with one output, e.g. a matrix."""
     return f"""\
 out
     Where to write the result, e.g. `A.layers['scaled']`.
     :class:`str`\\ s are :meth:`anndata.acc.AdAcc.resolve`\\ d, e.g. `'layers.scaled'`.
-    `sc.Prefix('p')` writes it to the same kind of place as the default, named `'p_{base}'`.
     If :data:`True`, the result is returned instead of written.
     If :data:`False`, it is written to {default}.\
 """
@@ -136,15 +129,14 @@ def doc_out_key(
     what: str,
     *,
     default: str,
-    prefixed: str,
     key_added: str | None = None,
     example: str | None = None,
 ) -> str:
     """Docs for the `out` parameter of a function with one output, and the `key_added` it replaces.
 
-    `prefixed` is where `out=sc.Prefix('p')` writes, e.g. "`.obsm['p_umap']` and `.uns['p_umap']`",
-    `key_added` says what `key_added='k'` did and how to say it with `out`.
-    Without `example`, the output only goes to `.uns`, so `out` can’t be an accessor.
+    `key_added` describes `key_added='k'`: how to say it with `out`,
+    or, without `example` (the output only goes to `.uns`), what it names.
+    Without `example`, `out` can’t be an accessor until there are `.uns` accessors.
     """
     acc = (
         ""
@@ -159,7 +151,6 @@ def doc_out_key(
 out
     Where to write {what}.
 {acc}\
-    `sc.Prefix('p')` writes it to {prefixed}.
     If :data:`True`, {what} is returned instead of written.
     If :data:`False`, it is written to {default}.\
 {_doc_key_added(key_added)}"""
@@ -171,34 +162,40 @@ def doc_out_multi(
     example: str,
     returns: str,
     key_added: str | None = None,
-    uns: str | None = None,
+    uns: bool = False,
+    primary: bool = True,
 ) -> str:
     """Docs for the `out` parameter of a function with several outputs, and the `key_added` it replaces.
 
-    `outputs` maps each output’s name to a description including its default location
-    and where `out=sc.Prefix('p')` writes it.
-    `uns` is the name of the accompanying `.uns` entry, if any, which a `Prefix` prefixes.
+    `outputs` maps each output’s name to a description including its default location.
+    The first one is the primary output, which a single accessor names (if `primary`).
+    `uns` says if there is an accompanying `.uns` entry, named after the primary output.
     `key_added` says what `key_added='k'` did and how to say it with `out`.
     """
+    first = next(iter(outputs))
     items = "\n".join(f"    `{name}`\n        {desc}" for name, desc in outputs.items())
     uns_doc = (
-        "" if uns is None else f" (and :attr:`~anndata.AnnData.uns`\\ `['p_{uns}']`)"
+        f"\n    The :attr:`~anndata.AnnData.uns` entry is named after `{first}`’s key,"
+        f" so a mapping has to include `{first}`."
+        if uns
+        else ""
     )
-    uns_map_doc = (
-        ""
-        if uns is None
-        else (
-            f" (and a :attr:`~anndata.AnnData.uns` entry named after `{next(iter(outputs))}`,"
-            " which it therefore has to include)"
-        )
+    primary_doc = (
+        f"""
+    A single accessor writes `{first}` to it and names the others after its key `k`:
+    `k` in kinds of places no other output goes to, else `k_{{name}}`,
+    e.g. `.obsp['k_distances']` next to `.obsp['k']`.
+    Outputs that aren’t written by default stay unwritten."""
+        if primary
+        else ""
     )
     return f"""\
 out
-    Where to write the outputs.
-    A mapping from output names to accessors writes only the outputs it names{uns_map_doc},
+    Where to write the outputs.\
+{primary_doc}
+    A mapping from output names to accessors writes only the outputs it names,
     e.g. `{example}`.
-    :class:`str`\\ s are :meth:`anndata.acc.AdAcc.resolve`\\ d.
-    `sc.Prefix('p')` writes each output under its name below, prefixed by `p_`{uns_doc}.
+    :class:`str`\\ s are :meth:`anndata.acc.AdAcc.resolve`\\ d.{uns_doc}
     If :data:`True`, they are returned as a {returns} instead of written.
     If :data:`False`, they are written to their default locations.
     The outputs are:
@@ -209,10 +206,3 @@ out
 
 def _doc_key_added(desc: str | None) -> str:
     return "" if desc is None else f"\nkey_added\n    {desc}"
-
-
-doc_use_rank_genes_groups = """\
-use
-    Where :func:`~scanpy.tl.rank_genes_groups` wrote its results, i.e. the `out` passed to it:
-    `None` for `.uns['rank_genes_groups']`, `sc.Prefix('p')` for `.uns['p_rank_genes_groups']`.\
-"""

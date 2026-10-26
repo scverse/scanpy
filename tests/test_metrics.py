@@ -176,22 +176,22 @@ def test_graph_metrics_w_constant_values(
 @pytest.mark.parametrize(
     ("graph", "deprecated"),
     [
-        pytest.param("foo_connectivities", "use_graph", id="use_graph"),
-        pytest.param("foo_neighbors", "neighbors_key", id="neighbors_key"),
+        pytest.param("foo", "use_graph", id="use_graph"),
+        pytest.param("foo", "neighbors_key", id="neighbors_key"),
     ],
 )
 def test_metrics_graph(metric, graph: str, deprecated: str) -> None:
     """`use['graph']` picks the graph, like the deprecated `use_graph`/`neighbors_key`."""
     rng = np.random.default_rng()
     adata = AnnData(rng.normal(size=(10, 20)))
-    sc.pp.neighbors(adata, out=sc.Prefix("foo"))
-    expected = metric(adata, use=dict(graph=A.obsp["foo_connectivities"], vals=A.X))
+    sc.pp.neighbors(adata, out=A.obsp["foo"])  # also writes `.uns['foo']`
+    expected = metric(adata, use=dict(graph=A.obsp["foo"], vals=A.X))
     with pytest.warns(FutureWarning, match=rf"argument {deprecated} is deprecated"):
         res = metric(adata, use=A.X, **{deprecated: graph})
     np.testing.assert_allclose(res, expected)
     # only the graph is needed
-    adata = AnnData(adata.X, obsp=dict(foo=adata.obsp["foo_connectivities"]))
-    metric(adata, use=dict(graph="obsp.foo"))
+    adata = AnnData(adata.X, obsp=dict(bar=adata.obsp["foo"]))
+    metric(adata, use=dict(graph="obsp.bar"))
 
 
 @needs.anndata_acc

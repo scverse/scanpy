@@ -25,7 +25,7 @@ from .._utils import (
     raise_not_implemented_error_if_backed_type,
     view_to_actual,
 )
-from ..get._out import _dest_kind, _out_dests, _use_dest, _write_dests, deprecated_copy
+from ..get._out import _out_dests, _use_dest, _write_dests, deprecated_copy
 from ..get._types import AdRef
 from ..get._use import _check_mask, _get_arr, _mask_arg, _resolve_obs
 
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import ArrayLike
 
-    from ..get._out import OutKind, Prefix
+    from ..get._out import OutKind
     from ..get._types import ArrAcc, Mask, RepAcc, VecRef
 
 # not `type`: Sphinx would render the private name in signatures
@@ -63,21 +63,14 @@ SCALE_KINDS: ScaleOut[set[OutKind], set[OutKind]] = ScaleOut(
 
 doc_out_scale = doc_out_multi(
     dict(
-        scaled=(
-            "The scaled matrix. "
-            "By default written to the place `use` reads from, "
-            "with `sc.Prefix('p')` to `A.layers['p_scaled']` "
-            "(`A.obsm['p_scaled']` if `use` points to `.obsm`)."
-        ),
+        scaled=("The scaled matrix. By default written to the place `use` reads from."),
         mean=(
             "Means per variable before scaling. By default written to `A.var['mean']` "
-            "(`A.var['mean of {mask}']` or `A.var['mean with mask']` if `mask` is given), "
-            "with `sc.Prefix('p')` to `A.var['p_mean']` (or `'p_mean of {mask}'`, …)."
+            "(`A.var['mean of {mask}']` or `A.var['mean with mask']` if `mask` is given)."
         ),
         std=(
             "Standard deviations per variable before scaling. By default written to `A.var['std']` "
-            "(`A.var['std of {mask}']` or `A.var['std with mask']` if `mask` is given), "
-            "with `sc.Prefix('p')` to `A.var['p_std']` (or `'p_std of {mask}'`, …)."
+            "(`A.var['std of {mask}']` or `A.var['std with mask']` if `mask` is given)."
         ),
     ),
     example="{'scaled': A.layers['scaled']}",
@@ -152,7 +145,7 @@ def scale[A: _Array](
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     use: RepAcc | str | None = None,
-    out: Mapping[str, ArrAcc | VecRef | str] | Prefix | bool = False,
+    out: Mapping[str, ArrAcc | VecRef | str] | bool = False,
     mask: Mask | None = None,
     # deprecated
     copy: bool = False,
@@ -391,7 +384,7 @@ def scale_anndata(
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     use: RepAcc | str | None = None,
-    out: Mapping[str, ArrAcc | VecRef | str] | Prefix | bool = False,
+    out: Mapping[str, ArrAcc | VecRef | str] | bool = False,
     mask: Mask | None = None,
     layer: str | None = None,
     obsm: str | None = None,
@@ -415,11 +408,6 @@ def scale_anndata(
             src, dict(var=str_mean_std[0]), dict(var=str_mean_std[1])
         ),
         kinds=SCALE_KINDS,
-        bases=ScaleOut(
-            {_dest_kind(src): "scaled"},
-            dict(var=str_mean_std[0]),
-            dict(var=str_mean_std[1]),
-        ),
     )
     view_to_actual(adata)
     x = _get_arr(adata, use, layer=layer, obsm=obsm)

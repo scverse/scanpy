@@ -72,15 +72,35 @@ def test_normalize_total(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
     sc.pp.normalize_total(adata)
     assert np.allclose(to_ndarray(stats.sum(adata.X, axis=1)), [3.0, 3.0, 3.0])
-    sc.pp.normalize_total(adata, target_sum=1, out=sc.Prefix("p"))
-    assert np.allclose(
-        to_ndarray(stats.sum(adata.layers["p_normalized"], axis=1)), [1.0, 1.0, 1.0]
-    )
-    assert np.allclose(adata.obs["p_norm_factor"], 3.0)
 
     adata = AnnData(array_type(X_frac).astype(dtype))
     sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.7)
     assert np.allclose(to_ndarray(stats.sum(adata.X[:, 1:3], axis=1)), [1.0, 1.0, 1.0])
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_normalize_total_out(array_type) -> None:
+    """A single accessor writes only the matrix, a mapping also the off-by-default factor."""
+    from anndata.acc import A
+
+    adata = AnnData(array_type(X_total).astype("float32"))
+    sc.pp.normalize_total(adata)
+    sc.pp.normalize_total(adata, target_sum=1, out=A.layers["p"])
+    assert np.allclose(
+        to_ndarray(stats.sum(adata.layers["p"], axis=1)), [1.0, 1.0, 1.0]
+    )
+    assert adata.obs.columns.empty
+
+    sc.pp.normalize_total(
+        adata,
+        target_sum=1,
+        out=dict(normalized=A.layers["q"], norm_factor=A.obs["q_factor"]),
+    )
+    np.testing.assert_allclose(
+        to_ndarray(adata.layers["q"]), to_ndarray(adata.layers["p"])
+    )
+    assert np.allclose(adata.obs["q_factor"], 3.0)
 
 
 @pytest.mark.filterwarnings("ignore:Some cells have zero counts:UserWarning")
@@ -531,14 +551,14 @@ def test_normalize_shifted_clr_use_out():
         layers={"counts": sparse.csr_matrix(X_clr_estimated)},  # noqa: TID251
     )
     x_before = to_ndarray(adata.X).copy()
-    sc.pp.normalize_shifted_clr(adata, use=A.layers["counts"], out=sc.Prefix("p"))
+    sc.pp.normalize_shifted_clr(adata, use=A.layers["counts"], out=A.layers["p"])
 
     np.testing.assert_array_equal(to_ndarray(adata.X), x_before)
     np.testing.assert_array_equal(to_ndarray(adata.layers["counts"]), x_before)
     np.testing.assert_allclose(
-        adata.layers["p_pflog"], X_clr_estimated_expected, rtol=1e-5, atol=1e-6
+        adata.layers["p"], X_clr_estimated_expected, rtol=1e-5, atol=1e-6
     )
-    assert isinstance(adata.layers["p_pflog"], np.ndarray)
+    assert isinstance(adata.layers["p"], np.ndarray)
 
 
 def test_normalize_shifted_clr_densifies_sparse_input():

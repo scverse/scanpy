@@ -15,7 +15,6 @@ from . import plotting as pl
 from . import preprocessing as pp
 from . import tools as tl
 from ._utils import annotate_doc_types
-from .get._out import Prefix
 from .neighbors import Neighbors
 from .plotting.legacy.mpl_settings import set_figure_params
 
@@ -25,7 +24,6 @@ if TYPE_CHECKING:
 __all__ = [
     "AnnData",
     "Neighbors",
-    "Prefix",
     "Preset",
     "Verbosity",
     "concat",

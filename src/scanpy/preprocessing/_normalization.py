@@ -16,7 +16,6 @@ from .._docs import DEPR_KEY_ADDED, doc_out, doc_out_multi, doc_use
 from .._utils import _doc_params, axis_mul_or_truediv, dematrix, view_to_actual
 from ..get._out import (
     _dest_key,
-    _dest_kind,
     _legacy_out,
     _out_dests,
     _use_dest,
@@ -32,7 +31,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..get._out import OutKind, Prefix
+    from ..get._out import OutKind
     from ..get._types import ArrAcc, RepAcc, VecRef
 
 
@@ -167,14 +166,10 @@ def _normalize_total_helper(
         dict(
             normalized=(
                 "The normalized matrix. "
-                "By default written to the place `use` reads from, "
-                "with `sc.Prefix('p')` to `A.layers['p_normalized']` "
-                "(`A.obsm['p_normalized']` if `use` points to `.obsm`)."
+                "By default written to the place `use` reads from."
             ),
             norm_factor=(
-                "The normalization factor of each cell. "
-                "By default not written, "
-                "with `sc.Prefix('p')` to `A.obs['p_norm_factor']`."
+                "The normalization factor of each cell. By default not written."
             ),
         ),
         example="{'normalized': A.layers['normalized']}",
@@ -196,7 +191,7 @@ def normalize_total(  # noqa: PLR0913
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
     use: RepAcc | str | None = None,
-    out: Mapping[str, ArrAcc | VecRef | str] | Prefix | bool = False,
+    out: Mapping[str, ArrAcc | VecRef | str] | bool = False,
     # deprecated
     key_added: str | None = None,
     layer: str | None = None,
@@ -314,9 +309,6 @@ def normalize_total(  # noqa: PLR0913
             src, None if key is None else dict(obs=key)
         ),
         kinds=NORMALIZE_TOTAL_KINDS,
-        bases=NormalizeTotalOut(
-            {_dest_kind(src): "normalized"}, dict(obs="norm_factor")
-        ),
     )
 
     if max_fraction < 0 or max_fraction > 1:
@@ -437,13 +429,13 @@ def _normalize_shifted_clr_helper(
     return log_values - row_center[:, None], cell_depths
 
 
-@_doc_params(use=doc_use("Which matrix to normalize."), out=doc_out("pflog"))
+@_doc_params(use=doc_use("Which matrix to normalize."), out=doc_out())
 def normalize_shifted_clr(
     adata: AnnData,
     *,
     alpha: float | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Prefix | bool = False,
+    out: RepAcc | str | bool = False,
 ) -> np.ndarray | DaskArray | None:
     r"""Normalize counts with the shifted centered log-ratio (PFlog) transform.
 
@@ -508,4 +500,4 @@ def normalize_shifted_clr(
         warn("Some cells have zero counts", UserWarning)
 
     logg.info("    finished ({time_passed})", time=start)
-    return _write_out(adata, x, out=out, base="pflog", use=use)
+    return _write_out(adata, x, out=out, use=use)

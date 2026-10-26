@@ -21,12 +21,11 @@ from scverse_misc import Deprecation, deprecated_arg
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
-from .._docs import DEPR_KEY_ADDED, doc_rng
+from .._docs import DEPR_KEY_ADDED, DEPR_NEIGHBORS_KEY, doc_rng
 from .._keys import _EmbeddingKeys, _existing_preset_keys
-from .._utils import NeighborsView, _doc_params, get_literal_vals
+from .._utils import _doc_params, get_literal_vals
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng
 from ..get._out import (
-    Prefix,
     _dest,
     _dest_key,
     _out_dests,
@@ -44,6 +43,7 @@ from ._common import (
     _get_sparse_matrix_from_indices_distances,
     _make_transformer,
     _neighbors_dests,
+    _neighbors_view,
 )
 from ._connectivity import umap
 from ._doc import doc_n_pcs, doc_out_key_added, doc_use_rep
@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._utils.random import RNGLike, SeedLike
-    from ..get._types import ArrAcc, MultiAcc, RepAcc
+    from ..get._types import ArrAcc, GraphAcc, MultiAcc, RepAcc
     from ._types import (
         KnnTransformerLike,
         RPForestDict,
@@ -90,7 +90,7 @@ def neighbors(  # noqa: PLR0912, PLR0913
     metric: _Metric | _MetricFn | None = None,
     metric_kwds: Mapping[str, Any] = frozendict({}),
     rng: SeedLike | RNGLike | None = None,
-    out: Mapping[str, ArrAcc | str] | Prefix | bool = False,
+    out: Mapping[str, ArrAcc | str] | bool = False,
     # deprecated
     key_added: str | None = None,
     copy: bool = False,
@@ -204,8 +204,7 @@ def neighbors(  # noqa: PLR0912, PLR0913
         key_added,
         dests=_neighbors_dests,
         kinds=NEIGHBORS_KINDS,
-        bases=_neighbors_dests(None),
-        uns="neighbors",
+        uns=True,
     )
 
     if distances is None:
@@ -376,16 +375,12 @@ class OnFlySymMatrix:
 
 
 def _diffmap_keys(
-    adata: AnnData, diffmap: MultiAcc | str | Prefix | None
+    adata: AnnData, diffmap: MultiAcc | str | None
 ) -> _EmbeddingKeys | None:
     """Where `tl.diffmap` wrote, given the `out` it was called with (`None` for the default)."""
     if diffmap is None:
         return _existing_preset_keys(adata, "diffmap")
-    key = (
-        f"{diffmap.prefix}_diffmap"
-        if isinstance(diffmap, Prefix)
-        else _dest_key(_dest(_resolve_obs(diffmap)))
-    )
+    key = _dest_key(_dest(_resolve_obs(diffmap)))
     return _EmbeddingKeys(key, key)
 
 
@@ -401,22 +396,29 @@ class Neighbors:
         Annotated data object.
     n_dcs
         Number of diffusion components to use.
-    neighbors_key
-        Where to look in `.uns` and `.obsp` for neighbors data.
+    use
+        The neighborhood graph (connectivities) to use, e.g. `A.obsp['k']`,
+        by default the one :func:`~scanpy.pp.neighbors` wrote by default.
+        Distances and parameters are found where :func:`~scanpy.pp.neighbors` put them
+        alongside it, if they exist.
     diffmap
         Where :func:`~scanpy.tl.diffmap` wrote its results, i.e. the `out` passed to it:
-        `None` for the default places, `sc.Prefix('p')` for `A.obsm['p_diffmap']`,
-        or an accessor like `A.obsm['k']`.
+        `None` for the default place, or an accessor like `A.obsm['k']`.
+    neighbors_key
+        Where to look in `.uns` and `.obsp` for neighbors data.
 
     """
 
-    def __init__(  # noqa: PLR0912, PLR0915
+    @deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
+    def __init__(  # noqa: PLR0912
         self,
         adata: AnnData,
         *,
         n_dcs: int | None = None,
+        use: GraphAcc | str | None = None,
+        diffmap: MultiAcc | str | None = None,
+        # deprecated
         neighbors_key: str | None = None,
-        diffmap: MultiAcc | str | Prefix | None = None,
     ) -> None:
         self._adata = adata
         self._init_iroot()
@@ -428,10 +430,7 @@ class Neighbors:
         self._transitions_sym: np.ndarray | CSRBase | None = None
         self._number_connected_components: int | None = None
         self._rp_forest: RPForestDict | None = None
-        if neighbors_key is None:
-            neighbors_key = "neighbors"
-        if neighbors_key in adata.uns:
-            neighbors = NeighborsView(adata, neighbors_key)
+        if (neighbors := _neighbors_view(adata, use, neighbors_key)) is not None:
             if "distances" in neighbors:
                 self.knn = isinstance(neighbors["distances"], CSBase)
                 self._distances = neighbors["distances"]

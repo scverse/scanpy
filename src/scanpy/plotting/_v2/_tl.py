@@ -18,8 +18,6 @@ if TYPE_CHECKING:
     from hv_anndata import AdDim
     from scipy.sparse import csr_matrix  # noqa: TID251
 
-    from ...get._out import Prefix
-
 
 def draw_graph(
     adata: AnnData,
@@ -191,7 +189,7 @@ def embedding_density(
     basis: MultiAcc,
     *,
     groupby: str | None = None,
-    use: AdRef | str | Prefix | None = None,
+    use: AdRef | str | None = None,
 ) -> hv.Scatter | hv.NdLayout:
     """Plot embedding density.
 
@@ -205,8 +203,7 @@ def embedding_density(
         ``groupby`` as specified in :func:`scanpy.tl.embedding_density`.
     use
         Where :func:`~scanpy.tl.embedding_density` wrote the densities, i.e. the `out` passed to it:
-        `None` for the default place, `sc.Prefix('p')` for its `p_`-prefixed name,
-        or an accessor like `A.obs['density']`.
+        `None` for the default place, or an accessor like `A.obs['density']`.
 
     Returns
     -------
@@ -223,15 +220,13 @@ def embedding_density(
         A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
-        sc.tl.embedding_density(adata, basis="umap", groupby="phase")
+        sc.tl.embedding_density(adata, "umap", groupby="phase")
         sc.pl.embedding_density(adata, A.obsm["umap"], groupby="phase")
 
     """
     basis_name = basis.k.removeprefix("X_")
     default = f"{basis_name}_density{'' if groupby is None else f'_{groupby}'}"
-    key = _out_key(
-        False if use is None else use, None, kind="obs", base=default, default=default
-    )
+    key = _out_key(False if use is None else use, None, kind="obs", default=default)
 
     groupby_vdims = [] if groupby is None else [A.obs[groupby]]
     scatter = hv.Scatter(adata, basis[0], [basis[1], *groupby_vdims, A.obs[key]]).opts(

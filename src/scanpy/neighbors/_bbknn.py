@@ -39,7 +39,6 @@ if TYPE_CHECKING:
 
     from .._compat import CSRBase
     from .._utils.random import RNGLike, SeedLike
-    from ..get._out import Prefix
     from ..get._types import ArrAcc, RepAcc
     from ._types import KnnTransformerLike, _KnownTransformer, _Metric, _MetricFn
 
@@ -58,7 +57,7 @@ def bbknn(  # noqa: PLR0913
     metric_kwds: Mapping[str, Any] = frozendict({}),
     trim: int | None = None,
     rng: SeedLike | RNGLike | None = None,
-    out: Mapping[str, ArrAcc | str] | Prefix | bool = False,
+    out: Mapping[str, ArrAcc | str] | bool = False,
 ) -> NeighborsOut | None:
     r"""Compute a batch balanced neighborhood graph of observations :cite:p:`Polanski2019`.
 
@@ -161,8 +160,7 @@ def bbknn(  # noqa: PLR0913
         None,
         dests=_neighbors_dests,
         kinds=NEIGHBORS_KINDS,
-        bases=_neighbors_dests(None),
-        uns="neighbors",
+        uns=True,
     )
     if adata.is_view:  # we shouldn’t need this here...
         adata._init_as_actual(adata.copy())

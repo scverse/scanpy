@@ -16,7 +16,6 @@ from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, warn
 from .._docs import (
-    DEPR_KEY_ADDED,
     DEPR_RAW,
     doc_mask,
     doc_out_key,
@@ -36,7 +35,7 @@ from ..get import aggregate
 from ..get._aggregated import _chan_combine
 from ..get._out import _out_key, deprecated_copy
 from ..get._uns import _use_to_uns
-from ..get._use import _check_mask, _get_arr, _mask_arg, _resolve_obs
+from ..get._use import _check_mask, _get_arr, _mask_arg, _obs_col, _resolve_obs
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -44,8 +43,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from ..get._out import Prefix
-    from ..get._types import Mask, RepAcc
+    from ..get._types import AdRef, Mask, RepAcc
 
 
 type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
@@ -767,18 +765,19 @@ def _build_stats_dataframe(
     out=doc_out_key(
         "the results",
         default="`.uns['rank_genes_groups']`",
-        prefixed="`.uns['p_rank_genes_groups']`",
-        key_added="`key_added='k'` wrote to `.uns['k']`.",
+        key_added=(
+            "Name of the :attr:`~anndata.AnnData.uns` entry to write to instead "
+            "(until there are `.uns` accessors)."
+        ),
     ),
 )
 @deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("use_raw", DEPR_RAW)
-@deprecated_arg("key_added", DEPR_KEY_ADDED)
 @deprecated_copy
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
-    groupby: str,
+    groupby: AdRef | str,
     *,
     mask: Mask | None = None,
     use_raw: bool | None = None,
@@ -794,11 +793,11 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     mean_in_log_space: bool | Default = Default(
         preset=("rank_genes_groups", "mean_in_log_space")
     ),
-    out: Prefix | bool = False,
+    out: bool = False,
+    key_added: str | None = None,
     # deprecated
     layer: str | None = None,
     mask_var: Mask | None = None,
-    key_added: str | None = None,
     copy: bool = False,
     **kwds,
 ) -> AnnData | dict[str, Any] | None:
@@ -822,7 +821,9 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata
         Annotated data matrix.
     groupby
-        The key of the observations grouping to consider.
+        The observations grouping to consider.
+        Given by a reference like `A.obs['leiden']`, or by column name
+        (:class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d with :attr:`~scanpy.Preset.ScanpyV2Preview`).
     {mask}
     use_raw
         Use `raw` attribute of `adata` if present. The default behavior is to use `raw` if present.
@@ -917,9 +918,9 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         out,
         key_added,
         kind="uns",
-        base="rank_genes_groups",
         default="rank_genes_groups",
     )
+    groupby = _obs_col(groupby, param="groupby")
     if use is not None:
         use = _resolve_obs(use, rep=True)
     mask = _mask_arg(mask, mask_var, dim="var")
@@ -1084,25 +1085,25 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
     out=doc_out_key(
         "the filtered results",
         default="`.uns['rank_genes_groups_filtered']`",
-        prefixed="`.uns['p_rank_genes_groups_filtered']`",
-        key_added="`key_added='k'` wrote to `.uns['k']`.",
+        key_added=(
+            "Name of the :attr:`~anndata.AnnData.uns` entry to write to instead "
+            "(until there are `.uns` accessors)."
+        ),
     )
 )
 @deprecated_arg("use_raw", DEPR_RAW)
-@deprecated_arg("key_added", DEPR_KEY_ADDED)
 def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     *,
     key: str | None = None,
-    groupby: str | None = None,
+    groupby: AdRef | str | None = None,
     use: RepAcc | str | None = None,
     use_raw: bool | None = None,
     min_in_group_fraction: float = 0.25,
     min_fold_change: float = 1,
     max_out_group_fraction: float = 0.5,
     compare_abs: bool = False,
-    out: Prefix | bool = False,
-    # deprecated
+    out: bool = False,
     key_added: str | None = None,
 ) -> dict[str, Any] | None:
     """Filter out genes based on two criteria.
@@ -1153,12 +1154,12 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
         out,
         key_added,
         kind="uns",
-        base="rank_genes_groups_filtered",
         default="rank_genes_groups_filtered",
     )
     if key is None:
         key = "rank_genes_groups"
 
+    groupby = _obs_col(groupby, param="groupby")
     if groupby is None:
         groupby = adata.uns[key]["params"]["groupby"]
 

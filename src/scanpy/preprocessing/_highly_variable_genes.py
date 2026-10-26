@@ -25,7 +25,7 @@ from .._utils import (
     sanitize_anndata,
 )
 from ..get import aggregate
-from ..get._out import Prefix, _legacy_out, _out_key
+from ..get._out import _legacy_out
 from ..get._use import _get_arr, _get_vec_compat, _ref_arg, _resolve_obs
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._settings.presets import HVGFlavor
-    from ..get._types import AdRef, MultiAcc, RepAcc
+    from ..get._types import AdRef, RepAcc
 
 
 @singledispatch
@@ -132,7 +132,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     check_values: bool = True,
     span: float = 0.3,
     subset: bool = False,
-    out: Prefix | bool = False,
+    out: bool = False,
 ) -> pd.DataFrame | None:
     """See `highly_variable_genes`.
 
@@ -296,7 +296,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         ).assign(
             variances_norm=df["variances_norm"].to_numpy().astype("float64", copy=False)
         )
-        _write_hvg(adata, res, out, uns={"flavor": flavor})
+        _write_hvg(adata, res, uns={"flavor": flavor})
         logg.hint(
             "added\n"
             "    'highly_variable', boolean vector (adata.var)\n"
@@ -317,23 +317,10 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     return None
 
 
-def _write_hvg(
-    adata: AnnData,
-    res: pd.DataFrame,
-    out: MultiAcc | str | Prefix | Literal[False],
-    *,
-    uns: dict[str, object],
-) -> None:
-    """Write `highly_variable_genes` results: as (prefixed) `.var` columns, or to `.varm`."""
-    if out is False or isinstance(out, Prefix):
-        prefix = f"{out.prefix}_" if out else ""
-        res = res.add_prefix(prefix)
-        adata.var[res.columns] = res
-        adata.uns[f"{prefix}hvg"] = uns
-        return
-    key = _out_key(out, None, kind="varm", base="hvg")
-    adata.varm[key] = res
-    adata.uns[key] = uns
+def _write_hvg(adata: AnnData, res: pd.DataFrame, *, uns: dict[str, object]) -> None:
+    """Write `highly_variable_genes` results as `.var` columns and `.uns['hvg']`."""
+    adata.var[res.columns] = res
+    adata.uns["hvg"] = uns
 
 
 @dataclass
@@ -660,9 +647,7 @@ def _highly_variable_genes_batched(
     use=doc_use("Which matrix to use for expression values.", legacy=("layer",)),
     out=doc_out_key(
         "the metrics",
-        example="A.varm['hvg']",
         default="the `.var` columns and `.uns['hvg']` listed below",
-        prefixed="`.var['p_highly_variable']`, `.var['p_means']`, … and `.uns['p_hvg']`",
     ),
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
@@ -687,7 +672,7 @@ def highly_variable_genes(  # noqa: PLR0913
     batch: AdRef | str | None = None,
     filter_unexpressed_genes: bool | None = None,
     check_values: bool = True,
-    out: MultiAcc | str | Prefix | bool = False,
+    out: bool = False,
     # deprecated
     inplace: bool = True,
     batch_key: str | None = None,
@@ -894,7 +879,7 @@ def highly_variable_genes(  # noqa: PLR0913
         .assign(dispersions_norm=df["dispersions_norm"].astype(np.float32))
         .reindex(adata.var_names)
     )
-    _write_hvg(adata, res, out, uns={"flavor": flavor})
+    _write_hvg(adata, res, uns={"flavor": flavor})
     logg.hint(
         "added\n"
         "    'highly_variable', boolean vector (adata.var)\n"

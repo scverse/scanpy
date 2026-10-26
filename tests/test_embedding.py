@@ -21,10 +21,12 @@ if TYPE_CHECKING:
     ("out", "key_obsm", "key_uns"),
     [
         pytest.param(False, "X_tsne", "tsne", id="default"),
-        pytest.param(sc.Prefix("custom"), "custom_tsne", "custom_tsne", id="prefix"),
+        pytest.param(
+            "obsm.custom", "custom", "custom", marks=needs.anndata_acc, id="acc"
+        ),
     ],
 )
-def test_tsne(*, out: sc.Prefix | bool, key_obsm: str, key_uns: str):
+def test_tsne(*, out: str | bool, key_obsm: str, key_uns: str):
     pbmc = pbmc68k_reduced()[:200].copy()
 
     euclidean1, euclidean2, cosine = (pbmc.copy() for _ in range(3))
@@ -50,10 +52,12 @@ def test_tsne(*, out: sc.Prefix | bool, key_obsm: str, key_uns: str):
     ("out", "key_obsm", "key_uns"),
     [
         pytest.param(False, "X_umap", "umap", id="default"),
-        pytest.param(sc.Prefix("custom"), "custom_umap", "custom_umap", id="prefix"),
+        pytest.param(
+            "obsm.custom", "custom", "custom", marks=needs.anndata_acc, id="acc"
+        ),
     ],
 )
-def test_umap_init_dtype(*, out: sc.Prefix | bool, key_obsm: str, key_uns: str):
+def test_umap_init_dtype(*, out: str | bool, key_obsm: str, key_uns: str):
     pbmc1 = pbmc68k_reduced()[:100, :].copy()
     pbmc2 = pbmc1.copy()
     for pbmc, dtype, o in [(pbmc1, np.float32, False), (pbmc2, np.float64, out)]:
@@ -117,8 +121,9 @@ def test_diffmap(
     [
         pytest.param(False, "X_diffmap", "diffmap_evals", False, id="default"),
         pytest.param(
-            *(sc.Prefix("custom"), "custom_diffmap", "custom_diffmap", True),
-            id="prefix",
+            *("obsm.custom", "custom", "custom", True),
+            marks=needs.anndata_acc,
+            id="acc",
         ),
         pytest.param(sc.Preset.ScanpyV1, "X_diffmap", "diffmap_evals", False, id="v1"),
         pytest.param(
@@ -130,7 +135,7 @@ def test_diffmap(
 )
 def test_diffmap_out(
     *,
-    out: sc.Prefix | sc.Preset | bool,
+    out: str | sc.Preset | bool,
     key_obsm: str,
     key_uns: str,
     is_dict: bool,
@@ -151,7 +156,7 @@ def test_diffmap_out(
     [
         pytest.param(False, "X_draw_graph_fr", "draw_graph", id="default"),
         pytest.param(
-            sc.Prefix("custom"), "custom_graph_fr", "custom_graph_fr", id="prefix"
+            "obsm.custom", "custom", "custom", marks=needs.anndata_acc, id="acc"
         ),
         pytest.param(sc.Preset.ScanpyV1, "X_draw_graph_fr", "draw_graph", id="v1"),
         pytest.param(
@@ -162,7 +167,7 @@ def test_diffmap_out(
     ],
 )
 def test_draw_graph_out(
-    *, out: sc.Prefix | sc.Preset | bool, key_obsm: str, key_uns: str
+    *, out: str | sc.Preset | bool, key_obsm: str, key_uns: str
 ) -> None:
     adata = pbmc68k_reduced()[:100, :100].copy()
     if isinstance(out, sc.Preset):

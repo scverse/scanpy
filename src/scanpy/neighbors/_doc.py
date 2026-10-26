@@ -37,31 +37,26 @@ n_pcs
 _doc_outs = dict(
     connectivities=(
         "The weighted adjacency matrix. "
-        "By default written to `A.obsp['connectivities']`, "
-        "with `sc.Prefix('p')` to `A.obsp['p_connectivities']`."
+        "By default written to `A.obsp['connectivities']`."
     ),
-    distances=(
-        "The distance matrix. "
-        "By default written to `A.obsp['distances']`, "
-        "with `sc.Prefix('p')` to `A.obsp['p_distances']`."
-    ),
+    distances=("The distance matrix. By default written to `A.obsp['distances']`."),
 )
 
 doc_out = doc_out_multi(
     _doc_outs,
     example="{'connectivities': A.obsp['conns']}",
     returns=":class:`~scanpy.pp.NeighborsOut`",
-    uns="neighbors",
+    uns=True,
 )
 
 doc_out_key_added = doc_out_multi(
     _doc_outs,
     example="{'connectivities': A.obsp['conns']}",
     returns=":class:`~scanpy.pp.NeighborsOut`",
-    uns="neighbors",
+    uns=True,
     key_added=(
         "`key_added='k'` wrote `.obsp['k_connectivities']`, `.obsp['k_distances']`, "
-        "and `.uns['k']`, so it is `out=sc.Prefix('k')`, "
-        "except that the latter names the `.uns` entry `'k_neighbors'`."
+        "and `.uns['k']`. `out=A.obsp['k']` writes `.obsp['k']`, `.obsp['k_distances']`, "
+        "and `.uns['k']` instead."
     ),
 )

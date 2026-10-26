@@ -53,7 +53,7 @@ if TYPE_CHECKING:
     from anndata.acc import AdRef
     from numpy.typing import ArrayLike, NDArray
 
-    from ..get._out import OutKind, Prefix
+    from ..get._out import OutKind
     from ..get._types import ArrAcc, VecRef, _SetRep
 
 
@@ -260,13 +260,11 @@ def _hashsolo_dests(prefix: str) -> HashsoloOut[_SetRep, _SetRep]:
         dict(
             classification=(
                 "Classification of each cell. "
-                "By default written to `A.obs['hashsolo']`, "
-                "with `sc.Prefix('p')` to `A.obs['p_hashsolo']`."
+                "By default written to `A.obs['hashsolo']`."
             ),
             probabilities=(
                 "Probabilities of each hypothesis. "
-                "By default written to `A.obsm['hashsolo']`, "
-                "with `sc.Prefix('p')` to `A.obsm['p_hashsolo']`."
+                "By default written to `A.obsm['hashsolo']`."
             ),
         ),
         example="{'classification': A.obs['hto']}",
@@ -280,7 +278,7 @@ def hashsolo(
     priors: tuple[float, float, float] = (0.01, 0.8, 0.19),
     pre_existing_clusters: AdRef | str | None = None,
     n_noise_barcodes: int | None = None,
-    out: Mapping[str, ArrAcc | VecRef | str] | Prefix | bool = False,
+    out: Mapping[str, ArrAcc | VecRef | str] | bool = False,
 ) -> HashsoloOut | None:
     r"""Probabilistic demultiplexing of cell hashing data using HashSolo :cite:p:`Bernstein2020`.
 
@@ -354,8 +352,8 @@ def hashsolo(
     referenced one by one:
 
     >>> adata.obs[["Hash1", "Hash2", "Hash3"]] = hto
-    >>> sc.pp.hashsolo(adata, A.obs[["Hash1", "Hash2", "Hash3"]], out=sc.Prefix("hs2"))
-    >>> adata.obs["hs2_hashsolo"].cat.categories.astype("string")
+    >>> sc.pp.hashsolo(adata, A.obs[["Hash1", "Hash2", "Hash3"]], out=A.obs["hs2"])
+    >>> adata.obs["hs2"].cat.categories.astype("string")
     Index(['Hash1', 'Hash2', 'Hash3'], dtype='string')
 
     """
@@ -364,7 +362,6 @@ def hashsolo(
         None,
         dests=_hashsolo_dests,
         kinds=HASHSOLO_KINDS,
-        bases=_hashsolo_dests("hashsolo"),
         default="hashsolo",
     )
     data, names = _get_hashes(adata, hashes)

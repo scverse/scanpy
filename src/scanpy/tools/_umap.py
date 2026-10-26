@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -10,7 +11,7 @@ from .. import logging as logg
 from .._docs import DEPR_KEY_ADDED, DEPR_NEIGHBORS_KEY, doc_out_key, doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default, settings
-from .._utils import NeighborsView, _doc_params
+from .._utils import _doc_params
 from .._utils.random import (
     _accepts_legacy_random_state,
     _legacy_random_state,
@@ -19,19 +20,19 @@ from .._utils.random import (
 from ..get._out import _out_key, deprecated_copy
 from ..get._types import MultiAcc
 from ..get._uns import _use_from_uns
-from ..get._use import _resolve_ref
-from ..neighbors._common import _neighbors_key
+from ..get._use import _resolve_obs, _resolve_ref
+from ..neighbors._common import _neighbors_view
 from ._docs import doc_use_neighbors
 from ._utils import _choose_representation_compat, get_init_pos_from_paga
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Any, Literal
 
     from anndata import AnnData
 
+    from .._compat import CSBase
     from .._utils.random import RNGLike, SeedLike
-    from ..get._out import Prefix
-    from ..neighbors._common import NeighborsUse
+    from ..get._types import GraphAcc, RepAcc
 
 
 type _InitPos = Literal["paga", "spectral", "random"]
@@ -40,11 +41,18 @@ type _InitPos = Literal["paga", "spectral", "random"]
 @_accepts_legacy_random_state(0)
 @_doc_params(
     rng=doc_rng,
-    use=doc_use_neighbors(),
+    use=doc_use_neighbors(
+        meta=True,
+        extra=(
+            "\n    UMAP lays out more than `2 * n_components` connected components using data,"
+            " by default the representation :func:`~scanpy.pp.neighbors` used."
+            "\n    If there is none, pass a mapping like"
+            " `{'graph': A.obsp['k'], 'rep': A.obsm['pca']}`."
+        ),
+    ),
     out=doc_out_key(
         "the embedding",
         example="A.obsm['umap']",
-        prefixed="`.obsm['p_umap']` and `.uns['p_umap']`",
         key_added="`key_added='k'` is `out=A.obsm['k']`.",
         default=(
             "`.obsm['X_umap']` and `.uns['umap']` "
@@ -71,8 +79,11 @@ def umap(  # noqa: PLR0913
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap"] = "umap",
-    use: NeighborsUse = None,
-    out: MultiAcc | str | Prefix | bool = False,
+    use: GraphAcc
+    | str
+    | Mapping[Literal["graph", "rep"], GraphAcc | RepAcc | str]
+    | None = None,
+    out: MultiAcc | str | bool = False,
     # deprecated
     neighbors_key: str | None = None,
     key_added: str | None = None,
@@ -170,18 +181,21 @@ def umap(  # noqa: PLR0913
     """
     non_deterministic = rng is None
     rng = np.random.default_rng(rng)
-    key = _out_key(out, key_added, kind="obsm", base="umap", default=Default())
+    key = _out_key(out, key_added, kind="obsm", default=Default())
 
-    neighbors_key = _neighbors_key(use, neighbors_key) or "neighbors"
-    if neighbors_key not in adata.uns:
-        msg = f"Did not find .uns[{neighbors_key!r}]. Run `sc.pp.neighbors` first."
+    graph, rep = (
+        (use.get("graph"), use.get("rep")) if isinstance(use, Mapping) else (use, None)
+    )
+    neighbors = _neighbors_view(adata, graph, neighbors_key)
+    if neighbors is None or "connectivities" not in neighbors:
+        msg = "Did not find a neighborhood graph. Run `sc.pp.neighbors` first."
         raise ValueError(msg)
+    conns = neighbors["connectivities"]
+    neigh_params = neighbors["params"] if "params" in neighbors else {}  # noqa: SIM401 (no `.get`)
 
     start = logg.info("computing UMAP")
 
-    neighbors = NeighborsView(adata, neighbors_key)
-
-    if "params" not in neighbors or neighbors["params"]["method"] != "umap":
+    if neigh_params and neigh_params["method"] != "umap":
         logg.warning(
             f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap'
         )
@@ -201,29 +215,19 @@ def umap(  # noqa: PLR0913
     elif isinstance(init_pos, str) and init_pos in adata.obsm:
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == "paga":
-        init_coords = get_init_pos_from_paga(
-            adata, rng=rng, neighbors_key=neighbors_key
-        )
+        init_coords = get_init_pos_from_paga(adata, rng=rng, adjacency=conns)
     else:
         init_coords = init_pos  # Let umap handle it
     if hasattr(init_coords, "dtype"):
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
-    neigh_params = neighbors["params"]
-    x = _choose_representation_compat(
-        adata,
-        use_rep=_use_from_uns(neigh_params),
-        n_pcs=neigh_params.get("n_pcs", None),
-        silent=True,
-    )
+    x = _umap_data(adata, conns, rep, neigh_params, n_components=n_components)
     if method == "umap":
-        # the data matrix X is really only used for determining the number of connected components
-        # for the init condition in the UMAP embedding
-        default_epochs = 500 if neighbors["connectivities"].shape[0] <= 10000 else 200
+        default_epochs = 500 if conns.shape[0] <= 10000 else 200
         n_epochs = default_epochs if maxiter is None else maxiter
         x_umap, _ = simplicial_set_embedding(
             data=x,
-            graph=neighbors["connectivities"].tocoo(copy=True),
+            graph=conns.tocoo(copy=True),
             n_components=n_components,
             initial_alpha=alpha,
             a=a,
@@ -259,4 +263,37 @@ def umap(  # noqa: PLR0913
             f"    {keys.uns!r}, UMAP parameters (adata.uns)"
         ),
     )
+    return None
+
+
+def _umap_data(
+    adata: AnnData,
+    conns: CSBase,
+    rep: RepAcc | str | None,
+    neigh_params: Mapping[str, Any],
+    *,
+    n_components: int,
+) -> Any:
+    """Get the data UMAP uses to lay out the graph’s connected components relative to each other.
+
+    UMAP only reads it if there are more than `2 * n_components` components,
+    and guesses the layout without a seed if it’s missing, so we require it then.
+    """
+    if rep is not None:
+        return adata[_resolve_obs(rep, rep=True)]
+    if neigh_params:  # the representation `pp.neighbors` used
+        return _choose_representation_compat(
+            adata,
+            use_rep=_use_from_uns(neigh_params),
+            n_pcs=neigh_params.get("n_pcs", None),
+            silent=True,
+        )
+    from scipy.sparse.csgraph import connected_components
+
+    if (n := connected_components(conns)[0]) > 2 * n_components:
+        msg = (
+            f"The graph has {n} connected components, so UMAP needs data to lay them out. "
+            "Pass e.g. `use={'graph': A.obsp[...], 'rep': A.obsm['pca']}`."
+        )
+        raise ValueError(msg)
     return None

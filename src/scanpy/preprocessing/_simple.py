@@ -39,7 +39,6 @@ from .._utils import (
 )
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
 from ..get._out import (
-    Prefix,
     _dest,
     _legacy_out,
     _out_key,
@@ -181,7 +180,7 @@ def filter_cells(
             ),
         )
         col = "n_counts" if min_genes is None and max_genes is None else "n_genes"
-        key = _out_key(out, None, kind="obs", base=col, default=col)
+        key = _out_key(out, None, kind="obs", default=col)
         if key is True:
             return cell_subset, number
         adata.obs[key] = number
@@ -305,7 +304,7 @@ def filter_genes(
             )
         )
         col = "n_counts" if min_cells is None and max_cells is None else "n_cells"
-        key = _out_key(out, None, kind="var", base=col, default=col)
+        key = _out_key(out, None, kind="var", default=col)
         if key is True:
             return gene_subset, number
         adata.var[key] = number
@@ -347,7 +346,7 @@ def _log1p(data, *, base: Number | None = None, copy: bool = False):
 
 @_doc_params(
     use=doc_use("Which matrix to logarithmize."),
-    out=doc_out("log1p"),
+    out=doc_out(),
 )
 @expose_dispatch(_log1p)
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
@@ -358,7 +357,7 @@ def log1p(
     *,
     base: Number | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Prefix | bool = False,
+    out: RepAcc | str | bool = False,
     chunked: bool | None = None,
     chunk_size: int | None = None,
     # deprecated
@@ -448,7 +447,7 @@ def log1p_anndata(
     *,
     base: Number | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Prefix | bool = False,
+    out: RepAcc | str | bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
     layer: str | None = None,
@@ -459,9 +458,7 @@ def log1p_anndata(
     # and only set it when writing to it.
     reads_x = _use_dest(use, layer=layer, obsm=obsm) == {}
     writes_x = chunked or (
-        reads_x
-        if out is False
-        else not isinstance(out, Prefix | bool) and _dest(out) == {}
+        reads_x if out is False else not isinstance(out, bool) and _dest(out) == {}
     )
     if reads_x and "log1p" in adata.uns:
         logg.warning("adata.X seems to be already log-transformed.")
@@ -494,9 +491,7 @@ def log1p_anndata(
         # log1p is in-place, so leave the source alone unless we write back over it
         x = _log1p(x, copy=out is not False, base=base)
         if (
-            unwritten := _write_out(
-                adata, x, out=out, base="log1p", use=use, layer=layer, obsm=obsm
-            )
+            unwritten := _write_out(adata, x, out=out, use=use, layer=layer, obsm=obsm)
         ) is not None:
             return unwritten
 
@@ -507,14 +502,14 @@ def log1p_anndata(
 
 @_doc_params(
     use=doc_use("Which matrix to take the square root of.", legacy=()),
-    out=doc_out("sqrt"),
+    out=doc_out(),
 )
 @deprecated_copy
 def sqrt(
     data: AnnData | CSBase | np.ndarray,
     *,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Prefix | bool = False,
+    out: RepAcc | str | bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
     # deprecated
@@ -559,7 +554,7 @@ def sqrt(
             data.X[start:end] = sqrt(chunk)
         return None
     x = sqrt(_get_arr(data, use))
-    return _write_out(data, x, out=out, base="sqrt", use=use)
+    return _write_out(data, x, out=out, use=use)
 
 
 @njit
@@ -606,7 +601,7 @@ def numpy_regress_out(
 
 @_doc_params(
     use=doc_use("Which matrix to regress on.", legacy=("layer",)),
-    out=doc_out("regressed"),
+    out=doc_out(),
     ref=doc_ref_compat,
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
@@ -617,7 +612,7 @@ def regress_out(  # noqa: PLR0912, PLR0915
     covariates: AdRef | str | Sequence[AdRef | str] | None = None,
     *,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Prefix | bool = False,
+    out: RepAcc | str | bool = False,
     n_jobs: int | None = None,
     # deprecated
     copy: bool = False,
@@ -762,11 +757,7 @@ def regress_out(  # noqa: PLR0912, PLR0915
         res = np.vstack(res).T
 
     logg.info("    finished", time=start)
-    if (
-        unwritten := _write_out(
-            adata, res, out=out, base="regressed", use=use, layer=layer
-        )
-    ) is not None:
+    if (unwritten := _write_out(adata, res, out=out, use=use, layer=layer)) is not None:
         return unwritten
     return None
 
@@ -959,7 +950,7 @@ def sample(  # noqa: PLR0912
 @_doc_params(
     rng=doc_rng,
     use=doc_use("Which count matrix to downsample.", legacy=()),
-    out=doc_out("downsampled"),
+    out=doc_out(),
 )
 @deprecated_copy
 def downsample_counts(
@@ -970,7 +961,7 @@ def downsample_counts(
     rng: SeedLike | RNGLike | None = None,
     replace: bool = False,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Prefix | bool = False,
+    out: RepAcc | str | bool = False,
     # deprecated
     copy: bool = False,
 ) -> AnnData | np.ndarray | CSBase | None:
@@ -1021,7 +1012,7 @@ def downsample_counts(
         x = _downsample_total_counts(x, total_counts, rng=rng, replace=replace)
     elif counts_per_cell is not None:
         x = _downsample_per_cell(x, counts_per_cell, rng=rng, replace=replace)
-    return _write_out(adata, x, out=out, base="downsampled", use=use)
+    return _write_out(adata, x, out=out, use=use)
 
 
 def _downsample_per_cell[T: (np.ndarray, CSBase)](

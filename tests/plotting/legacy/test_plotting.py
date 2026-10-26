@@ -462,12 +462,12 @@ def test_stacked_violin_swap_axes_match(plot_cmp) -> None:
         method="wilcoxon",
         tie_correct=True,
         pts=True,
-        out=sc.Prefix("wilcoxon"),
+        key_added="wilcoxon",
     )
     swapped_ax = sc.pl.rank_genes_groups_stacked_violin(
         pbmc,
         n_genes=2,
-        key="wilcoxon_rank_genes_groups",
+        key="wilcoxon",
         groupby="bulk_labels",
         swap_axes=True,
         return_fig=True,

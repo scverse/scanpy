@@ -73,10 +73,28 @@ def test_embedding_density_out_acc(adata_rand: AnnData, *, as_str: bool) -> None
     assert "d_params" in adata_rand.uns
 
 
-def test_embedding_density_prefix(adata_rand: AnnData) -> None:
-    sc.tl.embedding_density(adata_rand, "test", groupby="group", out=sc.Prefix("p"))
-    assert "p_test_density_group" in adata_rand.obs
-    assert "p_test_density_group_params" in adata_rand.uns
+@needs.anndata_acc
+def test_embedding_density_groupby_ref(adata_rand: AnnData) -> None:
+    """`groupby` takes a reference like `A.obs['group']`."""
+    from anndata.acc import A
+
+    sc.tl.embedding_density(adata_rand, "test", groupby=A.obs["group"])
+    assert "test_density_group" in adata_rand.obs
+    assert "test_density_group_params" in adata_rand.uns
+
+
+def test_embedding_density_basis_deprecated(adata_rand: AnnData) -> None:
+    """`basis` is the deprecated name of the (positional) `use`."""
+    expected = adata_rand.copy()
+    sc.tl.embedding_density(expected, "test")
+    with pytest.warns(FutureWarning, match=r"argument basis is deprecated"):
+        sc.tl.embedding_density(adata_rand, basis="test")
+    pd.testing.assert_frame_equal(adata_rand.obs, expected.obs)
+    with (
+        pytest.warns(FutureWarning, match=r"argument basis is deprecated"),
+        pytest.raises(TypeError, match=r"either `use` or `basis`"),
+    ):
+        sc.tl.embedding_density(adata_rand, "test", basis="test")
 
 
 def test_embedding_density_out_true(adata_rand: AnnData) -> None:
@@ -104,7 +122,7 @@ def test_embedding_density_key_added_deprecated(adata_rand: AnnData) -> None:
 
 @needs.anndata_acc
 def test_embedding_density_basis_acc(adata_rand: AnnData) -> None:
-    """An accessor `basis` is used as-is, without the `X_` lookup."""
+    """An accessor `use` is used as-is, without the `X_` lookup."""
     from anndata.acc import A
 
     sc.tl.embedding_density(adata_rand, "test")
@@ -117,7 +135,7 @@ def test_embedding_density_basis_acc(adata_rand: AnnData) -> None:
 
 @needs.scanpy2
 def test_embedding_density_basis_str_v2(adata_rand: AnnData) -> None:
-    """With the v2 preset, `basis` strings are resolved like other accessor strings."""
+    """With the v2 preset, `use` strings are resolved like other accessor strings."""
     expected = adata_rand.copy()
     sc.tl.embedding_density(expected, "test")
     with sc.settings.override(preset=sc.Preset.ScanpyV2Preview):

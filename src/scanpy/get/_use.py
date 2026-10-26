@@ -13,6 +13,7 @@ from numpy.typing import NDArray
 
 from .._settings import Default, Preset
 from .._utils import dim_acc
+from ._out import _dest
 from ._types import AdRef, ArrAcc, GraphAcc, LayerAcc, MultiAcc, _collection_of
 
 if TYPE_CHECKING:
@@ -449,3 +450,19 @@ def _resolve_obs(use: RefAcc | str | None, /, *, rep: bool = False) -> RefAcc | 
         )
         raise TypeError(msg)
     return use
+
+
+def _obs_col(ref: AdRef | str | None, *, param: str) -> str | None:
+    """Get the name of the `.obs` column a grouping `ref` points to.
+
+    Strings are column names unless the preset is `v2` (see `_resolve_ref`),
+    since grouping parameters took column names before.
+    """
+    if ref is None:
+        return None
+    if isinstance(ref := _resolve_ref(ref), str):
+        return ref
+    if (dest := _dest(ref)).keys() != {"obs"}:
+        msg = f"`{param}` must point to a column of `.obs`, was {ref!r}"
+        raise TypeError(msg)
+    return dest["obs"]

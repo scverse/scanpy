@@ -12,7 +12,7 @@ from .._settings import Default, settings
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state
 from ..get._out import _out_key, deprecated_copy
-from ..neighbors._common import _neighbors_key
+from ..neighbors._common import _neighbors_view
 from ._docs import doc_use_neighbors
 
 if TYPE_CHECKING:
@@ -22,8 +22,7 @@ if TYPE_CHECKING:
     from anndata.acc import MultiAcc
 
     from .._utils.random import RNGLike, SeedLike
-    from ..get._out import Prefix
-    from ..neighbors._common import NeighborsUse
+    from ..get._types import GraphAcc
 
 
 __all__ = ["diffmap"]
@@ -31,11 +30,10 @@ __all__ = ["diffmap"]
 
 @_doc_params(
     rng=doc_rng,
-    use=doc_use_neighbors(),
+    use=doc_use_neighbors(meta=True),
     out=doc_out_key(
         "the embedding",
         example="A.obsm['diffmap']",
-        prefixed="`.obsm['p_diffmap']` and `.uns['p_diffmap']`",
         default=(
             "`.obsm['X_diffmap']` and the eigenvalues to `.uns['diffmap_evals']` "
             "(`.obsm['diffmap']` and `.uns['diffmap']['evals']` if :attr:`scanpy.settings.preset` is "
@@ -51,8 +49,8 @@ def diffmap(
     n_comps: int = 15,
     *,
     rng: SeedLike | RNGLike | None = None,
-    use: NeighborsUse = None,
-    out: MultiAcc | str | Prefix | bool = False,
+    use: GraphAcc | str | None = None,
+    out: MultiAcc | str | bool = False,
     # deprecated
     neighbors_key: str | None = None,
     copy: bool = False,
@@ -115,17 +113,20 @@ def diffmap(
 
     """
     rng = np.random.default_rng(rng)
-    neighbors_key = _neighbors_key(use, neighbors_key) or "neighbors"
-
-    if neighbors_key not in adata.uns:
+    if _neighbors_view(adata, use, neighbors_key) is None:
         msg = "You need to run `pp.neighbors` first to compute a neighborhood graph."
         raise ValueError(msg)
     if n_comps <= 2:
         msg = "Provide any value greater than 2 for `n_comps`. "
         raise ValueError(msg)
-    key = _out_key(out, None, kind="obsm", base="diffmap", default=Default())
+    key = _out_key(out, None, kind="obsm", default=Default())
     emb = _diffmap(
-        adata, n_comps=n_comps, neighbors_key=neighbors_key, key_added=key, rng=rng
+        adata,
+        n_comps=n_comps,
+        use=use,
+        neighbors_key=neighbors_key,
+        key_added=key,
+        rng=rng,
     )
     return emb if key is True else None
 
@@ -134,7 +135,8 @@ def _diffmap(
     adata: AnnData,
     n_comps: int = 15,
     *,
-    neighbors_key: str | None,
+    use: GraphAcc | str | None = None,
+    neighbors_key: str | None = None,
     key_added: str | Default | Literal[True] | None,
     rng: np.random.Generator,
 ) -> np.ndarray | None:
@@ -142,7 +144,7 @@ def _diffmap(
     from ._dpt import DPT
 
     start = logging.info(f"computing Diffusion Maps using {n_comps=}(=n_dcs)")
-    dpt = DPT(adata, neighbors_key=neighbors_key)
+    dpt = DPT(adata, use=use, neighbors_key=neighbors_key)
     dpt.compute_transitions()
     dpt.compute_eigen(n_comps=n_comps, rng=rng)
     if key_added is True:

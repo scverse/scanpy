@@ -17,14 +17,3 @@ Represent data as a neighborhood structure, usually a knn graph.
    Neighbors
 
 ```
-
-Name a function’s outputs, passed as its `out` parameter.
-
-```{eval-rst}
-.. autosummary::
-   :nosignatures:
-   :toctree: generated/
-
-   Prefix
-
-```

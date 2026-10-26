@@ -11,7 +11,7 @@ from fast_array_utils.numba import njit
 from scipy import sparse
 from scverse_misc import Deprecation, deprecated_arg
 
-from scanpy.get._out import Prefix, _out_dests, _write_dests
+from scanpy.get._out import _out_dests, _write_dests
 from scanpy.get._use import _get_arr, _resolve_obs
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 
@@ -241,7 +241,7 @@ def calculate_qc_metrics(  # noqa: PLR0913
     qc_vars: Collection[str] | str = (),
     percent_top: Collection[int] | None = (50, 100, 200, 500),
     use: RepAcc | str | None = None,
-    out: Mapping[str, ArrAcc | str] | Prefix | bool | Default = Default(
+    out: ArrAcc | str | Mapping[str, ArrAcc | str] | bool | Default = Default(
         preset=("calculate_qc_metrics", "out")
     ),
     log1p: bool = True,
@@ -271,9 +271,9 @@ def calculate_qc_metrics(  # noqa: PLR0913
     out
         Where to write the metrics.
         By default (`out=False`), they are written as columns of `.obs` and `.var` (see below).
-        `sc.Prefix('p')` prefixes each of these columns with `p_`.
-        A mapping writes each metrics table it names as a whole :class:`~pandas.DataFrame`
-        to `.obsm` or `.varm` instead, e.g. `{{'obs': A.obsm['qc'], 'var': A.varm['qc']}}`.
+        An accessor like `A.obsm['qc']` writes the metrics tables as whole :class:`~pandas.DataFrame`\ s
+        to `.obsm['qc']` and `.varm['qc']` instead.
+        A mapping writes only the tables it names, e.g. `{{'obs': A.obsm['qc']}}`.
         :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d.
         If :data:`True`, they are returned as a :class:`~scanpy.pp.QcMetricsOut` instead of written.
         The default depends on :attr:`scanpy.settings.preset`:
@@ -358,18 +358,16 @@ def calculate_qc_metrics(  # noqa: PLR0913
     match out:
         case True:
             return vals
-        case False | Prefix():
+        case False:
             for df, annot in zip(vals, [adata.obs, adata.var], strict=True):
-                if isinstance(out, Prefix):
-                    df = df.add_prefix(f"{out.prefix}_")  # noqa: PLW2901
                 annot[df.columns] = df
         case _:
             _, dests = _out_dests(
                 out,
                 None,
-                dests=lambda _: QcMetricsOut(None, None),
+                # what a single accessor names after itself (`out=False` writes columns instead)
+                dests=lambda _: QcMetricsOut(dict(obsm="qc"), dict(varm="qc")),
                 kinds=QC_METRICS_KINDS,
-                bases=QcMetricsOut(None, None),
             )
             _write_dests(adata, vals, dests)
     return None
