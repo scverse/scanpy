@@ -234,11 +234,12 @@ texinfo_documents = [
 xref_overrides = {
     "numpy.typing.DTypeLike": ("py:data", "numpy.typing.DTypeLike"),
     "numpy._typing._array_like.NDArray": ("py:data", "numpy.typing.NDArray"),
+    "numpy.int64": ("py:attr", "numpy.int64"),
+    "numpy.float64": ("py:attr", "numpy.float64"),
 }
 
 nitpick_ignore = [
     # Technical issues
-    ("py:class", "numpy.int64"),  # documented as “attribute”
     ("py:class", "numpy._typing._dtype_like._SupportsDType"),
     ("py:obj", "numpy._typing._dtype_like._SupportsDType"),
     ("py:class", "numpy._typing._dtype_like._DTypeDict"),

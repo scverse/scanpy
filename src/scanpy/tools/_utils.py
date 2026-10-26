@@ -7,16 +7,17 @@ import numpy as np
 from .. import logging as logg
 from .._compat import warn
 from .._keys import _existing_preset_keys
-from .._settings import Preset, settings
+from .._settings import settings
 from .._utils import _choose_graph
-from ..get.get import LayerAcc, MultiAcc, _get_arr, _resolve_rep
+from ..get._types import LayerAcc, MultiAcc
+from ..get._use import _get_arr, _resolve_obs
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
     from .._compat import CSBase, CSRBase
-    from ..get.get import RepAcc
+    from ..get._types import RepAcc
 
 
 def _choose_representation(
@@ -29,7 +30,7 @@ def _choose_representation(
     """Get the representation to compute on, resolving strings using `anndata.acc`."""
     return _choose_representation_compat(
         adata,
-        use_rep=None if use_rep is None else _resolve_rep(use_rep),
+        use_rep=None if use_rep is None else _resolve_obs(use_rep, rep=True),
         n_pcs=n_pcs,
         silent=silent,
     )
@@ -38,21 +39,25 @@ def _choose_representation(
 def _choose_representation_compat(
     adata: AnnData,
     *,
-    use_rep: RepAcc | str | None,
+    use: RepAcc | str | None = None,
+    use_rep: RepAcc | str | None = None,
     n_pcs: int | None,
     silent: bool = False,
 ) -> np.ndarray | CSRBase:  # TODO: what else?
     """Get the representation to compute on.
 
-    Treats strings as `.obsm` keys (or `'X'`) instead of `anndata.acc` specs when the preset is v1.
+    `use` always uses `anndata.acc` semantics; `use_rep` is its deprecated predecessor,
+    whose strings are always `.obsm` keys (or `'X'`).
+    `use_rep` can also be an accessor, as read back by `_use_from_uns`.
     """
+    if use is not None:
+        if use_rep is not None:
+            msg = "Pass either `use` or `use_rep`, not both."
+            raise TypeError(msg)
+        use_rep = _resolve_obs(use, rep=True)
     verbosity = settings.verbosity
     if silent and settings.verbosity > 1:
         settings.verbosity = 1
-    if use_rep is not None and (
-        not isinstance(use_rep, str) or settings.preset is Preset.ScanpyV2Preview
-    ):
-        use_rep = _resolve_rep(use_rep)
     if use_rep is None and n_pcs == 0:  # backwards compat for specifying `.X`
         use_rep = "X"
     match use_rep:

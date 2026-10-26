@@ -98,3 +98,21 @@ Also see {ref}`data integration tools <data-integration>` and external {ref}`ext
    pp.neighbors
 
 ```
+
+## Output types
+
+Functions with several outputs return these if passed `out=True`.
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   pp.HashsoloOut
+   pp.NeighborsOut
+   pp.NormalizeTotalOut
+   pp.PcaOut
+   pp.QcMetricsOut
+   pp.ScaleOut
+   pp.ScrubletOut
+```

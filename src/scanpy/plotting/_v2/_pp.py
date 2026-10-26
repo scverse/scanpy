@@ -5,18 +5,25 @@ from typing import TYPE_CHECKING
 import holoviews as hv
 from hv_anndata import A
 
+from ...get._out import _out_dests
+from ...preprocessing._scrublet import SCRUBLET_BASES, SCRUBLET_KINDS
 from .._common import highest_expr_genes as _highest_expr_genes
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from anndata import AnnData
+    from anndata.acc import AdRef
+
+    from ...get._types import RepAcc, VecRef
 
 
 def highest_expr_genes(
     adata: AnnData,
     n_top: int = 20,
     *,
-    layer: str | None = None,
-    gene_symbols: str | None = None,
+    use: RepAcc | str | None = None,
+    gene_symbols: AdRef | None = None,
 ) -> hv.BoxWhisker:
     """Get ``n_top`` genes by mean expression.
 
@@ -26,10 +33,11 @@ def highest_expr_genes(
         The AnnData object.
     n_top
         The number of top genes to plot.
-    layer
-        The layer to use.
+    use
+        The count matrix to use, e.g. `A.layers['counts']`.
     gene_symbols
-        The column name containing gene symbols.
+        Gene symbols to label the genes with, e.g. `A.var['symbol']`.
+        Uses `.var_names` by default.
 
     Returns
     -------
@@ -46,10 +54,10 @@ def highest_expr_genes(
         A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
-        sc.pl.highest_expr_genes(adata, layer="counts")
+        sc.pl.highest_expr_genes(adata, use=A.layers["counts"])
 
     """
-    hxg = _highest_expr_genes(adata, n_top, layer=layer, gene_symbols=gene_symbols)
+    hxg = _highest_expr_genes(adata, n_top, use=use, gene_symbols=gene_symbols)
     hxg_melted = hxg.melt(var_name="gene", value_name="frac_pct")
     return hv.BoxWhisker(hxg_melted, ["gene"], ["frac_pct"]).opts(
         ylabel="% of total counts", invert_axes=True
@@ -84,15 +92,16 @@ def highly_variable_genes(adata: AnnData) -> hv.Layout:
         sc.pl.highly_variable_genes(adata)
 
     """
+    table, info = adata.var, adata.uns["hvg"]
     d1, d2 = (
         ("variances", "variances_norm")
-        if adata.uns["hvg"]["flavor"] == "seurat_v3"
+        if info["flavor"].startswith("seurat_v3")
         else ("dispersions", "dispersions_norm")
     )
 
     return hv.Layout([
-        hv.Scatter(adata, [A.var["means"]], [A.var[d], A.var["highly_variable"]]).opts(
-            color=A.var["highly_variable"],
+        hv.Scatter(table, ["means"], [d, "highly_variable"]).opts(
+            color="highly_variable",
             **(  # https://github.com/holoviz/holoviews/issues/6938
                 dict(cmap={True: "black", False: "gray"})
                 if hv.Store.current_backend != "plotly"
@@ -110,7 +119,9 @@ def highly_variable_genes(adata: AnnData) -> hv.Layout:
     ])
 
 
-def scrublet_score_distribution(adata: AnnData) -> hv.Layout:
+def scrublet_score_distribution(
+    adata: AnnData, *, use: Mapping[str, VecRef | str] | None = None
+) -> hv.Layout:
     """Plot the doublet score distribution.
 
     Plots the doublet score probability densities for observed transcriptomes
@@ -120,6 +131,9 @@ def scrublet_score_distribution(adata: AnnData) -> hv.Layout:
     ----------
     adata
         The AnnData object.
+    use
+        Where :func:`~scanpy.pp.scrublet` wrote its results, i.e. the `out` passed to it:
+        `None` for the default places, or a mapping like `{'doublet_score': A.obs['score']}`.
 
     Returns
     -------
@@ -141,6 +155,16 @@ def scrublet_score_distribution(adata: AnnData) -> hv.Layout:
         sc.pl.scrublet_score_distribution(adata)
 
     """
+    uns_key, dests = _out_dests(
+        False if use is None else use,
+        None,
+        dests=lambda _: SCRUBLET_BASES,
+        kinds=SCRUBLET_KINDS,
+        uns=True,
+        default="scrublet",
+        primary=False,
+    )
+    score = A.obs[dests.doublet_score["obs"]]
     labels = dict(
         xlabel="Doublet score",
         ylabel="Probability density",
@@ -148,8 +172,8 @@ def scrublet_score_distribution(adata: AnnData) -> hv.Layout:
 
     observed = (
         hv
-        .Dataset(adata, [], [A.obs["doublet_score"]])
-        .hist(A.obs["doublet_score"], adjoin=False)
+        .Dataset(adata, [], [score])
+        .hist(score, adjoin=False)
         .opts(
             xlim=(0, 1),
             logy=True,
@@ -161,11 +185,11 @@ def scrublet_score_distribution(adata: AnnData) -> hv.Layout:
 
     doublets_sim = (
         hv
-        .Table(adata.uns["scrublet"]["doublet_scores_sim"], "scores")
+        .Table(adata.uns[uns_key]["doublet_scores_sim"], "scores")
         .hist("scores", adjoin=False)
         .opts(xlim=(0, 1), shared_axes=False, title="Simulated doublets", **labels)
     )
 
     return hv.Layout([observed, doublets_sim]) * hv.VLine(
-        adata.uns["scrublet"]["threshold"]
+        adata.uns[uns_key]["threshold"]
     )

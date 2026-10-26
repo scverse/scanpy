@@ -8,12 +8,15 @@ import numpy as np
 import pandas as pd
 from fast_array_utils import stats
 
+from .._utils import own_deprecations
 from ..preprocessing._normalization import normalize_total
 
 if TYPE_CHECKING:
     import holoviews as hv
     from anndata import AnnData
     from numpy.typing import NDArray
+
+    from ..get._types import RepAcc, VecRef
 
 
 __all__ = ["dot_area", "highest_expr_genes"]
@@ -23,8 +26,9 @@ def highest_expr_genes(
     adata: AnnData,
     n_top: int,
     *,
+    use: RepAcc | str | None = None,
     layer: str | None = None,
-    gene_symbols: str | None = None,
+    gene_symbols: VecRef | None = None,
 ) -> pd.DataFrame:
     """Return a wide-format DataFrame of the top ``n_top`` genes by mean expression.
 
@@ -37,24 +41,34 @@ def highest_expr_genes(
         Annotated data matrix.
     n_top
         Number of top genes to return.
+    use
+        Matrix to pull data from.
     layer
-        Layer to pull data from.
+        Layer to pull data from (for the legacy API).
     gene_symbols
-        Column in ``.var`` containing gene symbols; uses ``.var_names`` if ``None``.
+        Gene symbols: an accessor like `A.var['symbol']`, or (for the legacy API)
+        a column in ``.var``; uses ``.var_names`` if ``None``.
 
     Returns
     -------
     DataFrame with cells as rows and top genes as columns, values are
     percent of total counts.
     """
-    norm_expr = normalize_total(adata, target_sum=100, layer=layer, inplace=False)["X"]
+    with own_deprecations():
+        norm_expr = normalize_total(
+            adata, target_sum=100, use=use, out=True, layer=layer
+        ).normalized
     mean_percent = stats.mean(norm_expr, axis=0)
     top_idx = np.argsort(mean_percent)[::-1][:n_top]
-    columns = (
-        adata.var_names[top_idx]
-        if gene_symbols is None
-        else adata.var[gene_symbols].iloc[top_idx].astype("string")
-    )
+    if gene_symbols is None:
+        columns = adata.var_names[top_idx]
+    else:
+        symbols = (
+            adata.var[gene_symbols]
+            if isinstance(gene_symbols, str)
+            else pd.Series(adata[gene_symbols], index=adata.var_names)
+        )
+        columns = symbols.iloc[top_idx].astype("string")
     counts_top = norm_expr[:, top_idx]
     if hasattr(counts_top, "toarray"):
         counts_top = counts_top.toarray()

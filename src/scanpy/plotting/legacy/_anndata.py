@@ -23,6 +23,7 @@ from ..._utils import (
     _doc_params,
     check_use_raw,
     get_literal_vals,
+    own_deprecations,
     sanitize_anndata,
 )
 from . import _utils, mpl_settings
@@ -874,7 +875,10 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
         raise ValueError(msg)
 
     if groupby is not None:
-        obs_df = get.obs_df(adata, keys=[groupby, *keys], layer=layer, use_raw=use_raw)
+        with own_deprecations():  # `anndata.acc` is optional, so no `use`
+            obs_df = get.obs_df(
+                adata, keys=[groupby, *keys], layer=layer, use_raw=use_raw
+            )
         if kwds.get("palette") is None:
             if not isinstance(adata.obs[groupby].dtype, CategoricalDtype):
                 msg = (
@@ -894,7 +898,8 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
                 )
             )
     else:
-        obs_df = get.obs_df(adata, keys=keys, layer=layer, use_raw=use_raw)
+        with own_deprecations():  # `anndata.acc` is optional, so no `use`
+            obs_df = get.obs_df(adata, keys=keys, layer=layer, use_raw=use_raw)
     if groupby is None:
         obs_tidy = pd.melt(obs_df, value_vars=keys)
         x = "variable"
@@ -2049,9 +2054,10 @@ def _prepare_dataframe(  # noqa: PLR0912
         groupby = groupby.copy()  # copy to not modify user passed parameter
         groupby.remove(groupby_index)
     keys = list(groupby) + list(np.unique(var_names))
-    obs_tidy = get.obs_df(
-        adata, keys=keys, layer=layer, use_raw=use_raw, gene_symbols=gene_symbols
-    )
+    with own_deprecations():  # `anndata.acc` is optional, so no `use`
+        obs_tidy = get.obs_df(
+            adata, keys=keys, layer=layer, use_raw=use_raw, gene_symbols=gene_symbols
+        )
     assert np.all(np.array(keys) == np.array(obs_tidy.columns))
 
     if groupby_index is not None:
@@ -2343,7 +2349,8 @@ def _get_dendrogram_key(
             "Running `sc.tl.dendrogram` with default parameters. For fine "
             "tuning it is recommended to run `sc.tl.dendrogram` independently."
         )
-        dendrogram(adata, groupby, key_added=dendrogram_key)
+        with own_deprecations():  # `anndata.acc` is optional, so no `out`
+            dendrogram(adata, groupby, key_added=dendrogram_key)
 
     if "dendrogram_info" not in adata.uns[dendrogram_key]:
         msg = (

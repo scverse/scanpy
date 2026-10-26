@@ -20,10 +20,25 @@ __all__ = [
 
 
 @deprecated(Deprecation("1.13.0", "Import from sc.pp instead"))
-def harmony_integrate(*args, **kwargs):
+def harmony_integrate(
+    adata,
+    key,
+    *,
+    basis: str = "X_pca",
+    adjusted_basis: str = "X_pca_harmony",
+    **kwargs,
+):
+    """Translate the 1.12 API (`.obs`/`.obsm` keys) to :func:`scanpy.pp.harmony_integrate`’s."""
+    from anndata.acc import A
+
+    from ...get._use import _resolve_ref
     from ...preprocessing import harmony_integrate
 
-    return harmony_integrate(*args, **kwargs)
+    keys = [key] if isinstance(key, str) else key
+    batch = [A.obs[r] if isinstance(r := _resolve_ref(k), str) else r for k in keys]
+    return harmony_integrate(
+        adata, batch, use=A.obsm[basis], out=A.obsm[adjusted_basis], **kwargs
+    )
 
 
 @deprecated(Deprecation("1.10.0", "Import from sc.pp instead."))

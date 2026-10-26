@@ -1,26 +1,79 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import pandas as pd
 import scipy as sp
 from natsort import natsorted
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
-from .._keys import _existing_preset_keys
+from .._docs import doc_out_multi
+from .._utils import _doc_params, own_deprecations
 from .._utils.random import _LegacyRng
-from ..neighbors import Neighbors, OnFlySymMatrix
+from ..get._out import _out_dests, _set_arr, deprecated_copy
+from ..neighbors import Neighbors, OnFlySymMatrix, _diffmap_keys
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
     from anndata import AnnData
+    from numpy.typing import NDArray
+
+    from ..get._types import GraphAcc, MultiAcc, VecRef
 
 
-__all__ = ["DPT", "dpt"]
+__all__ = ["DPT", "DptOut", "dpt"]
 
 
+class DptOut(NamedTuple):
+    """Outputs of :func:`~scanpy.tl.dpt`.
+
+    Each is `None` if not computed:
+    `pseudotime` needs a root cell, the others need `n_branchings > 0`.
+    """
+
+    pseudotime: NDArray[np.float64] | None
+    """The pseudotime of each cell, i.e. the DPT distance to the root cell."""
+    groups: pd.Categorical | None
+    """The subgroup id (`'0'`, `'1'`, …) of each cell."""
+    order: NDArray[np.int_] | None
+    """The position of each cell in the ordering by segments and pseudotime."""
+    order_indices: NDArray[np.int_] | None
+    """The cell indices in that ordering."""
+
+
+DPT_KINDS: DptOut = DptOut({"obs"}, {"obs"}, {"obs"}, {"obs"})
+"""Where `out` can write the outputs of `tl.dpt`."""
+
+DPT_BASES: DptOut = DptOut(
+    *(dict(obs=f"dpt_{name}") for name in DptOut._fields)  # type: ignore[arg-type]
+)
+
+
+@_doc_params(
+    out=doc_out_multi(
+        dict(
+            pseudotime="By default written to `A.obs['dpt_pseudotime']`.",
+            groups="By default written to `A.obs['dpt_groups']`.",
+            order="By default written to `A.obs['dpt_order']`.",
+            order_indices="By default written to `A.obs['dpt_order_indices']`.",
+        ),
+        example="{'pseudotime': A.obs['pt']}",
+        returns=":class:`~scanpy.tl.DptOut`",
+        uns=True,
+    )
+)
+@deprecated_arg(
+    "neighbors_key",
+    Deprecation(
+        "1.13.0",
+        "It’s only used to compute a missing diffusion map: "
+        "run `tl.diffmap(adata, use=...)` first instead.",
+    ),
+)
+@deprecated_copy
 def dpt(
     adata: AnnData,
     n_dcs: int = 10,
@@ -28,10 +81,12 @@ def dpt(
     n_branchings: int = 0,
     min_group_size: float = 0.01,
     allow_kendall_tau_shift: bool = True,
+    use: MultiAcc | str | None = None,
+    out: Mapping[str, VecRef | str] | bool = False,
+    # deprecated
     neighbors_key: str | None = None,
-    diffmap_key: str | None = None,
     copy: bool = False,
-) -> AnnData | None:
+) -> AnnData | DptOut | None:
     """Infer progression of cells through geodesic distance along the graph :cite:p:`Haghverdi2016,Wolf2019`.
 
     Reconstruct the progression of a biological process from snapshot
@@ -87,16 +142,21 @@ def dpt(
         .obsp[.uns[neighbors_key]['connectivities_key']] and
         .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances,
         respectively.
-    diffmap_key
-        If specified, dpt looks in .obsm[diffmap_key] for diffmap coordinates,
-        otherwise int the default place.
+    use
+        Where :func:`~scanpy.tl.diffmap` wrote its results, i.e. the `out` passed to it,
+        e.g. `A.obsm['k']` (with its `.uns` entry `'k'`).
+        If :data:`None`, the default places.
+    {out}
     copy
         Copy instance before computation and return a copy.
         Otherwise, perform computation inplace and return `None`.
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields (If `n_branchings==0`, no field `adata.obs['dpt_groups']` will be written):
+    Returns the outputs as a :class:`~scanpy.tl.DptOut` if `out=True`
+    (without the `.uns` entries), else `None`.
+    By default sets the following fields (see `out` for others;
+    if `n_branchings==0`, no field `adata.obs['dpt_groups']` will be written):
 
     `adata.obs['dpt_pseudotime']` : :class:`pandas.Series` (dtype `float`)
         Array of dim (number of samples) that stores the pseudotime of each
@@ -111,14 +171,17 @@ def dpt(
     The tool is similar to the R package `destiny` of :cite:t:`Angerer2015`.
 
     """
+    dests = _out_dests(
+        out,
+        None,
+        dests=lambda _: DPT_BASES,
+        kinds=DPT_KINDS,
+        uns=True,
+        default="dpt",
+        primary=False,
+    )
     # standard errors, warnings etc.
-    adata = adata.copy() if copy else adata
 
-    if neighbors_key is None:
-        neighbors_key = "neighbors"
-    if neighbors_key not in adata.uns:
-        msg = "You need to run `pp.neighbors` and `tl.diffmap` first."
-        raise ValueError(msg)
     if "iroot" not in adata.uns and "xroot" not in adata.var:
         logg.warning(
             "No root cell found. To compute pseudotime, pass the index or "
@@ -126,14 +189,18 @@ def dpt(
             "    adata.uns['iroot'] = root_cell_index\n"
             "    adata.var['xroot'] = adata[root_cell_name, :].X"
         )
-    if not diffmap_key and not _existing_preset_keys(adata, "diffmap"):
+    if use is None and not _diffmap_keys(adata, None):
+        if (neighbors_key or "neighbors") not in adata.uns:
+            msg = "You need to run `pp.neighbors` and `tl.diffmap` first."
+            raise ValueError(msg)
         logg.warning(
             "Trying to run `tl.dpt` without prior call of `tl.diffmap`. "
             "Falling back to `tl.diffmap` with default parameters."
         )
         from ._diffmap import diffmap
 
-        diffmap(adata, neighbors_key=neighbors_key, rng=_LegacyRng(0))
+        with own_deprecations():
+            diffmap(adata, neighbors_key=neighbors_key, rng=_LegacyRng(0))
     # start with the actual computation
     dpt = DPT(
         adata,
@@ -142,34 +209,43 @@ def dpt(
         n_branchings=n_branchings,
         allow_kendall_tau_shift=allow_kendall_tau_shift,
         neighbors_key=neighbors_key,
-        diffmap_key=diffmap_key,
+        diffmap=use,
     )
     start = logg.info(f"computing Diffusion Pseudotime using {n_dcs=}")
     if n_branchings > 1:
         logg.info("    this uses a hierarchical implementation")
+    pseudotime = groups = order = order_indices = None
+    uns = {}
     if dpt.iroot is not None:
         dpt._set_pseudotime()  # pseudotimes are distances from root point
-        adata.uns["iroot"] = (
-            dpt.iroot
-        )  # update iroot, might have changed when subsampling, for example
-        adata.obs["dpt_pseudotime"] = dpt.pseudotime
+        if dests is not True:
+            # update iroot, might have changed when subsampling, for example
+            adata.uns["iroot"] = dpt.iroot
+        pseudotime = dpt.pseudotime
     # detect branchings and partition the data into segments
     if n_branchings > 0:
         dpt.branchings_segments()
-        adata.obs["dpt_groups"] = pd.Categorical(
+        groups = pd.Categorical(
             values=dpt.segs_names.astype("U"),
             categories=natsorted(np.array(dpt.segs_names_unique).astype("U")),
         )
         # the "change points" separate segments in the ordering above
-        adata.uns["dpt_changepoints"] = dpt.changepoints
+        uns["changepoints"] = dpt.changepoints
         # the tip points of segments
-        adata.uns["dpt_grouptips"] = dpt.segs_tips
+        uns["grouptips"] = dpt.segs_tips
         # the ordering according to segments and pseudotime
-        ordering_id = np.zeros(adata.n_obs, dtype=int)
+        order = np.zeros(adata.n_obs, dtype=int)
         for count, idx in enumerate(dpt.indices):
-            ordering_id[idx] = count
-        adata.obs["dpt_order"] = ordering_id
-        adata.obs["dpt_order_indices"] = dpt.indices
+            order[idx] = count
+        order_indices = dpt.indices
+    vals = DptOut(pseudotime, groups, order, order_indices)
+    if dests is not True:
+        uns_key, dests = dests
+        for val, dest in zip(vals, dests, strict=True):
+            if val is not None and dest is not None:  # skip what wasn’t computed
+                _set_arr(adata, val, **dest)
+        for name, val in uns.items():
+            adata.uns[f"{uns_key}_{name}"] = val
     logg.info(
         "    finished",
         time=start,
@@ -188,7 +264,7 @@ def dpt(
             )
         ),
     )
-    return adata if copy else None
+    return vals if dests is True else None
 
 
 class DPT(Neighbors):
@@ -202,12 +278,18 @@ class DPT(Neighbors):
         min_group_size: float = 0.01,
         n_branchings: int = 0,
         allow_kendall_tau_shift: bool = False,
+        use: GraphAcc | str | None = None,
         neighbors_key: str | None = None,
-        diffmap_key: str | None = None,
+        diffmap: MultiAcc | str | None = None,
     ):
-        super().__init__(
-            adata, n_dcs=n_dcs, neighbors_key=neighbors_key, diffmap_key=diffmap_key
-        )
+        with own_deprecations():  # callers handle `neighbors_key`’s deprecation
+            super().__init__(
+                adata,
+                n_dcs=n_dcs,
+                use=use,
+                neighbors_key=neighbors_key,
+                diffmap=diffmap,
+            )
         self.n_branchings = n_branchings
         self.min_group_size = (
             min_group_size

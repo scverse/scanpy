@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, overload
+from functools import partial
+from typing import TYPE_CHECKING, Literal, NamedTuple, overload
 
 import numpy as np
 from anndata import AnnData
@@ -8,18 +9,26 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
 from ..._compat import CSBase, DaskArray, warn
-from ..._docs import doc_rng
+from ..._docs import DEPR_KEY_ADDED, doc_out_multi, doc_rng, doc_use
 from ..._keys import _embedding_keys
 from ..._settings import Default, settings
 from ..._utils import _doc_params, get_literal_vals, is_backed_type
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
-from ...get import _check_mask, _get_arr
-from ...get.get import _mask_arg, _mask_hvg, _ref_to_json
+from ...get._out import _dest_key, _out_dests, _write_dests, deprecated_copy
+from ...get._uns import _ref_to_uns, _use_to_uns
+from ...get._use import (
+    _check_mask,
+    _get_arr,
+    _is_multi,
+    _mask_arg,
+    _mask_hvg,
+    _resolve_obs,
+)
 from .._docs import doc_mask_var
 from ._compat import _pca_compat_sparse
 
 if TYPE_CHECKING:
-    from collections.abc import Container
+    from collections.abc import Container, Mapping
     from collections.abc import Set as AbstractSet
     from typing import LiteralString
 
@@ -28,7 +37,8 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
     from ..._utils.random import RNGLike, SeedLike
-    from ...get.get import Mask
+    from ...get._out import OutKind
+    from ...get._types import ArrAcc, Mask, RepAcc, _SetRep
 
 
 type MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
@@ -51,16 +61,72 @@ type SvdSolvPCACustom = Literal["covariance_eigh"]
 type SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 
 
-@_doc_params(mask=doc_mask_var, rng=doc_rng)
+class PcaOut[E = np.ndarray | DaskArray, L = np.ndarray](NamedTuple):
+    """Outputs of :func:`~scanpy.pp.pca`."""
+
+    embedding: E
+    """PCA representation (coordinates) of the observations, shape `(n_obs, n_comps)`."""
+    loadings: L
+    """The principal components containing the loadings, shape `(n_vars, n_comps)`.
+
+    If `mask` was used, rows of variables not selected by it are zero.
+    """
+
+
+PCA_KINDS: PcaOut[set[OutKind], set[OutKind]] = PcaOut({"obsm"}, {"varm"})
+"""Where `out` can write the outputs of `pp.pca`."""
+
+
+def _pca_dests(
+    key_added: str | Default | None, *, multi: bool = False
+) -> PcaOut[_SetRep | None, _SetRep | None]:
+    """Where `key_added` put the outputs of `pp.pca`.
+
+    If `multi` (PCA ran on an `.obsm` array), the loadings went to `.uns` instead.
+    """
+    keys = _embedding_keys("pca", key_added)
+    return PcaOut(dict(obsm=keys.obsm), None if multi else dict(varm=keys.varm))
+
+
+@_doc_params(
+    mask=doc_mask_var,
+    rng=doc_rng,
+    use=doc_use("Which matrix to run PCA on."),
+    out=doc_out_multi(
+        dict(
+            embedding=(
+                "The PCA representation. "
+                "By default written to `A.obsm['X_pca']` "
+                "(`A.obsm['pca']` if :attr:`scanpy.settings.preset` is "
+                ":attr:`~scanpy.Preset.ScanpyV2Preview`)."
+            ),
+            loadings=(
+                "The principal components containing the loadings. "
+                "By default written to `A.varm['PCs']` "
+                "(`A.varm['pca']` if :attr:`scanpy.settings.preset` is "
+                ":attr:`~scanpy.Preset.ScanpyV2Preview`). "
+                "If `use` points to `.obsm`, stored in the `.uns` entry instead."
+            ),
+        ),
+        example="{'embedding': A.obsm['pca']}",
+        returns=":class:`~scanpy.pp.PcaOut`",
+        uns=True,
+        key_added=(
+            "`key_added='k'` is `out={'embedding': A.obsm['k'], 'loadings': A.varm['k']}`."
+        ),
+    ),
+)
 @_accepts_legacy_random_state(0)
-# `stacklevel=2` skips `_accepts_legacy_random_state`’s wrapper frame
-@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
+@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_copy
 def pca(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | np.ndarray | CSBase,
     n_comps: int | None = None,
     *,
-    layer: str | None = None,
-    obsm: str | None = None,
+    use: RepAcc | str | None = None,
     zero_center: bool = True,
     svd_solver: SvdSolver | None = None,
     chunked: bool = False,
@@ -69,10 +135,14 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     return_info: bool = False,
     mask: Mask | Default | None = Default("adata.var.get('highly_variable')"),
     dtype: DTypeLike = "float32",
-    key_added: str | Default | None = Default(preset=("pca", "key_added")),
+    out: Mapping[str, ArrAcc | str] | bool = False,
+    # deprecated
+    key_added: str | None = None,
     copy: bool = False,
+    layer: str | None = None,
+    obsm: str | None = None,
     mask_var: Mask | None = None,
-) -> AnnData | np.ndarray | CSBase | None:
+) -> AnnData | PcaOut | np.ndarray | CSBase | None:
     r"""Principal component analysis :cite:p:`Pedregosa2011`.
 
     Computes PCA coordinates, loadings and variance decomposition.
@@ -110,10 +180,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     n_comps
         Number of principal components to compute. Defaults to 50,
         or 1 - minimum dimension size of selected representation.
-    layer
-        If provided, which element of :attr:`~anndata.AnnData.layers` to use for PCA instead of `X`.
-    obsm
-        If provided, which element of :attr:`~anndata.AnnData.obsm` to use for PCA instead of `X`.
+    {use}
     zero_center
         If `True`, compute (or approximate) PCA from covariance matrix.
         If `False`, performa a truncated SVD instead of PCA.
@@ -165,15 +232,11 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     {mask}
     dtype
         Numpy data type string to which to convert the result.
-    key_added
-        If not specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\ `['X_pca']`, the loadings as
-        :attr:`~anndata.AnnData.varm`\ `['PCs']`, and the the parameters in
-        :attr:`~anndata.AnnData.uns`\ `['pca']`.
-        If specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\ ``[key_added]``, the loadings as
-        :attr:`~anndata.AnnData.varm`\ ``[key_added]``, and the the parameters in
-        :attr:`~anndata.AnnData.uns`\ ``[key_added]``.
+    {out}
+
+        Only valid if `data` is an :class:`~anndata.AnnData`.
+        With `out=True`, the `.uns` entry (including the variance) is neither written nor returned,
+        use array input with `return_info=True` to get it.
     copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned. Is ignored otherwise.
@@ -183,28 +246,34 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     If `data` is array-like and `return_info=False` was passed,
     this function returns the PCA representation of `data` as an
     array of the same type as the input array.
+    If `return_info=True` was passed, it returns a tuple of
+    the PCA representation, components, variance ratio and variance.
 
-    Otherwise, it returns `None` if `copy=False`, else an updated `AnnData` object.
-    Sets the following fields:
+    Otherwise, it returns the outputs as a :class:`~scanpy.pp.PcaOut` if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `.obsm['X_pca' | key_added]` : :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
+    `.obsm['X_pca']` : :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
         PCA representation of data.
-    `.varm['PCs' | key_added]` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
-        The principal components containing the loadings *when `obsm=None`*.
-    `.uns['pca' | key_added]['components']` : :class:`~numpy.ndarray` (shape `(adata.obsm[obsm].shape[1], n_comps)`)
-        The principal components containing the loadings *when `obsm="..."`*.
-    `.uns['pca' | key_added]['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+    `.varm['PCs']` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
+        The principal components containing the loadings *unless `use` points to `.obsm`*.
+    `.uns['pca']['components']` : :class:`~numpy.ndarray` (shape `(adata.obsm[...].shape[1], n_comps)`)
+        The principal components containing the loadings *when `use` points to `.obsm`*.
+    `.uns['pca']['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
         Ratio of explained variance.
-    `.uns['pca' | key_added]['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+    `.uns['pca']['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
         Explained variance, equivalent to the eigenvalues of the
         covariance matrix.
 
     """
     logg_start = logg.info("computing PCA")
+    if use is not None:
+        use = _resolve_obs(use, rep=True)
+    # `.obsm` columns aren’t variables, so the loadings can’t go to `.varm`
+    multi = obsm is not None or _is_multi(use)
     rng = np.random.default_rng(rng)
-    if (layer is not None or obsm is not None) and chunked:
+    if (layer is not None or obsm is not None or use is not None) and chunked:
         # Current chunking implementation relies on pca being called on X
-        msg = "Cannot use `layer`/`obsm` and `chunked` at the same time."
+        msg = "Cannot use `use`/`layer`/`obsm` and `chunked` at the same time."
         raise NotImplementedError(msg)
 
     # chunked calculation is not randomized, anyways
@@ -215,16 +284,32 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             "reproducibility, choose `svd_solver='arpack'`."
         )
     if return_anndata := isinstance(data, AnnData):
-        if (layer is None and obsm is None) and not chunked and is_backed_type(data.X):
+        if (
+            (layer is None and obsm is None and use is None)
+            and not chunked
+            and is_backed_type(data.X)
+        ):
             msg = f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
             raise NotImplementedError(msg)
-        adata = data.copy() if copy else data
+        dests = _out_dests(
+            out,
+            key_added,
+            dests=partial(_pca_dests, multi=multi),
+            kinds=PCA_KINDS,
+            uns=True,
+            default=Default(),
+        )
+        adata = data
     else:
+        if out is not False:
+            msg = "Argument `out` is only valid if an AnnData object is passed."
+            raise TypeError(msg)
         adata = AnnData(data)
 
     mask = _mask_arg(mask, mask_var, dim="var")
-    if not isinstance(mask, Default) and mask is not None and obsm is not None:
-        msg = "Argument `mask` is incompatible with `obsm`."
+    if not isinstance(mask, Default) and mask is not None and multi:
+        # `mask` selects variables, which an `.obsm` array’s columns aren’t
+        msg = "Argument `mask` is incompatible with `.obsm` arrays."
         raise ValueError(msg)
     mask = _mask_hvg(adata, mask)
     mask_param, mask_var = mask, _check_mask(adata, mask, "var")
@@ -236,8 +321,8 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     logg.info(f"    with {n_comps=}")
 
-    x = _get_arr(adata_comp, layer=layer, obsm=obsm)
-    if is_backed_type(x) and (layer is not None or obsm is not None):
+    x = _get_arr(adata_comp, use, layer=layer, obsm=obsm)
+    if is_backed_type(x) and (layer is not None or obsm is not None or use is not None):
         msg = f"PCA is not implemented for matrices of type {type(x)} from layers/obsm"
         raise NotImplementedError(msg)
 
@@ -338,38 +423,39 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         x_pca = x_pca.astype(dtype)
 
     if return_anndata:
-        keys = _embedding_keys("pca", key_added)
-        adata.obsm[keys.obsm] = x_pca
-
-        if obsm:
-            pass  # see below, components are stored in `uns`.
-        elif mask_var is not None:
-            adata.varm[keys.varm] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm[keys.varm][mask_var] = pca_.components_.T
-        else:
-            adata.varm[keys.varm] = pca_.components_.T
-
+        loadings = pca_.components_.T
+        if mask_var is not None and not multi:
+            loadings = np.zeros(shape=(adata.n_vars, n_comps))
+            loadings[mask_var] = pca_.components_.T
+        vals = PcaOut(x_pca, loadings)
+        if dests is True:
+            logg.info("    finished", time=logg_start)
+            return vals
+        key, dests = dests
+        keys = _embedding_keys("pca", key)
         adata.uns[keys.uns] = dict(
             params=dict(
                 zero_center=zero_center,
-                mask_var=_ref_to_json(mask_param),
+                mask_var=_ref_to_uns(mask_param, mask_var),
                 **(dict(layer=layer) if layer is not None else {}),
                 **(dict(obsm=obsm) if obsm is not None else {}),
+                **_use_to_uns(use, rep=False),
             ),
             variance=pca_.explained_variance_,
             variance_ratio=pca_.explained_variance_ratio_,
-            **(dict(components=pca_.components_.T) if obsm is not None else {}),
+            **(dict(components=pca_.components_.T) if multi else {}),
         )
+        _write_dests(adata, vals, dests)
 
         logg.info("    finished", time=logg_start)
         logg.debug(
             "and added\n"
-            f"    {keys.obsm!r}, the PCA coordinates (adata.obs)\n"
-            f"    {keys.varm!r}, the loadings (adata.varm)\n"
+            f"    {_dest_key(dests.embedding)!r}, the PCA coordinates (adata.obsm)\n"
+            f"    {_dest_key(dests.loadings)!r}, the loadings (adata.varm)\n"
             f"    'pca_variance', the variance / eigenvalues (adata.uns[{keys.uns!r}])\n"
             f"    'pca_variance_ratio', the variance ratio (adata.uns[{keys.uns!r}])"
         )
-        return adata if copy else None
+        return None
     else:
         logg.info("    finished", time=logg_start)
         if return_info:

@@ -1,22 +1,56 @@
 from __future__ import annotations
 
 from operator import truediv
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numba
 import numpy as np
 from fast_array_utils import conv, stats
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
-from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
-from ..get import _get_arr, _set_obs_rep
+from .._docs import DEPR_KEY_ADDED, doc_out, doc_out_multi, doc_use
+from .._utils import _doc_params, axis_mul_or_truediv, dematrix, view_to_actual
+from ..get._out import (
+    _dest_key,
+    _legacy_out,
+    _out_dests,
+    _use_dest,
+    _write_dests,
+    _write_out,
+    deprecated_copy,
+)
+from ..get._use import _get_arr, _resolve_obs
 from ._simple import log1p
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from anndata import AnnData
+
+    from ..get._out import OutKind
+    from ..get._types import ArrAcc, RepAcc, VecRef
+
+
+class NormalizeTotalOut[
+    M = np.ndarray | CSRBase | DaskArray,
+    V = np.ndarray | DaskArray,
+](NamedTuple):
+    """Outputs of :func:`~scanpy.pp.normalize_total`."""
+
+    normalized: M
+    """The normalized matrix."""
+    norm_factor: V
+    """The normalization factor (counts per cell before normalization, divided by `target_sum`)."""
+
+
+NORMALIZE_TOTAL_KINDS: NormalizeTotalOut[set[OutKind], set[OutKind]] = (
+    NormalizeTotalOut({"layer", "obsm"}, {"obs"})
+)
+"""Where `out` can write the outputs of `pp.normalize_total`."""
 
 
 def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
@@ -126,18 +160,45 @@ def _normalize_total_helper(
     return x, counts_per_cell, gene_subset
 
 
-def normalize_total(  # noqa: PLR0912
+@_doc_params(
+    use=doc_use("Which matrix to normalize."),
+    out=doc_out_multi(
+        dict(
+            normalized=(
+                "The normalized matrix. "
+                "By default written to the place `use` reads from."
+            ),
+            norm_factor=(
+                "The normalization factor of each cell. By default not written."
+            ),
+        ),
+        example="{'normalized': A.layers['normalized']}",
+        returns=":class:`~scanpy.pp.NormalizeTotalOut`",
+        key_added="`key_added='k'` is `out={'normalized': <use>, 'norm_factor': A.obs['k']}`.",
+    ),
+)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use`/`out` instead."))
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
+)
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_copy
+def normalize_total(  # noqa: PLR0913
     adata: AnnData,
     *,
     target_sum: float | None = None,
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
+    use: RepAcc | str | None = None,
+    out: Mapping[str, ArrAcc | VecRef | str] | bool = False,
+    # deprecated
     key_added: str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> AnnData | dict[str, np.ndarray] | None:
+) -> AnnData | NormalizeTotalOut | dict[str, np.ndarray] | None:
     """Normalize counts per cell.
 
     Normalize each cell by total counts over all genes,
@@ -157,7 +218,7 @@ def normalize_total(  # noqa: PLR0912
     .. note::
         When used with a :class:`~dask.array.Array` in `adata.X`, this function will have to
         call functions that trigger `.compute()` on the :class:`~dask.array.Array` if `exclude_highly_expressed`
-        is `True`, `layer_norm` is not `None`, or if `key_added` is not `None`.
+        is `True`, or if `norm_factor` is written.
 
     Parameters
     ----------
@@ -179,24 +240,17 @@ def normalize_total(  # noqa: PLR0912
         If `exclude_highly_expressed=True`, consider cells as highly expressed
         that have more counts than `max_fraction` of the original total counts
         in at least one cell.
-    key_added
-        Name of the field in `adata.obs` where the normalization factor is
-        stored.
-    layer
-        Layer to normalize instead of `X`.
-    obsm
-        Array to normalize instead of `X`.
+    {use}
+    {out}
     inplace
-        Whether to update `adata` or return dictionary with normalized copies of
-        `adata.X` and `adata.layers`.
+        `inplace=False` is `out=True`.
     copy
-        Whether to modify copied input object. Not compatible with inplace=False.
+        Whether to return a modified copy instead of modifying `adata` in place.
 
     Returns
     -------
-    Returns dictionary with normalized copies of `adata.X` and `adata.layers`
-    or updates `adata` with normalized version of the original
-    `adata.X` and `adata.layers`, depending on `inplace`.
+    Returns the outputs as a :class:`~scanpy.pp.NormalizeTotalOut` if `out=True`, else `None`.
+    The deprecated `inplace=False` returns them as a :class:`dict` instead.
 
     Example
     -------
@@ -220,7 +274,7 @@ def normalize_total(  # noqa: PLR0912
     array([[ 3.,  3.,  3.,  6.,  6.],
            [ 1.,  1.,  1.,  2.,  2.],
            [ 1., 22.,  1.,  2.,  2.]], dtype=float32)
-    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, inplace=False)["X"]
+    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, out=True).normalized
     normalizing counts per cell
         finished (0:00:00)
     >>> X_norm
@@ -232,8 +286,8 @@ def normalize_total(  # noqa: PLR0912
     ...     target_sum=1,
     ...     exclude_highly_expressed=True,
     ...     max_fraction=0.2,
-    ...     inplace=False,
-    ... )["X"]
+    ...     out=True,
+    ... ).normalized
     normalizing counts per cell
     The following highly-expressed genes are not considered during normalization factor computation:
     ['1', '3', '4']
@@ -244,11 +298,18 @@ def normalize_total(  # noqa: PLR0912
            [ 0.5, 11. ,  0.5,  1. ,  1. ]], dtype=float32)
 
     """
-    if copy:
-        if not inplace:
-            msg = "`copy=True` cannot be used with `inplace=False`."
-            raise ValueError(msg)
-        adata = adata.copy()
+    out = _legacy_out(out, "inplace", None if inplace else True)
+    use = _resolve_obs(use)
+    # the normalized matrix goes back to where it was read from by default
+    src = _use_dest(use, layer=layer, obsm=obsm)
+    dests = _out_dests(
+        out,
+        key_added,
+        dests=lambda key: NormalizeTotalOut(
+            src, None if key is None else dict(obs=key)
+        ),
+        kinds=NORMALIZE_TOTAL_KINDS,
+    )
 
     if max_fraction < 0 or max_fraction > 1:
         msg = "Choose max_fraction between 0 and 1."
@@ -256,10 +317,12 @@ def normalize_total(  # noqa: PLR0912
 
     view_to_actual(adata)
 
-    x = _get_arr(adata, layer=layer, obsm=obsm)
+    x = _get_arr(adata, use, layer=layer, obsm=obsm)
     if isinstance(x, CSCBase):
         x = x.tocsr()
-    if not inplace:
+    if dests is True or src != dests[1].normalized:
+        # normalization is in-place, so leave the source alone
+        # unless we write back over it
         x = x.copy()
     if issubclass(x.dtype.type, int | np.integer):
         x = x.astype(np.float32)  # TODO: Check if float64 should be used
@@ -283,28 +346,17 @@ def normalize_total(  # noqa: PLR0912
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
         warn("Some cells have zero counts", UserWarning)
 
-    dat = dict(
-        X=x,
-        norm_factor=counts_per_cell,
-    )
-    if inplace:
-        if key_added is not None:
-            adata.obs[key_added] = dat["norm_factor"]
-        _set_obs_rep(adata, dat["X"], layer=layer, obsm=obsm)
-
-    logg.info(
-        "    finished ({time_passed})",
-        time=start,
-    )
-    if key_added is not None:
+    vals = NormalizeTotalOut(x, counts_per_cell)
+    logg.info("    finished ({time_passed})", time=start)
+    if dests is True:
+        if not inplace:  # deprecated, returns what it did in 1.12
+            return dict(X=vals.normalized, norm_factor=vals.norm_factor)
+        return vals
+    _write_dests(adata, vals, dests[1])
+    if (key := _dest_key(dests[1].norm_factor)) is not None:
         logg.debug(
-            f"and added {key_added!r}, counts per cell before normalization (adata.obs)"
+            f"and added {key!r}, counts per cell before normalization (adata.obs)"
         )
-
-    if copy:
-        return adata
-    elif not inplace:
-        return dat
     return None
 
 
@@ -377,14 +429,14 @@ def _normalize_shifted_clr_helper(
     return log_values - row_center[:, None], cell_depths
 
 
+@_doc_params(use=doc_use("Which matrix to normalize."), out=doc_out())
 def normalize_shifted_clr(
     adata: AnnData,
     *,
     alpha: float | None = None,
-    layer: str | None = None,
-    inplace: bool = True,
-    copy: bool = False,
-) -> AnnData | dict[str, np.ndarray | DaskArray] | None:
+    use: RepAcc | str | None = None,
+    out: RepAcc | str | bool = False,
+) -> np.ndarray | DaskArray | None:
     r"""Normalize counts with the shifted centered log-ratio (PFlog) transform.
 
     If `alpha` is not provided, it is estimated from the input matrix. PFlog is
@@ -392,7 +444,7 @@ def normalize_shifted_clr(
 
     .. math::
         T(x)_i = \log(1 + 4 α x_i)
-            - \frac{1}{D} \sum_{j=1}^D \log(1 + 4 α x_j),
+            - \frac{{1}}{{D}} \sum_{{j=1}}^D \log(1 + 4 α x_j),
 
     which is equivalent to centering
     :math:`\log(x_i + 1 / (4 α))` because the constant :math:`\log(4 α)`
@@ -414,19 +466,12 @@ def normalize_shifted_clr(
         If `None`, it is estimated from the input matrix. A positive numeric
         value uses that value directly. PFlog applies
         ``log1p(4 * alpha * x)`` before CLR centering.
-    layer
-        Layer to normalize instead of `X`.
-    inplace
-        Whether to update `adata` or return a dictionary with the normalized
-        matrix.
-    copy
-        Whether to modify a copied input object. Not compatible with
-        `inplace=False`.
+    {use}
+    {out}
 
     Returns
     -------
-    Returns a dictionary with the normalized matrix or updates `adata`, depending
-    on `inplace`.
+    The normalized matrix if `out=True`, else `None`.
 
     Example
     -------
@@ -438,19 +483,12 @@ def normalize_shifted_clr(
     >>> np.allclose(adata.X.sum(axis=1), 0, atol=1e-5)
     True
     """
-    if copy:
-        if not inplace:
-            msg = "`copy=True` cannot be used with `inplace=False`."
-            raise ValueError(msg)
-        adata = adata.copy()
-
+    use = _resolve_obs(use)
     view_to_actual(adata)
 
-    x = _get_arr(adata, layer=layer)
+    x = _get_arr(adata, use)
     if isinstance(x, CSCBase):
         x = x.tocsr()
-    if not inplace:
-        x = x.copy()
     if issubclass(x.dtype.type, int | np.integer):
         x = x.astype(np.float64)
 
@@ -461,17 +499,5 @@ def normalize_shifted_clr(
     if not isinstance(cell_depths, DaskArray) and not np.all(cell_depths > 0):
         warn("Some cells have zero counts", UserWarning)
 
-    dat = dict(X=x)
-    if inplace:
-        _set_obs_rep(adata, x, layer=layer)
-
-    logg.info(
-        "    finished ({time_passed})",
-        time=start,
-    )
-
-    if copy:
-        return adata
-    elif not inplace:
-        return dat
-    return None
+    logg.info("    finished ({time_passed})", time=start)
+    return _write_out(adata, x, out=out, use=use)

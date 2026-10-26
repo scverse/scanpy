@@ -8,22 +8,32 @@ from typing import TYPE_CHECKING, cast
 import numba
 import numpy as np
 from fast_array_utils.numba import njit
+from scverse_misc import Deprecation, deprecated_arg
 
 from .._compat import CSRBase
+from .._docs import DEPR_RAW
 from .._utils import _doc_params
-from ..get import _get_arr
 from ..neighbors._doc import doc_neighbors_key
-from ._common import _get_graph, _SparseMetric
+from ._common import DEPR_GRAPH, DOC_USE, _graph_and_vals, _SparseMetric
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from ._common import _Vals
+    from ._common import _MetricUse, _Vals
 
 
 @singledispatch
-@_doc_params(neighbors_key=doc_neighbors_key)
+@_doc_params(
+    neighbors_key=doc_neighbors_key,
+    use=DOC_USE,
+)
+@deprecated_arg("use_graph", DEPR_GRAPH)
+@deprecated_arg("neighbors_key", DEPR_GRAPH)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsp", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
 def morans_i(
     adata_or_graph: AnnData | CSRBase,
     /,
@@ -31,6 +41,7 @@ def morans_i(
     *,
     use_graph: str | None = None,
     neighbors_key: str | None = None,
+    use: _MetricUse | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     obsp: str | None = None,
@@ -38,9 +49,10 @@ def morans_i(
 ) -> np.ndarray | float:
     r"""Calculate Moran’s I Global Autocorrelation Statistic.
 
-    Moran’s I is a global autocorrelation statistic for some measure on a graph. It is commonly used in
-    spatial data analysis to assess autocorrelation on a 2D grid. It is closely related to Geary's C,
-    but not identical. More info can be found `here <https://en.wikipedia.org/wiki/Moran%27s_I>`_.
+    Moran’s I is a global autocorrelation statistic for some measure on a graph.
+    It is commonly used in spatial data analysis to assess autocorrelation on a 2D grid.
+    It is closely related to Geary's C, but not identical.
+    More info can be found `here <https://en.wikipedia.org/wiki/Moran%27s_I>`_.
 
     .. math::
 
@@ -57,24 +69,16 @@ def morans_i(
         AnnData object containing a graph (see ``use_graph``) or the graph itself.
         See the examples for more info.
     vals
-        Values to calculate Moran's I for. If this is two dimensional, should
-        be of shape `(n_features, n_cells)`. Otherwise should be of shape
-        `(n_cells,)`. This matrix can be selected from elements of the anndata
-        object by using key word arguments: `layer`, `obsm`, `obsp`, or
-        `use_raw`.
+        Values to calculate Moran's I for.
+        If this is two dimensional, should be of shape `(n_features, n_cells)`.
+        Otherwise should be of shape `(n_cells,)`.
+        Deprecated if `adata_or_graph` is an :class:`~anndata.AnnData`, use `use` instead.
     use_graph
         Key to use for graph in anndata object.
         If not provided, default neighbors connectivities will be used instead.
         (See ``neighbors_key`` below.)
     {neighbors_key}
-    layer
-        Key for `adata.layers` to choose `vals`.
-    obsm
-        Key for `adata.obsm` to choose `vals`.
-    obsp
-        Key for `adata.obsp` to choose `vals`.
-    use_raw
-        Whether to use `adata.raw.X` for `vals`.
+    {use}
 
     Returns
     -------
@@ -88,9 +92,10 @@ def morans_i(
     .. code:: python
 
         import scanpy as sc, numpy as np
+        from anndata.acc import A
 
         pbmc = sc.datasets.pbmc68k_processed()
-        pc_c = sc.metrics.morans_i(pbmc, obsm="X_pca")
+        pc_c = sc.metrics.morans_i(pbmc, use=A.obsm["X_pca"])
 
     It's equivalent to call the function directly on the underlying arrays:
 
@@ -100,10 +105,17 @@ def morans_i(
         np.testing.assert_array_equal(pc_c, alt)
 
     """
-    adata = cast("AnnData", adata_or_graph)
-    g = _get_graph(adata, use_graph=use_graph, neighbors_key=neighbors_key)
-    if vals is None:
-        vals = _get_arr(adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp).T
+    g, vals = _graph_and_vals(
+        cast("AnnData", adata_or_graph),
+        use,
+        vals=vals,
+        use_graph=use_graph,
+        neighbors_key=neighbors_key,
+        use_raw=use_raw,
+        layer=layer,
+        obsm=obsm,
+        obsp=obsp,
+    )
     return morans_i(g, vals)
 
 

@@ -4,19 +4,31 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
+from scverse_misc import deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
-from .._docs import doc_rng
+from .._docs import (
+    DEPR_ADJACENCY,
+    DEPR_NEIGHBORS_KEY,
+    DEPR_OBSP_GRAPH,
+    doc_out_key,
+    doc_rng,
+)
 from .._keys import _embedding_keys
 from .._settings import Default
-from .._utils import _choose_graph, _doc_params, get_literal_vals
+from .._utils import _doc_params, get_literal_vals
 from .._utils.random import (
     _accepts_legacy_random_state,
     _if_legacy_apply_global,
     _LegacyRng,
     _set_igraph_rng,
 )
+from ..get._out import _out_key, deprecated_copy
+from ..get._types import MultiAcc
+from ..get._use import _resolve_ref
+from ..neighbors._common import _use_graph
+from ._docs import doc_use_neighbors
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
@@ -28,31 +40,49 @@ if TYPE_CHECKING:
 
     from .._compat import CSBase
     from .._utils.random import RNGLike, SeedLike
+    from ..get._types import GraphAcc
 
 
 type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
 
 
-@_doc_params(rng=doc_rng)
+@_doc_params(
+    rng=doc_rng,
+    use=doc_use_neighbors(),
+    out=doc_out_key(
+        "the embedding",
+        example="A.obsm['fa']",
+        default=(
+            "`.obsm['X_draw_graph_{layout}']` and `.uns['draw_graph']` "
+            "(`.obsm['graph_{layout}']` if :attr:`scanpy.settings.preset` is "
+            ":attr:`~scanpy.Preset.ScanpyV2Preview`)"
+        ),
+    ),
+)
 @_accepts_legacy_random_state(0)
-def draw_graph(  # noqa: PLR0913
+@deprecated_arg("adjacency", DEPR_ADJACENCY)
+@deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
+@deprecated_arg("obsp", DEPR_OBSP_GRAPH)
+@deprecated_copy
+def draw_graph(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     layout: _Layout = "fa",
     *,
-    init_pos: str | bool | None = None,
+    init_pos: MultiAcc | str | bool | None = None,
     root: int | None = None,
     rng: SeedLike | RNGLike | None = None,
     n_jobs: int | None = None,
+    use: GraphAcc | str | None = None,
+    out: MultiAcc | str | bool = False,
+    # deprecated
     adjacency: CSBase | None = None,
-    key_added: str | Default | None = Default(preset=("draw_graph", "key_added")),
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    # deprecated
     key_added_ext: str | None = None,
     **kwds,
-) -> AnnData | None:
-    """Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
+) -> AnnData | np.ndarray | None:
+    r"""Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
 
     An alternative to tSNE that often preserves the topology of the data
     better. This requires running :func:`~scanpy.pp.neighbors`, first.
@@ -88,14 +118,17 @@ def draw_graph(  # noqa: PLR0913
     {rng}
 
         Applies to layouts with random initialization like `'fr'`.
-    adjacency
-        Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
-    key_added
-        Template for the key. If `None`, uses `f'X_draw_graph_{{layout}}'` for `obsm`.
     init_pos
-        `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
+        `'paga'`/`True`, `None`/`False`, or a 2d `.obsm` entry, e.g. `A.obsm['umap']`.
+        Other :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d
+        if :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`
+        (e.g. `'obsm.umap'`), otherwise they are keys of `.obsm`.
         Use precomputed coordinates for initialization.
         If `False`/`None` (the default), initialize randomly.
+    {use}
+    {out}
+    adjacency
+        Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
     neighbors_key
         If not specified, draw_graph looks at `.obsp['connectivities']` for connectivities
         (default storage place for pp.neighbors).
@@ -113,9 +146,10 @@ def draw_graph(  # noqa: PLR0913
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the embedding if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.obsm[(f'X_draw_graph_{{layout}}' | key_added).format(layout=layout)]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm['X_draw_graph_{{layout}}']` : :class:`numpy.ndarray` (dtype `float`)
         Coordinates of graph layout. E.g. for `layout='fa'` (the default),
         the field is called `'X_draw_graph_fa'`. `key_added_ext` overwrites `layout`.
     `adata.uns['draw_graph']`: :class:`dict`
@@ -124,8 +158,20 @@ def draw_graph(  # noqa: PLR0913
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     layout = coerce_fa2_layout(layout)
-    keys = _embedding_keys(
-        "draw_graph", key_added, layout=layout, key_added_ext=key_added_ext
+    key = _out_key(
+        out,
+        None,
+        kind="obsm",
+        default=Default(),
+    )
+    if isinstance(key, str):
+        key = key.replace("{", "{{").replace("}", "}}")  # keys from `out` are literal
+    keys = (
+        None
+        if key is True
+        else _embedding_keys(
+            "draw_graph", key, layout=layout, key_added_ext=key_added_ext
+        )
     )
     rng = np.random.default_rng(rng)
     meta_random_state = (
@@ -134,11 +180,15 @@ def draw_graph(  # noqa: PLR0913
     if layout not in (layouts := get_literal_vals(_Layout)):
         msg = f"Provide a valid layout, one of {layouts}."
         raise ValueError(msg)
-    adata = adata.copy() if copy else adata
-    if adjacency is None:
-        adjacency = _choose_graph(adata, obsp, neighbors_key)
+    adjacency = _use_graph(
+        adata, use, adjacency=adjacency, obsp=obsp, neighbors_key=neighbors_key
+    )
     # init coordinates
-    if init_pos in adata.obsm:
+    if isinstance(init_pos, str) and init_pos != "paga":
+        init_pos = _resolve_ref(init_pos, vec=False)
+    if isinstance(init_pos, MultiAcc):
+        init_coords = cast("NDArray[np.floating]", adata[init_pos])
+    elif init_pos in adata.obsm:
         init_coords = cast("NDArray[np.floating]", adata.obsm[init_pos])
     elif init_pos:  # "paga" or True
         init_coords = get_init_pos_from_paga(
@@ -166,6 +216,9 @@ def draw_graph(  # noqa: PLR0913
             else:
                 ig_layout = g.layout(layout, **kwds)
         positions = np.array(ig_layout.coords)
+    if keys is None:
+        logg.info("    finished", time=start)
+        return positions
     adata.uns[keys.uns] = {}
     adata.uns[keys.uns]["params"] = dict(layout=layout, **meta_random_state)
     adata.obsm[keys.obsm] = positions
@@ -176,7 +229,7 @@ def draw_graph(  # noqa: PLR0913
         f"\n    {keys.obsm!r}, draw_graph coordinates (adata.obsm)"
         f"\n    {keys.uns!r}, draw_graph parameters (adata.uns)",
     )
-    return adata if copy else None
+    return None
 
 
 def fa2_positions(

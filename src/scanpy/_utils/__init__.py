@@ -9,7 +9,9 @@ from __future__ import annotations
 import importlib.util
 import inspect
 import re
-from contextlib import suppress
+import warnings
+from collections.abc import Mapping
+from contextlib import contextmanager, suppress
 from functools import partial, reduce, singledispatch, wraps
 from operator import mul, or_, truediv
 from textwrap import indent
@@ -36,7 +38,7 @@ from .._compat import CSBase, DaskArray, SpBase, warn
 from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, KeysView, Mapping
+    from collections.abc import Callable, Generator, Iterable, KeysView
     from typing import Any
 
     from anndata import AnnData
@@ -71,10 +73,12 @@ __all__ = [
     "descend_classes_and_funcs",
     "dim_acc",
     "ensure_igraph",
+    "expose_dispatch",
     "get_igraph_from_adjacency",
     "get_literal_vals",
     "indent",
     "is_backed_type",
+    "own_deprecations",
     "raise_not_implemented_error_if_backed_type",
     "renamed_arg",
     "sanitize_anndata",
@@ -256,6 +260,7 @@ def check_use_raw(
     adata: AnnData,
     use_raw: bool | None,  # noqa: FBT001
     *,
+    use: object = None,
     layer: str | None = None,
 ) -> bool:
     """Normalize checking `use_raw`.
@@ -264,7 +269,7 @@ def check_use_raw(
     """
     if use_raw is not None:
         return use_raw
-    if layer is not None:
+    if use is not None or layer is not None:
         return False
     return adata.raw is not None
 
@@ -899,15 +904,17 @@ class NeighborsView:
                 msg = 'No "neighbors" in .uns'
                 raise KeyError(msg)
             self._neighbors_dict = adata.uns["neighbors"]
-            self._conns_key = "connectivities"
-            self._dists_key = "distances"
+            # old `.uns['neighbors']` entries don’t store their keys
+            default_conns, default_dists = "connectivities", "distances"
         else:
             if key not in adata.uns:
                 msg = f"No {key!r} in .uns"
                 raise KeyError(msg)
             self._neighbors_dict = adata.uns[key]
-            self._conns_key = self._neighbors_dict["connectivities_key"]
-            self._dists_key = self._neighbors_dict["distances_key"]
+            default_conns = default_dists = None
+        # a key is missing if `pp.neighbors`’ `out` didn’t write that matrix
+        self._conns_key = self._neighbors_dict.get("connectivities_key", default_conns)
+        self._dists_key = self._neighbors_dict.get("distances_key", default_dists)
 
         if self._conns_key in adata.obsp:
             self._connectivities = adata.obsp[self._conns_key]
@@ -922,6 +929,34 @@ class NeighborsView:
             self._conns_key,
             self._dists_key,
         )
+
+    @classmethod
+    def from_graph(cls, adata: AnnData, graph: str) -> NeighborsView:
+        """View the neighbors whose connectivities are `.obsp[graph]`.
+
+        Uses the `.uns` entry of the :func:`~scanpy.pp.neighbors` call that wrote them, if any:
+        `out=A.obsp[graph]` names it `graph`, the default is `'neighbors'`,
+        and other entries are found by their `connectivities_key`.
+        Without one, the distances are where `out=A.obsp[graph]` would put them, if they exist.
+        """
+        candidates = dict.fromkeys([graph, "neighbors", *adata.uns])
+        for key in candidates:
+            entry = adata.uns.get(key)
+            default = "connectivities" if key == "neighbors" else None
+            if (
+                isinstance(entry, Mapping)
+                and entry.get("connectivities_key", default) == graph
+            ):
+                return cls(adata, key)
+        self = cls.__new__(cls)
+        self._neighbors_dict = {}
+        self._conns_key = graph
+        self._dists_key = (
+            "distances" if graph == "connectivities" else f"{graph}_distances"
+        )
+        self._connectivities = adata.obsp[graph]
+        self._distances = adata.obsp.get(self._dists_key)
+        return self
 
     @overload
     def __getitem__(self, key: Literal["distances", "connectivities"]) -> CSRBase: ...
@@ -997,6 +1032,41 @@ def dim_acc(col: str, *, dim: Literal["obs", "var"]) -> str | AdRef:
 
         return getattr(A, dim)[col]
     return col
+
+
+def expose_dispatch[F: Callable](inner: Callable) -> Callable[[F], F]:
+    """Expose `inner`’s `singledispatch` API on a validating wrapper around it.
+
+    Not `functools.wraps`: that sets `__wrapped__` even with `assigned=()`,
+    and :func:`inspect.signature` follows it – so the docs and our signature
+    conventions would see `inner`’s signature instead of the wrapper’s.
+    """
+
+    def decorate(wrapper: F) -> F:
+        for attr in ("register", "dispatch", "registry", "_clear_cache"):
+            setattr(wrapper, attr, getattr(inner, attr))
+        return wrapper
+
+    return decorate
+
+
+@contextmanager
+def own_deprecations() -> Generator[None]:
+    """Silence our own deprecation warnings for the duration of an internal call.
+
+    Internal calls sometimes have to use a deprecated parameter:
+    `use` needs `anndata.acc`, which isn’t guaranteed to be installed.
+    Users can’t act on a deprecation they didn’t trigger, so don’t show it to them.
+
+    `module=` can’t narrow this:
+    `scverse_misc`’s `warn_outside` blames the first frame outside scanpy,
+    so these warnings are attributed to the caller’s module.
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r"The argument \w+ is deprecated", FutureWarning
+        )
+        yield
 
 
 def is_backed_type(x: object, /) -> bool:

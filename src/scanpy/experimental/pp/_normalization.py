@@ -11,8 +11,8 @@ from anndata import AnnData
 from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
-from ... import settings
 from ..._compat import CSBase, warn
+from ..._docs import doc_out, doc_use
 from ..._keys import _embedding_keys
 from ..._settings import Default
 from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
@@ -20,23 +20,30 @@ from ..._utils.random import _accepts_legacy_random_state
 from ...experimental._docs import (
     doc_adata,
     doc_check_values,
-    doc_copy,
     doc_dist_params,
     doc_inplace,
-    doc_layer,
+    doc_input_matrix,
     doc_pca_chunk,
 )
-from ...get import _check_mask, _get_arr, _set_obs_rep
-from ...get.get import _mask_arg, _mask_hvg
+from ...get._out import (
+    _dest,
+    _dest_key,
+    _legacy_out,
+    _out_dests,
+    _write_dests,
+    _write_out,
+    deprecated_copy,
+)
+from ...get._use import _check_mask, _get_arr, _mask_arg, _mask_hvg, _resolve_obs
 from ...preprocessing._docs import doc_mask_var
-from ...preprocessing._pca import pca
+from ...preprocessing._pca import PCA_KINDS, PcaOut, _pca_dests, pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any
 
     from ..._utils.random import RNGLike, SeedLike
-    from ...get.get import Mask
+    from ...get._types import LayerAcc, Mask, RepAcc, _SetRep
 
 
 def _pearson_residuals(
@@ -85,21 +92,29 @@ def _pearson_residuals(
     adata=doc_adata,
     dist_params=doc_dist_params,
     check_values=doc_check_values,
-    layer=doc_layer,
-    inplace=doc_inplace,
-    copy=doc_copy,
+    use=doc_input_matrix,
+    out=doc_out(),
 )
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
+)
+@deprecated_copy
 def normalize_pearson_residuals(
     adata: AnnData,
     *,
     theta: float = 100,
     clip: float | None = None,
     check_values: bool = True,
+    use: RepAcc | str | None = None,
+    out: RepAcc | str | bool = False,
+    # deprecated
     layer: str | None = None,
     obsm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> AnnData | dict[str, np.ndarray] | None:
+) -> AnnData | np.ndarray | dict[str, np.ndarray] | None:
     """Apply analytic Pearson residual normalization, based on :cite:t:`Lause2021`.
 
     The residuals are based on a negative binomial offset model with overdispersion
@@ -113,15 +128,22 @@ def normalize_pearson_residuals(
     {adata}
     {dist_params}
     {check_values}
-    {layer}
-    {inplace}
-    {copy}
+    {use}
+    {out}
+    inplace
+        `inplace=False` is `out=True`.
+    copy
+        Whether to return a modified copy instead of modifying `adata` in place.
 
     Returns
     -------
-    If `inplace=True`, `adata.X` or the selected layer in `adata.layers` is updated
-    with the normalized values. `adata.uns` is updated with the following fields.
-    If `inplace=False`, the same fields are returned as dictionary with the
+    If `out=True`, returns the normalized values.
+    Otherwise, writes them to `out` (by default where `use` reads from),
+    and updates `adata.uns` with the following fields.
+    That `.uns` entry is named after the key `out` writes to
+    (e.g. `'k'` for `out=A.layers['k']`),
+    and `'pearson_residuals_normalization'` by default.
+    The deprecated `inplace=False` returns these fields as dictionary with the
     normalized values in `results_dict['X']`.
 
     `.uns['pearson_residuals_normalization']['theta']`
@@ -132,34 +154,69 @@ def normalize_pearson_residuals(
          The name of the layer on which the residuals were computed.
 
     """
-    if copy:
-        if not inplace:
-            msg = "`copy=True` cannot be used with `inplace=False`."
-            raise ValueError(msg)
-        adata = adata.copy()
+    out = _legacy_out(out, "inplace", None if inplace else True)
 
     view_to_actual(adata)
-    x = _get_arr(adata, layer=layer, obsm=obsm)
-    computed_on = layer or obsm or "adata.X"
+    use = _resolve_obs(use)
+    x = _get_arr(adata, use, layer=layer, obsm=obsm)
+    computed_on = layer or obsm or (repr(use) if use is not None else "adata.X")
 
     msg = f"computing analytic Pearson residuals on {computed_on}"
     start = logg.info(msg)
 
-    residuals = _pearson_residuals(x, theta, clip, check_values, copy=not inplace)
+    residuals = _pearson_residuals(x, theta, clip, check_values, copy=out is not False)
     settings_dict = dict(theta=theta, clip=clip, computed_on=computed_on)
-
-    if inplace:
-        _set_obs_rep(adata, residuals, layer=layer, obsm=obsm)
-        adata.uns["pearson_residuals_normalization"] = settings_dict
-    else:
-        results_dict = dict(X=residuals, **settings_dict)
-
     logg.info("    finished ({time_passed})", time=start)
 
-    if copy:
-        return adata
-    elif not inplace:
-        return results_dict
+    if out is True:
+        return residuals if inplace else dict(X=residuals, **settings_dict)
+    _write_out(
+        adata,
+        residuals,
+        out=out,
+        use=use,
+        layer=layer,
+        obsm=obsm,
+    )
+    # the `.uns` entry follows the output’s key, like other outputs do (see `_out_dests`)
+    key = None if out is False else _dest_key(_dest(out))
+    adata.uns[key or "pearson_residuals_normalization"] = settings_dict
+    return None
+
+
+def _pca_kwargs_dests(
+    kwargs_pca: Mapping[str, Any],
+) -> tuple[str | Default | None, PcaOut[_SetRep | None, _SetRep | None]]:
+    """Where `pca(**kwargs_pca)` writes, see `_write_pca_from`."""
+    if kwargs_pca.get("out") is True:
+        msg = "`kwargs_pca['out']=True` is not supported."
+        raise ValueError(msg)
+    return _out_dests(
+        kwargs_pca.get("out", False),
+        kwargs_pca.get("key_added"),
+        dests=_pca_dests,
+        kinds=PCA_KINDS,
+        uns=True,
+        default=Default(),
+    )
+
+
+def _write_pca_from(
+    adata: AnnData,
+    adata_pca: AnnData,
+    dests: PcaOut[_SetRep | None, _SetRep | None],
+    mask_var: np.ndarray | None,
+) -> None:
+    """Copy PCA outputs from `adata_pca` (`adata` subset to `mask_var`) to `adata`."""
+    embedding, loadings = (
+        None if dest is None else _get_arr(adata_pca, **dest) for dest in dests
+    )
+    if loadings is not None and mask_var is not None:
+        # zero rows for the variables not selected
+        padded = np.zeros(shape=(adata.n_vars, loadings.shape[1]))
+        padded[mask_var] = loadings
+        loadings = padded
+    _write_dests(adata, PcaOut(embedding, loadings), dests)
 
 
 @_doc_params(
@@ -168,12 +225,16 @@ def normalize_pearson_residuals(
     pca_chunk=doc_pca_chunk,
     mask=doc_mask_var,
     check_values=doc_check_values,
+    use=doc_use("Which count matrix to use as input.", legacy=()),
     inplace=doc_inplace,
 )
 @_accepts_legacy_random_state(0)
-# `stacklevel=2` skips `_accepts_legacy_random_state`’s wrapper frame
-@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
-def normalize_pearson_residuals_pca(
+@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
+@deprecated_arg(
+    "inplace",
+    Deprecation("1.13.0", "Copy `adata` before calling this function instead."),
+)
+def normalize_pearson_residuals_pca(  # noqa: PLR0913
     adata: AnnData,
     *,
     theta: float = 100,
@@ -183,8 +244,9 @@ def normalize_pearson_residuals_pca(
     kwargs_pca: Mapping[str, Any] = frozendict({}),
     mask: Mask | Default | None = Default("adata.var.get('highly_variable')"),
     check_values: bool = True,
-    inplace: bool = True,
+    use: LayerAcc | str | None = None,
     # deprecated
+    inplace: bool = True,
     mask_var: Mask | None = None,
 ) -> AnnData | None:
     """Apply analytic Pearson residual normalization and PCA, based on :cite:t:`Lause2021`.
@@ -203,6 +265,7 @@ def normalize_pearson_residuals_pca(
     {pca_chunk}
     {mask}
     {check_values}
+    {use}
     {inplace}
 
     Returns
@@ -217,49 +280,43 @@ def normalize_pearson_residuals_pca(
     `.uns['pearson_residuals_normalization']['clip']`
         The used value of the clipping parameter.
 
-    `.obsm[kwargs_pca.get('key_added', 'X_pca')]`
+    By default, the PCA results are stored in these fields
+    (see `out` of :func:`~scanpy.pp.pca`, which can be passed via `kwargs_pca`):
+
+    `.obsm['X_pca']`
         PCA representation of data after gene selection (if applicable) and Pearson
         residual normalization.
-    `.varm[kwargs_pca.get('key_added', 'PCs')]`
+    `.varm['PCs']`
         The principal components containing the loadings. When `inplace=True` and
         `mask_var is not None`, this will contain empty rows for the genes not
         selected.
-    `.uns[kwargs_pca.get('key_added', 'pca')]['variance_ratio']`
+    `.uns['pca']['variance_ratio']`
         Ratio of explained variance.
-    `.uns[kwargs_pca.get('key_added', 'pca')]['variance']`
+    `.uns['pca']['variance']`
         Explained variance, equivalent to the eigenvalues of the covariance matrix.
 
     """
-    key_added = kwargs_pca.get("key_added", settings.preset.pca.key_added)
-    keys = _embedding_keys("pca", key_added)
+    key, dests = _pca_kwargs_dests(kwargs_pca)
+    keys = _embedding_keys("pca", key)
     mask = _mask_hvg(adata, _mask_arg(mask, mask_var, dim="var"))
     mask_var = _check_mask(adata, mask, "var")
 
+    x, var = _get_arr(adata, _resolve_obs(use)), adata.var[[]]
     if mask_var is not None:
-        adata_sub = adata[:, mask_var].copy()
-        adata_pca = AnnData(
-            adata_sub.X.copy(), obs=adata_sub.obs[[]], var=adata_sub.var[[]]
-        )
-    else:
-        adata_pca = AnnData(adata.X.copy(), obs=adata.obs[[]], var=adata.var[[]])
+        x, var = x[:, mask_var], var[mask_var]
+    adata_pca = AnnData(x.copy(), obs=adata.obs[[]], var=var)
 
     normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
     pca(adata_pca, n_comps=n_comps, rng=rng, **kwargs_pca)
-    n_comps = adata_pca.obsm[keys.obsm].shape[1]  # might be None
 
     if inplace:
         norm_settings = adata_pca.uns["pearson_residuals_normalization"]
         norm_dict = dict(**norm_settings, pearson_residuals_df=adata_pca.to_df())
-        if mask_var is not None:
-            adata.varm[keys.varm] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm[keys.varm][mask_var] = adata_pca.varm[keys.varm]
-        else:
-            adata.varm[keys.varm] = adata_pca.varm[keys.varm]
+        _write_pca_from(adata, adata_pca, dests, mask_var)
         adata.uns[keys.uns] = adata_pca.uns[keys.uns]
         adata.uns["pearson_residuals_normalization"] = norm_dict
-        adata.obsm[keys.obsm] = adata_pca.obsm[keys.obsm]
         return None
     else:
         return adata_pca
