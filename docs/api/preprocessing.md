@@ -35,6 +35,18 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
    pp.downsample_counts
 ```
 
+## Protein expression
+
+Normalization of CITE-seq antibody-derived tag (ADT) counts.
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   pp.dsb
+```
+
 ## Recipes
 
 ```{eval-rst}
