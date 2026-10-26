@@ -289,6 +289,9 @@ filterwarnings = [
     "ignore:.*joblib will operate in serial mode:UserWarning",
     # mudata uses `DataFrame.drop(inplace=True)`, deprecated in pandas 3
     "ignore:The inplace keyword in DataFrame.drop is deprecated:DeprecationWarning:mudata",
+    # anndata≤0.13.4 accesses options deprecated in pandas 3.1
+    # (no `::anndata` module filter: `pytest.warns` re-emits warnings with module="warnings")
+    "ignore:The '(future\\.infer_string|mode\\.chained_assignment)' option is deprecated",
 ]
 junit_family = "xunit1"
 markers = [
