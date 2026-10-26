@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 
 type _ScaleFactor = Literal["standardize", "mean_subtract"]
 
-_SUBSET = 2000  # Mclust starts longer vectors from a random subset this size
-# EM iteration cap (R has none); only a guard against fits that never converge
+_SUBSET = 2000  # longer vectors start from a random subset this size
+# EM iteration cap; only a guard against fits that never converge
 _MAX_ITER = 100_000
 _CHUNK = 65_536  # rows of empty droplets densified at a time
 _ISOTYPE_PATTERN = re.compile(r"sotype|Iso|iso|control|CTRL|ctrl|Ctrl|ontrol")
@@ -68,14 +68,6 @@ def dsb(  # noqa: PLR0912, PLR0913, PLR0915
     subtracts, per protein, the first-component mean of a mixture fit across
     cells.
 
-    The mixture fits reproduce ``mclust::Mclust(x, G = 2)``. Mclust starts
-    vectors longer than 2000 values from a random subset of 2000, which affects
-    the per-protein fits of the negative model with more than 2000 cells: these
-    match R only in distribution and vary between calls unless `rng` is set.
-    Step 2 follows ``limma::removeBatchEffect`` from limma 3.66 on, which
-    centers the covariate. Without isotype controls, results of dsb with older
-    limma versions differ from this by a constant per protein.
-
     .. array-support:: pp.dsb
 
     Parameters
@@ -99,8 +91,7 @@ def dsb(  # noqa: PLR0912, PLR0913, PLR0915
         Step 1 with empty droplets: `'standardize'` or `'mean_subtract'`.
     fast_km
         Use the lower center of a two-cluster k-means as per-cell background.
-        R's ``kmeans(nstart = 5)`` depends on random starts; here the exact
-        optimum of the one-dimensional problem is computed.
+        The exact optimum of the one-dimensional problem is computed.
     quantile_clip
         Clip every protein to these lower and upper quantiles (type 7) of its
         normalized values; dsb's `quantile.clipping` uses `(0.001, 0.9995)`.
@@ -118,7 +109,9 @@ def dsb(  # noqa: PLR0912, PLR0913, PLR0915
         center of a two-cluster k-means as background, and EM stops after
         100,000 iterations (R has no limit).
     rng
-        Random number generator for the subsampled fits of long vectors.
+        Random number generator for the mixture fits of vectors longer than
+        2000 values, which start from a random subset. Without `adata_empty`
+        and with more than 2000 cells, results vary between calls unless set.
     copy
         Return a modified copy instead of updating `adata` in place.
 
@@ -251,7 +244,7 @@ def dsb(  # noqa: PLR0912, PLR0913, PLR0915
                 )
                 raise ValueError(msg)
             technical = _first_pc_scores(noise)
-        # limma::removeBatchEffect: subtract the slope times the centered v;
+        # subtract the slope times the centered technical component;
         # a constant covariate leaves the data unchanged
         if np.ptp(technical) > 0:
             vc = technical - technical.mean()
@@ -381,10 +374,7 @@ class _MixtureFit(NamedTuple):
 def _mixture_fits(
     m: NDArray[np.float64], rng: np.random.Generator, *, max_iter: int = _MAX_ITER
 ) -> _MixtureFit:
-    """Fit ``Mclust(x, G = 2)`` to every row of `m`.
-
-    Behaviour of mclust 6.1.3, established from its documentation and
-    black-box runs, not its source:
+    """Fit a univariate two-component Gaussian mixture to every row of `m`.
 
     * Start: hard split ``x < q``, ``q`` the type 7 quantile at the fraction
       ``j / k`` with the smallest ``k >= 2`` for which ``min < q < max`` (the
@@ -471,7 +461,7 @@ def _unique_counts(xs: NDArray[np.float64]):
 
 @numba.njit(cache=True)  # noqa: TID251
 def _threshold(xs: NDArray[np.float64]) -> float:
-    """Mclust's univariate start split of the sorted values `xs`.
+    """Start split of the sorted values `xs`.
 
     The type 7 quantile at the fraction ``j / k`` with the smallest ``k >= 2``
     for which ``min < q < max`` (the median for untied data); NaN when all

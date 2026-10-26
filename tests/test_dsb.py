@@ -346,8 +346,8 @@ def test_constant_isotype(counts):
 
 
 def test_identical_cells(counts):
-    # limma::removeBatchEffect returns the data unchanged for a constant
-    # covariate; with isotypes, R's prcomp cannot scale constant columns
+    # a constant covariate leaves the data unchanged; with isotypes, constant
+    # columns cannot be standardized
     cells, empty = counts
     same = AnnData(np.repeat(cells.X[:1], 20, axis=0), var=cells.var)
     step1 = sc.pp.dsb(same, empty, denoise_counts=False, copy=True).X
@@ -428,7 +428,7 @@ def _ref_threshold(x):
     return np.nan
 
 
-def _ref_mclust2(x, sub=None):
+def _ref_mixture(x, sub=None):
     """NumPy reference of the fits (see ``_mixture_fits``).
 
     `sub` is the random subset that starts long vectors.
@@ -498,7 +498,7 @@ def test_mixture_fits_match_reference():
     for x in _random_rows(rng, 60):
         assert _threshold(np.sort(x)) == pytest.approx(_ref_threshold(x), abs=1e-12)
         got = _mixture_fits(x[None, :], rng).params[0]
-        ref = _ref_mclust2(x)
+        ref = _ref_mixture(x)
         if ref is None:
             assert np.isnan(got).all()
             continue
@@ -526,7 +526,7 @@ def test_mixture_fits_subset_path():
 
     sub_rng = np.random.default_rng(7)
     for x, got in zip(mat, fit.params, strict=True):
-        ref = _ref_mclust2(x, x[sub_rng.choice(n, 2000, replace=False)])
+        ref = _ref_mixture(x, x[sub_rng.choice(n, 2000, replace=False)])
         np.testing.assert_allclose(got[:2], ref[0], rtol=1e-9, atol=1e-10)
 
 
