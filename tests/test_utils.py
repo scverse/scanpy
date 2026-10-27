@@ -13,10 +13,12 @@ import pytest
 from anndata.tests.helpers import asarray
 from scipy import sparse
 
+import scanpy._utils
 from scanpy._compat import CSBase, DaskArray
 from scanpy._utils import (
     _numba_thread_limit,
     axis_mul_or_truediv,
+    axis_nnz,
     check_nonnegative_integers,
     descend_classes_and_funcs,
 )
@@ -27,6 +29,7 @@ from scanpy._utils.random import (
     random_k_tuples,
     random_str,
 )
+from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_DASK,
@@ -184,6 +187,45 @@ def test_check_nonnegative_integers(
         # convert to python bool
         received = received.item()
     assert received is expected
+
+
+@needs.dask
+@pytest.mark.parametrize(
+    ("func", "kwargs"),
+    [
+        pytest.param(check_nonnegative_integers, {}, id="check_nonnegative_integers"),
+        pytest.param(axis_nnz, dict(axis=0), id="axis_nnz-0"),
+        pytest.param(axis_nnz, dict(axis=1), id="axis_nnz-1"),
+    ],
+)
+@pytest.mark.parametrize(
+    "block_type",
+    [np.asarray, sparse.csr_matrix],  # noqa: TID251
+    ids=["dense_dask", "csr_dask"],
+)
+def test_dask_reductions_blockwise(
+    monkeypatch: pytest.MonkeyPatch, func: Callable, kwargs: dict, block_type
+):
+    """Reductions over dask arrays must see one block at a time, not all blocks concatenated."""
+    import dask.array as da
+
+    x_np = np.random.default_rng(0).poisson(size=(100, 20)).astype(np.float32)
+    x = da.from_array(block_type(x_np), chunks=(10, 20), asarray=False)
+
+    # the dask implementation calls the module-level function on each block
+    seen_shapes = []
+
+    def spy(block, **kw):
+        seen_shapes.append(block.shape)
+        return func(block, **kw)
+
+    monkeypatch.setattr(scanpy._utils, func.__name__, spy)
+    received = func(x, **kwargs).compute()
+
+    # dask also calls the function on an empty array to infer the output metadata
+    block_shapes = [shape for shape in seen_shapes if 0 not in shape]
+    assert block_shapes == [(10, 20)] * 10
+    np.testing.assert_array_equal(received, func(x_np, **kwargs))
 
 
 @pytest.mark.parametrize("seed", [0, 1, 1256712675])

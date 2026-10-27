@@ -743,12 +743,30 @@ def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
 
 @axis_nnz.register(DaskArray)
 def _(x: DaskArray, /, axis: Literal[0, 1]) -> DaskArray:
-    return x.map_blocks(
-        partial(axis_nnz, axis=axis),
+    import dask.array as da
+
+    # Count per block, then sum the counts across blocks.
+    # (`map_blocks(..., drop_axis=axis)` would concatenate all blocks along `axis`
+    # before counting, i.e. load all of a row-chunked array into memory for `axis=0`.)
+    return da.reduction(
+        x,
+        chunk=_axis_nnz_block,
+        # keep the in-memory result’s dtype (int32 for scipy sparse), `np.sum` upcasts
+        aggregate=lambda counts, axis, keepdims: counts.sum(
+            axis=axis, keepdims=keepdims, dtype=counts.dtype
+        ),
+        axis=axis,
         dtype=np.int64,
         meta=np.array([], dtype=np.int64),
-        drop_axis=axis,
     )
+
+
+def _axis_nnz_block(
+    x: _MemoryArray, /, *, axis: tuple[Literal[0, 1]], keepdims: bool
+) -> np.ndarray:
+    # `da.reduction` passes `axis` as a tuple and expects the reduced axis to be kept
+    (ax,) = axis
+    return np.expand_dims(axis_nnz(x, axis=ax), ax)
 
 
 @singledispatch
@@ -774,7 +792,18 @@ def _check_nonnegative_integers_in_mem(x: _MemoryArray, /) -> bool:
 
 @check_nonnegative_integers.register(DaskArray)
 def _check_nonnegative_integers_dask(x: DaskArray, /) -> DaskArray:
-    return x.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
+    import dask.array as da
+
+    # One result per block, combined with `all` (see `axis_nnz` for why not `drop_axis`)
+    return da.reduction(
+        x,
+        chunk=lambda block, axis, keepdims: np.array([
+            [check_nonnegative_integers(block)]
+        ]),
+        aggregate=np.all,
+        dtype=bool,
+        meta=np.array([], dtype=bool),
+    )
 
 
 def dematrix[SA: _SupportedArray](x: SA | np.matrix) -> SA:
