@@ -625,13 +625,16 @@ def test_downsample_total_counts(
 
 @pytest.mark.parametrize("matrix_type", [sparse.csr_matrix, sparse.csc_matrix])  # noqa: TID251
 @pytest.mark.parametrize("target", [0, 7, 11, 12, 13])
-def test_downsample_total_counts_complement(matrix_type, target: int) -> None:
+@pytest.mark.parametrize("seed_kind", ["int", "generator"])
+def test_downsample_total_counts_complement(
+    matrix_type, target: int, seed_kind: str
+) -> None:
     """Sampling the discarded counts matches sampling them by hand."""
     counts = np.array([[0, 2, 7], [1, 0, 2]], dtype=np.int64)
     total = int(counts.sum())
     retained = min(target, total)
     adata = AnnData(matrix_type(counts))
-    rng = np.random.default_rng(42)
+    rng = 42 if seed_kind == "int" else np.random.default_rng(42)
 
     labels = np.repeat(np.arange(counts.size), counts.ravel())
     sample_size = min(retained, total - retained)

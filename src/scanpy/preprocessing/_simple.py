@@ -881,10 +881,12 @@ def downsample_counts(
     Notes
     -----
     For sparse ``int64`` counts, sampling without replacement with ``rng``
+    (an integer seed or a :class:`numpy.random.Generator`)
     samples discarded counts when `total_counts` exceeds half the input total.
     This preserves the sampling distribution, but changes seeded results and
     subsequent random draws compared with sampling retained counts directly.
-    Legacy ``random_state`` and the default random state retain their behavior.
+    Calls using the legacy ``random_state`` argument, or neither argument,
+    retain their previous behavior.
 
     """
     raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
