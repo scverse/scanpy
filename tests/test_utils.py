@@ -220,11 +220,11 @@ def test_dask_reductions_blockwise(
         return func(block, **kw)
 
     monkeypatch.setattr(scanpy._utils, func.__name__, spy)
-    received = func(x, **kwargs).compute()
+    lazy = func(x, **kwargs)
+    seen_shapes.clear()  # drop dask’s metadata probe, made while building the graph
+    received = lazy.compute()
 
-    # dask also calls the function on an empty array to infer the output metadata
-    block_shapes = [shape for shape in seen_shapes if 0 not in shape]
-    assert block_shapes == [(10, 20)] * 10
+    assert seen_shapes == [(10, 20)] * 10
     np.testing.assert_array_equal(received, func(x_np, **kwargs))
 
 
