@@ -491,6 +491,48 @@ def test_compare_to_seurat_v3():
 
 
 @needs.skmisc
+@pytest.mark.filterwarnings("ignore:Variable names are not unique:UserWarning")
+@pytest.mark.parametrize("flavor", ["seurat_v3", "seurat_v3_paper"])
+@pytest.mark.parametrize("batch_key", [None, "batch"])
+@pytest.mark.parametrize("inplace", [False, True])
+@pytest.mark.parametrize("subset", [False, True])
+def test_seurat_v3_duplicate_var_names(
+    flavor: Literal["seurat_v3", "seurat_v3_paper"],
+    batch_key: Literal["batch"] | None,
+    *,
+    inplace: bool,
+    subset: bool,
+) -> None:
+    rng = np.random.default_rng(0)
+    adata = AnnData(rng.negative_binomial(3, 0.3, (300, 120)).astype(np.float32))
+    adata.obs["batch"] = np.tile(["a", "b"], adata.n_obs // 2)
+    adata_dup = adata.copy()
+    duplicate_names = pd.Index([f"g{i % 100}" for i in range(adata.n_vars)])
+    adata_dup.var_names = duplicate_names
+
+    results = [
+        sc.pp.highly_variable_genes(
+            a,
+            flavor=flavor,
+            n_top_genes=30,
+            batch_key=batch_key,
+            inplace=inplace,
+            subset=subset,
+        )
+        for a in [adata, adata_dup]
+    ]
+    expected, result = (adata.var, adata_dup.var) if inplace else results
+    assert isinstance(expected, pd.DataFrame)
+    assert isinstance(result, pd.DataFrame)
+    assert result["highly_variable"].sum() == 30
+
+    expected.index = duplicate_names[expected.index.astype(int)]
+    if not inplace:
+        expected["gene_name"] = expected.index
+    assert_frame_equal(result, expected)
+
+
+@needs.skmisc
 def test_seurat_v3_warning():
     pbmc = pbmc3k()[:200].copy()
     sc.pp.log1p(pbmc)
