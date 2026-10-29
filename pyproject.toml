@@ -290,7 +290,8 @@ filterwarnings = [
     # (no `::anndata` module filter: `pytest.warns` re-emits warnings with module="warnings")
     "ignore:The '(future\\.infer_string|mode\\.chained_assignment)' option is deprecated",
     # anndata<0.12.18 passes args deprecated in scverse-misc
-    "ignore:The decorator_name argument is deprecated:DeprecationWarning",
+    # anndata<0.12.18 passes arguments deprecated in scverse-misc 0.1
+    "ignore:The (decorator_name|docstring_style) argument is deprecated:DeprecationWarning",
 ]
 junit_family = "xunit1"
 markers = [
