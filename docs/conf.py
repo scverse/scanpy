@@ -164,6 +164,7 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
     "pp.calculate_qc_metrics": (["np", "sp", "da"], []),
     "pp.combat": (["np"], []),
     "pp.downsample_counts": (["np", "sp[csr]"], []),
+    "pp.dsb": (["np", "sp", "da"], []),
     "pp.filter_cells": (["np", "sp", "da"], []),
     "pp.filter_genes": (["np", "sp", "da"], []),
     "pp.harmony_integrate": (["np"], []),
