@@ -335,6 +335,8 @@ def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
 
 def test_pca_reproducible(array_type):
     pbmc = pbmc3k_normalized()
+    # PCA only uses HVGs anyway, and densified copies of all genes take GBs
+    pbmc = pbmc[:, pbmc.var["highly_variable"]].copy()
     pbmc.X = array_type(pbmc.X)
 
     with (

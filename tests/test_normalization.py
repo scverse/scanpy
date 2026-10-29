@@ -96,8 +96,8 @@ def test_normalize_total_view(array_type, dtype):
     assert_equal(adata, v)
 
 
-def test_normalize_pearson_residuals_warnings(pbmc3k_parametrized):
-    adata = pbmc3k_parametrized()
+def test_normalize_pearson_residuals_warnings(pbmc3k_parametrized_small):
+    adata = pbmc3k_parametrized_small()
 
     if np.issubdtype(adata.X.dtype, np.integer):
         pytest.skip("Can’t store non-integral data with int dtype")
