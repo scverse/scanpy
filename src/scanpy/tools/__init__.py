@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ._archetype import archetype
 from ._dendrogram import dendrogram
 from ._diffmap import diffmap
 from ._dpt import dpt
@@ -41,6 +42,7 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
+    "archetype",
     "dendrogram",
     "diffmap",
     "dpt",

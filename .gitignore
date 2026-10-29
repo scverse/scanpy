@@ -45,3 +45,6 @@ Thumbs.db
 # asv benchmark files
 /benchmarks/.asv
 /benchmarks/data/
+
+tests/_data/*.h5ad
+output*.png
