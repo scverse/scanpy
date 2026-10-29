@@ -96,5 +96,6 @@ Also see {ref}`data integration tools <data-integration>` and external {ref}`ext
 
    pp.bbknn
    pp.neighbors
+   pp.wnn
 
 ```

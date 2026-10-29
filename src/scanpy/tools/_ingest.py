@@ -285,6 +285,14 @@ class Ingest:
 
     def _init_neighbors(self, adata: AnnData, neighbors_key: str | None) -> None:
         neighbors = NeighborsView(adata, neighbors_key)
+        if "modalities" in neighbors["params"]:
+            msg = (
+                f"`adata_ref.uns[{neighbors_key!r}]` is a multimodal graph from "
+                "`sc.pp.wnn`, which `ingest` cannot map into. Compute single-modality "
+                "neighbors, e.g. `sc.pp.neighbors(adata_ref, key_added='rna')`, "
+                "and pass `neighbors_key='rna'`."
+            )
+            raise NotImplementedError(msg)
 
         self._n_neighbors = neighbors["params"]["n_neighbors"]
 

@@ -179,6 +179,7 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
     "pp.scale": (["np", "sp", "da"], []),
     "pp.scrublet": (["np", "sp"], []),
     "pp.scrublet_simulate_doublets": (["np", "sp"], []),
+    "pp.wnn": (["np"], []),
     "tl.dendrogram": (["np", "sp"], []),
     "tl.diffmap": (["np", "sp"], []),
     "tl.dpt": (["np", "sp"], []),
