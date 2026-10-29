@@ -289,6 +289,8 @@ filterwarnings = [
     # anndata≤0.13.4 accesses options deprecated in pandas 3.1
     # (no `::anndata` module filter: `pytest.warns` re-emits warnings with module="warnings")
     "ignore:The '(future\\.infer_string|mode\\.chained_assignment)' option is deprecated",
+    # anndata<0.12.18 passes args deprecated in scverse-misc
+    "ignore:The decorator_name argument is deprecated:DeprecationWarning",
 ]
 junit_family = "xunit1"
 markers = [
