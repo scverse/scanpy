@@ -283,21 +283,6 @@ class Ingest:
             random_state=_legacy_random_state(rng),
         )
 
-        # temporary hack for the broken forest storage
-        from pynndescent.rp_trees import make_forest
-
-        current_random_state = check_random_state(self._nnd_idx.random_state)
-        self._nnd_idx._rp_forest = make_forest(
-            self._nnd_idx._raw_data,
-            self._nnd_idx.n_neighbors,
-            self._nnd_idx.n_search_trees,
-            self._nnd_idx.leaf_size,
-            self._nnd_idx.rng_state,
-            current_random_state,
-            self._nnd_idx.n_jobs,
-            self._nnd_idx._angular_trees,
-        )
-
     def _init_neighbors(self, adata: AnnData, neighbors_key: str | None) -> None:
         neighbors = NeighborsView(adata, neighbors_key)
 
