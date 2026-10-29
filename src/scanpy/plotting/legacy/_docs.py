@@ -116,7 +116,9 @@ vmax
 vcenter
     The value representing the center of the color scale. Useful for diverging colormaps.
     The format is the same as for `vmin`.
-    Example: ``sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')``\
+    Example: ``sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')``
+norm
+    Custom color normalization object from matplotlib. See :ref:`colormapnorms` for details.\
 """
 
 doc_vboundnorm = """\
