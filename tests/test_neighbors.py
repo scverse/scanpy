@@ -170,7 +170,15 @@ def test_distances_euclidean(
         # knn=False trivially returns all distances
         pytest.param(None, False, id="knn=False"),
         # pynndescent returns all distances when data is so small
-        pytest.param("pynndescent", True, id="pynndescent"),
+        pytest.param(
+            "pynndescent",
+            True,
+            id="pynndescent",
+            # TODO: remove once https://github.com/lmcinnes/pynndescent/issues/286 is fixed
+            marks=pytest.mark.filterwarnings(
+                "ignore:Failed to correctly find n_neighbors:UserWarning"
+            ),
+        ),
         # Explicit brute force also returns all distances
         pytest.param(
             KNeighborsTransformer(n_neighbors=n_neighbors, algorithm="brute"),

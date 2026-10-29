@@ -136,7 +136,7 @@ def test_neighbors(adatas):
     assert percent_correct > 0.99
 
 
-@pytest.mark.parametrize("n", [3, 4])
+@pytest.mark.parametrize("n", [8, 12])
 def test_neighbors_defaults(adatas, n):
     adata_ref = adatas[0].copy()
     adata_new = adatas[1].copy()

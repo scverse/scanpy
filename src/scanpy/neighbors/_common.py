@@ -105,21 +105,19 @@ def _ind_dist_slow(
     distances = np.zeros((d.shape[0], n_neighbors), dtype=d.dtype)
     n_neighbors_m1 = n_neighbors - 1
     for i in range(indices.shape[0]):
-        neighbors = d[i].nonzero()  # 'true' and 'spurious' zeros
+        row = slice(d.indptr[i], d.indptr[i + 1])
+        cols, vals = d.indices[row], d.data[row]
+        cols, vals = cols[vals != 0], vals[vals != 0]  # 'true' and 'spurious' zeros
         indices[i, 0] = i
         distances[i, 0] = 0
         # account for the fact that there might be more than n_neighbors
         # due to an approximate search
         # [the point itself was not detected as its own neighbor during the search]
-        if len(neighbors[1]) > n_neighbors_m1:
-            sorted_indices = np.argsort(d[i][neighbors].A1)[:n_neighbors_m1]
-            indices[i, 1:] = neighbors[1][sorted_indices]
-            distances[i, 1:] = d[i][
-                neighbors[0][sorted_indices], neighbors[1][sorted_indices]
-            ]
-        else:
-            indices[i, 1:] = neighbors[1]
-            distances[i, 1:] = d[i][neighbors]
+        if len(cols) > n_neighbors_m1:
+            order = np.argsort(vals)[:n_neighbors_m1]
+            cols, vals = cols[order], vals[order]
+        indices[i, 1:] = cols
+        distances[i, 1:] = vals
     return indices, distances
 
 
@@ -128,7 +126,7 @@ def _ind_dist_shortcut(
 ) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]] | None:
     """Shortcut for scipy or RAPIDS style distance matrices."""
     # Check if each row has the correct number of entries
-    nnzs = d.getnnz(axis=1)
+    nnzs = np.diff(d.indptr)
     if not is_constant(nnzs):
         msg = (
             "Sparse matrix has no constant number of neighbors per row. "
