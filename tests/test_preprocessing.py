@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import warnings
+from collections import Counter
 from contextlib import nullcontext
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, NamedTuple
+from itertools import combinations, product
+from math import comb, prod
+from typing import TYPE_CHECKING, NamedTuple, override
 
 import numpy as np
 import pandas as pd
@@ -16,6 +19,8 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy._compat import CSBase
+from scanpy._utils.random import _LegacyRng
+from scanpy.preprocessing._simple import _downsample_array
 from testing.scanpy._helpers import (
     check_rep_mutation,
     check_rep_results,
@@ -618,6 +623,75 @@ def test_downsample_total_counts(
         )
         assert (x == adata.X).all()
     assert x.dtype == adata.X.dtype
+
+
+@pytest.mark.parametrize("matrix_type", [sparse.csr_matrix, sparse.csc_matrix])  # noqa: TID251
+@pytest.mark.parametrize("target", [0, 7, 11, 12, 13])
+@pytest.mark.parametrize("seed_kind", ["int", "generator"])
+def test_downsample_total_counts_complement(
+    matrix_type, target: int, seed_kind: str
+) -> None:
+    """Sampling the discarded counts matches sampling them by hand."""
+    counts = np.array([[0, 2, 7], [1, 0, 2]], dtype=np.int64)
+    total = int(counts.sum())
+    retained = min(target, total)
+    adata = AnnData(matrix_type(counts))
+    rng = 42 if seed_kind == "int" else np.random.default_rng(42)
+
+    labels = np.repeat(np.arange(counts.size), counts.ravel())
+    sample_size = min(retained, total - retained)
+    sample = np.random.default_rng(42).choice(total, sample_size, replace=False)
+    sampled = np.bincount(labels[sample], minlength=counts.size).reshape(counts.shape)
+    expected = counts - sampled if retained > total // 2 else sampled
+
+    sc.pp.downsample_counts(adata, total_counts=target, rng=rng)
+
+    assert type(adata.X) is matrix_type
+    assert adata.X.dtype == counts.dtype
+    assert not np.any(adata.X.data == 0)
+    np.testing.assert_array_equal(adata.X.toarray(), expected)
+
+
+class _EnumeratedRng(np.random.Generator):
+    """Generator whose `choice` returns a given set of tickets."""
+
+    def __init__(self, tickets: tuple[int, ...]) -> None:
+        super().__init__(np.random.PCG64(0))
+        self.tickets = tickets
+
+    @override
+    def choice(self, a, size=None, replace=True, **kwargs):
+        return np.array(self.tickets)
+
+
+def test_downsample_total_counts_complement_joint_law() -> None:
+    """Averaged over all equally likely samples, the result is multivariate hypergeometric."""
+    counts = (1, 2, 3, 4)
+    target = 7
+    observed = Counter()
+    for tickets in combinations(range(sum(counts)), sum(counts) - target):
+        adata = AnnData(sparse.csr_matrix(np.array([counts], dtype=np.int64)))  # noqa: TID251
+        sc.pp.downsample_counts(adata, total_counts=target, rng=_EnumeratedRng(tickets))
+        observed[tuple(adata.X.toarray()[0])] += 1
+    expected = {
+        y: prod(comb(c, k) for c, k in zip(counts, y, strict=True))
+        for y in product(*(range(c + 1) for c in counts))
+        if sum(y) == target
+    }
+    assert observed == expected
+
+
+@pytest.mark.parametrize("kind", ["legacy", "default"])
+def test_downsample_total_counts_complement_not_used(kind: str) -> None:
+    """Legacy and default random states keep sampling the retained counts."""
+    counts = np.array([[0, 2, 7], [1, 0, 2]], dtype=np.int64)
+    kwargs = {"random_state": 42} if kind == "legacy" else {}
+    expected = _downsample_array(
+        counts.ravel(), 11, rng=_LegacyRng(42 if kind == "legacy" else 0), replace=False
+    ).reshape(counts.shape)
+    adata = AnnData(sparse.csr_matrix(counts))  # noqa: TID251
+    sc.pp.downsample_counts(adata, total_counts=11, **kwargs)
+    np.testing.assert_array_equal(adata.X.toarray(), expected)
 
 
 def test_recipe_weinreb():
