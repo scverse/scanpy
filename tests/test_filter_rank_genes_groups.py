@@ -6,6 +6,11 @@ import pytest
 from scanpy.tools import filter_rank_genes_groups, rank_genes_groups
 from testing.scanpy._helpers.data import pbmc68k_reduced
 
+pytestmark = pytest.mark.filterwarnings(
+    r"ignore:The function (rank_genes_groups|filter_rank_genes_groups|rank_genes_groups_df) is deprecated:FutureWarning"
+)
+
+
 NAMES_NO_REF = [
     ["CD3D", "ITM2A", "CD3D", "CCL5", "CD7", "nan", "CD79A", "nan", "NKG7", "LYZ"],
     ["CD3E", "CD3D", "nan", "NKG7", "CD3D", "AIF1", "CD79B", "nan", "GNLY", "CST3"],
