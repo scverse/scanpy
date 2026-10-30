@@ -11,6 +11,8 @@ env:
   PYTEST_ADDOPTS: "-v --color=yes -n auto --internet-tests --junitxml=test-data/test-results.xml"
   FORCE_COLOR: "1"
   MPLBACKEND: agg
+  # ubuntu-26.04’s system Python is 3.14.4, whose incremental GC (reverted in 3.14.5) lets garbage pile up until the runner OOMs
+  UV_PYTHON_PREFERENCE: only-managed
   # It’s impossible to ignore SyntaxWarnings for a single module,
   # so because leidenalg 0.10.0 has them, we pre-compile things: https://github.com/vtraag/leidenalg/issues/173
   UV_COMPILE_BYTECODE: "1"
