@@ -115,6 +115,25 @@ def test_top_proportions(request: pytest.FixtureRequest, array_type):
     assert (segfull == propfull).all()
 
 
+@pytest.mark.parametrize(
+    "dtype",
+    [np.int8, np.int16, np.uint8, np.uint16, np.uint32],
+    ids=lambda d: d.__name__,
+)
+def test_top_segments_sparse_small_int(dtype):
+    """Row sums must not overflow or fail for small integer dtypes."""
+    dense = (
+        np.random
+        .default_rng(0)
+        .integers(1, min(np.iinfo(dtype).max, 1000), (3, 60))
+        .astype(dtype)
+    )
+    ns = np.array([5, 10])
+    expected = top_segment_proportions(dense, ns)
+    result = top_segment_proportions(sparse.csr_matrix(dense), ns)  # noqa: TID251
+    np.testing.assert_allclose(result, expected)
+
+
 # While many of these are trivial,
 # they’re also just making sure the metrics are there
 def test_qc_metrics(adata_prepared: AnnData):
