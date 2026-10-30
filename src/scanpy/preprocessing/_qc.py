@@ -434,7 +434,7 @@ def top_segment_proportions_sparse_csr(data, indptr, ns):
     ns = ns.astype(np.int64)
     ns = np.sort(ns)
     maxidx = ns[-1]
-    sums = np.zeros((indptr.size - 1), dtype=data.dtype)
+    sums = np.zeros((indptr.size - 1), dtype=np.float64)
     values = np.zeros((indptr.size - 1, len(ns)), dtype=np.float64)
     # Just to keep it simple, as a dense matrix
     partitioned = np.zeros((indptr.size - 1, maxidx), dtype=data.dtype)
@@ -447,7 +447,7 @@ def top_segment_proportions_sparse_csr(data, indptr, ns):
             partitioned[i, :] = -(np.partition(-data[start:end], maxidx))[:maxidx]
         partitioned[i, :] = np.partition(partitioned[i, :], maxidx - ns)
     partitioned = partitioned[:, ::-1][:, : ns[-1]]
-    acc = np.zeros((indptr.size - 1), dtype=data.dtype)
+    acc = np.zeros((indptr.size - 1), dtype=np.float64)
     prev = 0
     # can’t use enumerate due to https://github.com/numba/numba/issues/2625
     for j in range(ns.size):
