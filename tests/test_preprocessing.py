@@ -590,6 +590,17 @@ def test_downsample_counts_per_cell_multiple_targets(
     assert x.dtype == adata.X.dtype
 
 
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+def test_downsample_total_counts_large_float32(dtype: type[np.floating]) -> None:
+    """Running sums above 2**24 must stay exact for float32 input."""
+    x = np.array([[2**24, 1, 1, 1, 1]], dtype=dtype)
+    adata = AnnData(X=x.copy())
+    sc.pp.downsample_counts(adata, total_counts=2**24 + 3, rng=0, replace=False)
+    assert adata.X.sum(dtype=np.float64) == 2**24 + 3
+    assert np.all(x >= adata.X)
+    assert adata.X.dtype == dtype
+
+
 @pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
 def test_downsample_total_counts(
     *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
