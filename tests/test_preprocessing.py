@@ -403,6 +403,8 @@ def test_regress_out_ordinal():
     np.testing.assert_array_equal(single, multi)
 
 
+# genes with equal means in both categories have a constant regressor (collinear with the intercept)
+@pytest.mark.filterwarnings("ignore:The design matrix is rank-deficient:UserWarning")
 @pytest.mark.parametrize("dtype", [np.uint32, np.float64, np.uint64])
 def test_regress_out_int(data_dir: Path, dtype: type[np.generic]):
     adata = pbmc3k()[:200, :200].copy()
@@ -414,8 +416,8 @@ def test_regress_out_int(data_dir: Path, dtype: type[np.generic]):
     adata_other = adata.copy()
     adata_other.X = adata_other.X.astype(dtype)
     # results using only one processor
-    sc.pp.regress_out(adata, ["labels"])
-    sc.pp.regress_out(adata_other, ["labels"])
+    sc.pp.regress_out(adata, ["labels"], n_jobs=1)
+    sc.pp.regress_out(adata_other, ["labels"], n_jobs=1)
     assert_equal(adata_other, adata)
     # This file was generated under scanpy 1.10.3
     ground_truth = np.load(data_dir / "cat_regressor_for_int_input.npy")

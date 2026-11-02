@@ -289,6 +289,10 @@ filterwarnings = [
     # anndata≤0.13.4 accesses options deprecated in pandas 3.1
     # (no `::anndata` module filter: `pytest.warns` re-emits warnings with module="warnings")
     "ignore:The '(future\\.infer_string|mode\\.chained_assignment)' option is deprecated",
+    # anndata≤0.13.4 uses `inplace=True` when reading legacy zarr (fixed in scverse/anndata#2671)
+    "ignore:The inplace keyword in DataFrame\\.set_index is deprecated::anndata\\.",
+    # anndata<0.12.18 passes arguments deprecated in scverse-misc 0.1
+    "ignore:The (decorator_name|docstring_style) argument is deprecated:DeprecationWarning",
 ]
 junit_family = "xunit1"
 markers = [
