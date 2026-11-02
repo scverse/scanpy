@@ -458,6 +458,14 @@ def _resolve_layer(use: LayerAcc | str | None) -> LayerAcc | None:
     return use
 
 
+def _resolve_obsm(use: MultiAcc | str | None) -> MultiAcc | None:
+    """Like `_resolve_obs`, but for functions needing an embedding, i.e. an `.obsm` array."""
+    if (use := _resolve_obs(use)) is not None and not isinstance(use, MultiAcc):
+        msg = f"`use` must be an embedding (e.g. `A.obsm[...]`), was {use!r}"
+        raise TypeError(msg)
+    return use
+
+
 def _obs_col(ref: AdRef | str | None, *, param: str) -> str | None:
     """Get the name of the `.obs` column a grouping `ref` points to.
 

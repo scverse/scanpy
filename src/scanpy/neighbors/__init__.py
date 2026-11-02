@@ -76,7 +76,7 @@ SCIPY_1_17 = pkg_version("scipy") >= Version("1.17")
 @deprecated_arg("use_rep", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("key_added", DEPR_KEY_ADDED)
 @deprecated_copy
-def neighbors(  # noqa: PLR0912, PLR0913, PLR0915
+def neighbors(  # noqa: PLR0913
     adata: AnnData,
     n_neighbors: int = 15,
     n_pcs: int | None = None,
@@ -195,8 +195,7 @@ def neighbors(  # noqa: PLR0912, PLR0913, PLR0915
     :doc:`/how-to/knn-transformers`
 
     """
-    if use is not None:
-        use = _resolve_obs(use, rep=True)
+    use = _resolve_obs(use, rep=True)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )

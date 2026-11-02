@@ -11,7 +11,7 @@ from ..._keys import _embedding_keys
 from ..._utils import _doc_params
 from ...get._out import _out_key
 from ...get._types import AdRef
-from ...get._use import _get_arr, _obs_df, _ref_arg, _resolve_obs
+from ...get._use import _get_arr, _obs_df, _ref_arg, _resolve_obsm
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -231,7 +231,7 @@ def harmony_integrate(  # noqa: PLR0913
             )
 
     # Get the input data
-    use = _resolve_obs(use)
+    use = _resolve_obsm(use)
     input_data = (
         adata.obsm[_embedding_keys("pca").obsm] if use is None else _get_arr(adata, use)
     )

@@ -434,6 +434,8 @@ def test_harmony_input_validation(subtests) -> None:
         harmony_integrate(AnnData(adata.X, obs=adata.obs), "obs.bulk_labels")
     with subtests.test("no key"), pytest.raises(KeyError):
         harmony_integrate(adata, "obs.nonexistent_key")
+    with subtests.test("not obsm"), pytest.raises(TypeError, match=r"embedding"):
+        harmony_integrate(adata, "obs.bulk_labels", use="layers.x")
 
 
 @needs.anndata_acc
