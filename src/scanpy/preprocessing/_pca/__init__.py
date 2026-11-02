@@ -135,7 +135,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     return_info: bool = False,
     mask: Mask | Default | None = Default("adata.var.get('highly_variable')"),
     dtype: DTypeLike = "float32",
-    out: Mapping[str, ArrAcc | str] | bool = False,
+    out: ArrAcc | str | Mapping[str, ArrAcc | str] | bool = False,
     # deprecated
     key_added: str | None = None,
     copy: bool = False,

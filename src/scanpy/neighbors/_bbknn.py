@@ -57,7 +57,7 @@ def bbknn(  # noqa: PLR0913
     metric_kwds: Mapping[str, Any] = frozendict({}),
     trim: int | None = None,
     rng: SeedLike | RNGLike | None = None,
-    out: Mapping[str, ArrAcc | str] | bool = False,
+    out: ArrAcc | str | Mapping[str, ArrAcc | str] | bool = False,
 ) -> NeighborsOut | None:
     r"""Compute a batch balanced neighborhood graph of observations :cite:p:`Polanski2019`.
 

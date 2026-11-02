@@ -90,7 +90,7 @@ def neighbors(  # noqa: PLR0912, PLR0913
     metric: _Metric | _MetricFn | None = None,
     metric_kwds: Mapping[str, Any] = frozendict({}),
     rng: SeedLike | RNGLike | None = None,
-    out: Mapping[str, ArrAcc | str] | bool = False,
+    out: ArrAcc | str | Mapping[str, ArrAcc | str] | bool = False,
     # deprecated
     key_added: str | None = None,
     copy: bool = False,

@@ -191,7 +191,7 @@ def normalize_total(  # noqa: PLR0913
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
     use: RepAcc | str | None = None,
-    out: Mapping[str, ArrAcc | VecRef | str] | bool = False,
+    out: ArrAcc | str | Mapping[str, ArrAcc | VecRef | str] | bool = False,
     # deprecated
     key_added: str | None = None,
     layer: str | None = None,

@@ -278,7 +278,7 @@ def hashsolo(
     priors: tuple[float, float, float] = (0.01, 0.8, 0.19),
     pre_existing_clusters: AdRef | str | None = None,
     n_noise_barcodes: int | None = None,
-    out: Mapping[str, ArrAcc | VecRef | str] | bool = False,
+    out: VecRef | Mapping[str, ArrAcc | VecRef | str] | bool = False,
 ) -> HashsoloOut | None:
     r"""Probabilistic demultiplexing of cell hashing data using HashSolo :cite:p:`Bernstein2020`.
 

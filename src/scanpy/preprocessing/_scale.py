@@ -145,7 +145,7 @@ def scale[A: _Array](
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     use: RepAcc | str | None = None,
-    out: Mapping[str, ArrAcc | VecRef | str] | bool = False,
+    out: ArrAcc | str | Mapping[str, ArrAcc | VecRef | str] | bool = False,
     mask: Mask | None = None,
     # deprecated
     copy: bool = False,
@@ -384,7 +384,7 @@ def scale_anndata(
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     use: RepAcc | str | None = None,
-    out: Mapping[str, ArrAcc | VecRef | str] | bool = False,
+    out: ArrAcc | str | Mapping[str, ArrAcc | VecRef | str] | bool = False,
     mask: Mask | None = None,
     layer: str | None = None,
     obsm: str | None = None,
