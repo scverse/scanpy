@@ -89,6 +89,8 @@ class NeighborsSuite:
             adata.uns["batch_key"] = batch_key
             adata.write_zarr(f"{dataset}.zarr")
 
+    setup_cache.timeout = 600  # reading lung93k takes longer than asv’s 60s default, and class `timeout` doesn’t apply here
+
     def setup(self, dataset: Dataset) -> None:
         self.adata = ad.read_zarr(f"{dataset}.zarr")
 
@@ -116,6 +118,8 @@ class HVGSuite:  # noqa: D101
         obs = np.arange(adata.shape[0])
         np.random.default_rng().shuffle(obs)
         adata[obs].write_zarr("lung93k_shuffled.zarr")
+
+    setup_cache.timeout = 600  # reading lung93k takes longer than asv’s 60s default, and class `timeout` doesn’t apply here
 
     def setup(
         self,
