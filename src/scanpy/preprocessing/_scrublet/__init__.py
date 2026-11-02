@@ -16,7 +16,7 @@ from ..._utils import _doc_params, own_deprecations
 from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
 from ...get._out import _out_dests, _write_dests, deprecated_copy
 from ...get._uns import _ref_to_uns
-from ...get._use import _get_arr, _get_vec_compat, _ref_arg, _resolve_obs
+from ...get._use import _get_arr, _get_vec, _ref_arg, _resolve_obs
 from . import pipeline
 from .core import Scrublet
 
@@ -307,7 +307,7 @@ def scrublet(  # noqa: PLR0913, PLR0915
     batch = _ref_arg(batch, batch_key, name="batch", legacy_name="batch_key")
     if batch is not None:
         try:
-            batch_info = np.asarray(_get_vec_compat(adata, batch, dim="obs"))
+            batch_info = np.asarray(_get_vec(adata, batch, dim="obs", compat=True))
         except KeyError as e:
             msg = f"Could not find `batch` ({batch!r}) in the input AnnData object."
             raise ValueError(msg) from e

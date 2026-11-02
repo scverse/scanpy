@@ -61,7 +61,7 @@ def _get_arr(  # noqa: PLR0911, PLR0912
 
             use = A.resolve(use, vec=False)
 
-        if any(v not in (None, False) for v in choices.values()):
+        if any(v not in {None, False} for v in choices.values()):
             msg = "`use` cannot be combined with `layer`/`use_raw`/`obsm`/`obsp`/`varm`/`varp`"
             raise TypeError(msg)
         if not isinstance(use, GraphAcc | LayerAcc | MultiAcc):
@@ -185,7 +185,7 @@ def _check_mask[M: NDArray[np.bool] | NDArray[np.floating] | pd.Series | None](
             msg = f"Cannot use refererence for {desc} without providing anndata object as argument"
             raise ValueError(msg)
         try:
-            mask_array = np.asarray(_get_vec_compat(data, mask, dim=dim))
+            mask_array = np.asarray(_get_vec(data, mask, dim=dim, compat=True))
         except KeyError:
             if isinstance(mask, AdRef):
                 msg = (
@@ -239,15 +239,7 @@ def _resolve_ref(
     With `vec=False`, resolve into a whole array’s accessor (e.g. `A.obsm['x']`) instead,
     for parameters whose strings used to be keys, e.g. of `.obsm`.
     """
-    if not vec:
-        from scanpy import settings
-
-        if settings.preset is not Preset.ScanpyV2Preview:
-            return ref
-        from anndata.acc import A
-
-        return A.resolve(ref, vec=False)
-    if not isinstance(ref, AdRef | str):
+    if vec and not isinstance(ref, AdRef | str):
         refs = [_resolve_ref(r) for r in ref]
         if sum(isinstance(r, str) for r in refs) not in {0, len(refs)}:
             msg = "All elements of `refs` must be either `AdRef` or strings, not a mix, if `preset` is not `ScanpyV2Preview`."
@@ -260,7 +252,22 @@ def _resolve_ref(
         return ref
     from anndata.acc import A
 
-    return A.resolve(ref, vec=True)
+    return A.resolve(ref, vec=vec)
+
+
+def _resolve_strs(
+    ref: AdRef | str | Collection[AdRef | str],
+) -> AdRef | Collection[AdRef]:
+    """Resolve the string `ref` or the strings in a collection `ref` into `AdRef`s."""
+    if isinstance(ref, str):
+        from anndata.acc import A
+
+        return A.resolve(ref, vec=True)
+    if isinstance(ref, Collection) and any(isinstance(r, str) for r in ref):
+        from anndata.acc import A
+
+        return [A.resolve(r, vec=True) if isinstance(r, str) else r for r in ref]
+    return ref
 
 
 def _ref_arg[R: AdRef | str | Collection[AdRef | str] | None](
@@ -279,15 +286,7 @@ def _ref_arg[R: AdRef | str | Collection[AdRef | str] | None](
         return _resolve_ref(legacy)
     if ref is None or compat:
         return ref if ref is None else _resolve_ref(ref)
-    if isinstance(ref, str) or (
-        isinstance(ref, Collection) and any(isinstance(r, str) for r in ref)
-    ):
-        from anndata.acc import A
-
-        if isinstance(ref, str):
-            return A.resolve(ref, vec=True)
-        return [A.resolve(r, vec=True) if isinstance(r, str) else r for r in ref]
-    return ref
+    return _resolve_strs(ref)
 
 
 def _ref_dim(
@@ -325,43 +324,6 @@ def _fetch_vec(adata: AnnData, ref: AdRef | str, *, dim: Literal["obs", "var"]) 
     return adata[ref]
 
 
-@overload
-def _get_vec_compat(
-    adata: AnnData,
-    ref: Collection[AdRef] | Collection[str],
-    *,
-    dim: Literal["obs", "var"] | None = None,
-) -> list[Any]: ...
-
-
-@overload
-def _get_vec_compat(
-    adata: AnnData, ref: AdRef | str, *, dim: Literal["obs", "var"] | None = None
-) -> Any: ...
-
-
-def _get_vec_compat(
-    adata: AnnData,
-    ref: AdRef | str | Collection[AdRef] | Collection[str],
-    *,
-    dim: Literal["obs", "var"] | None = None,
-) -> Any:
-    """Get the 1D array(s) one or more `ref`erences point to.
-
-    Treats strings as `obs` columns instead of `anndata.acc` specs when the preset is v1.
-    """
-    if _collection_of(ref, (AdRef, str)):
-        dim = _refs_dim(ref, dim=dim)
-        return [_fetch_vec(adata, r, dim=dim) for r in ref]
-
-    if isinstance(ref, Collection) and not isinstance(ref, str):
-        msg = f"Expected a single ref or collection of refs, got {ref!r}"
-        raise TypeError(msg)
-
-    dim = _ref_dim(ref, dim=dim)
-    return _fetch_vec(adata, ref, dim=dim)
-
-
 def _obs_df(
     adata: AnnData, refs: AdRef | str | Collection[AdRef | str]
 ) -> pd.DataFrame:
@@ -370,7 +332,7 @@ def _obs_df(
     Its columns are labelled for display (e.g. `A.obs['batch']`), so only use them as labels.
     """
     refs = [refs] if isinstance(refs, AdRef | str) else list(refs)
-    vals = _get_vec_compat(adata, refs, dim="obs")
+    vals = _get_vec(adata, refs, dim="obs", compat=True)
     return pd.DataFrame(
         {str(_resolve_ref(r)): v for r, v in zip(refs, vals, strict=True)},
         index=adata.obs_names,
@@ -383,12 +345,17 @@ def _get_vec(
     ref: Collection[AdRef] | Collection[str],
     *,
     dim: Literal["obs", "var"] | None = None,
+    compat: bool = False,
 ) -> list[Any]: ...
 
 
 @overload
 def _get_vec(
-    adata: AnnData, ref: AdRef | str, *, dim: Literal["obs", "var"] | None = None
+    adata: AnnData,
+    ref: AdRef | str,
+    *,
+    dim: Literal["obs", "var"] | None = None,
+    compat: bool = False,
 ) -> Any: ...
 
 
@@ -397,23 +364,25 @@ def _get_vec(
     ref: AdRef | str | Collection[AdRef] | Collection[str],
     *,
     dim: Literal["obs", "var"] | None = None,
+    compat: bool = False,
 ) -> Any:
-    """Get the 1D array(s) one or more `ref`erences point to, using `anndata.acc`."""
-    from anndata.acc import A, AdRef
+    """Get the 1D array(s) one or more `ref`erences point to.
 
+    Strings are `anndata.acc` specs, except with `compat`,
+    where they are `obs` columns unless the preset is v2 (see `_resolve_ref`).
+    """
+    if not compat:
+        ref = _resolve_strs(ref)
     if _collection_of(ref, (AdRef, str)):
-        refs = [A.resolve(r, vec=True) if isinstance(r, str) else r for r in ref]
-        _refs_dim(refs, dim=dim)
-        return [adata[r] for r in refs]
+        dim = _refs_dim(ref, dim=dim)
+        return [_fetch_vec(adata, r, dim=dim) for r in ref]
 
     if isinstance(ref, Collection) and not isinstance(ref, str):
         msg = f"Expected a single ref or collection of refs, got {ref!r}"
         raise TypeError(msg)
 
-    if isinstance(ref, str):
-        ref = A.resolve(ref, vec=True)
-    _ref_dim(ref, dim=dim)
-    return adata[ref]
+    dim = _ref_dim(ref, dim=dim)
+    return _fetch_vec(adata, ref, dim=dim)
 
 
 @overload

@@ -27,7 +27,7 @@ from ...experimental._docs import (
     doc_layer,
 )
 from ...get._out import _legacy_out
-from ...get._use import _get_arr, _get_vec_compat, _ref_arg, _resolve_obs
+from ...get._use import _get_arr, _get_vec, _ref_arg, _resolve_obs
 from ...preprocessing._distributed import materialize_as_ndarray
 from ...preprocessing._highly_variable_genes import _write_hvg
 
@@ -166,7 +166,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     if batch_key is None:
         batch_info = np.zeros(adata.shape[0], dtype=int)
     else:
-        batch_info = np.asarray(_get_vec_compat(adata, batch_key, dim="obs"))
+        batch_info = np.asarray(_get_vec(adata, batch_key, dim="obs", compat=True))
     n_batches = len(np.unique(batch_info))
 
     # Get pearson residuals for each batch separately

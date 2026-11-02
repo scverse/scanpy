@@ -26,7 +26,7 @@ from .._utils import (
 )
 from ..get import aggregate
 from ..get._out import _legacy_out
-from ..get._use import _get_arr, _get_vec_compat, _ref_arg, _resolve_obs
+from ..get._use import _get_arr, _get_vec, _ref_arg, _resolve_obs
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
@@ -175,7 +175,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     batch_info = (
         pd.Categorical(np.zeros(adata.shape[0], dtype=int))
         if batch_key is None
-        else pd.Categorical(_get_vec_compat(adata, batch_key, dim="obs"))
+        else pd.Categorical(_get_vec(adata, batch_key, dim="obs", compat=True))
     )
     norm_gene_vars = []
 
@@ -581,7 +581,7 @@ def _highly_variable_genes_batched(
 ) -> pd.DataFrame:
     cutoff = kwargs["cutoff"]
     sanitize_anndata(adata)
-    batch_info = pd.Categorical(_get_vec_compat(adata, batch_key, dim="obs"))
+    batch_info = pd.Categorical(_get_vec(adata, batch_key, dim="obs", compat=True))
     x = _get_arr(adata, use, layer=layer)
 
     func = _per_batch_func
