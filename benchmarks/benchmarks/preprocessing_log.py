@@ -79,6 +79,7 @@ class NeighborsSuite:
 
     params: tuple[list[Dataset]] = (["bmmc", "lung93k"],)
     param_names = ("dataset",)
+    timeout = 180  # pynndescent’s JIT compilation takes long, and `--quick`/`peakmem_*` don’t warm up
 
     def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
