@@ -209,8 +209,13 @@ def test_metrics_graph(metric, graph: str, deprecated: str) -> None:
             id="both_use",
         ),
         pytest.param(lambda: dict(use_graph="foo"), KeyError, r"foo", id="no_graph"),
-        pytest.param(lambda: dict(neighbors_key="bar"), KeyError, r"bar", id="no_key"),
-        pytest.param(dict, KeyError, r"neighbors.*uns", id="nothing"),
+        pytest.param(
+            lambda: dict(neighbors_key="bar"),
+            ValueError,
+            r"pp\.neighbors",
+            id="no_key",
+        ),
+        pytest.param(dict, ValueError, r"pp\.neighbors", id="nothing"),
         pytest.param(lambda: dict(use=A.X), TypeError, r"obsp", id="not_graph"),
     ],
 )

@@ -331,17 +331,13 @@ def _use_graph(
         raise TypeError(msg)
     if adjacency is not None:
         return adjacency
-    if (graph := obsp) is None and use is not None:
-        graph = _graph_key(use)
-    if graph is not None:
+    if obsp is not None:
         if neighbors_key is not None:
-            msg = "Pass either `use`/`obsp` or `neighbors_key`, not both."
+            msg = "Pass either `obsp` or `neighbors_key`, not both."
             raise TypeError(msg)
-        return adata.obsp[graph]
-    from .._utils import NeighborsView
-
-    neighbors = NeighborsView(adata, neighbors_key)
-    if "connectivities" not in neighbors:
+        return adata.obsp[obsp]
+    neighbors = _neighbors_view(adata, use, neighbors_key)
+    if neighbors is None or "connectivities" not in neighbors:
         msg = "You need to run `pp.neighbors` first to compute a neighborhood graph."
         raise ValueError(msg)
     return neighbors["connectivities"]
