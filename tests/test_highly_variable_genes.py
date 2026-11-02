@@ -777,7 +777,9 @@ def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     assert_frame_equal(output_mem, output_dask, atol=1e-4)
 
 
-@pytest.mark.parametrize("flavor", ["seurat", "seurat_v3"])
+@pytest.mark.parametrize(
+    "flavor", ["seurat", pytest.param("seurat_v3", marks=needs.skmisc)]
+)
 def test_hvg_out(flavor: str) -> None:
     """`out=True` returns the table, `out=False` writes the `.var` columns."""
     adata = pbmc3k()
@@ -795,7 +797,9 @@ def test_hvg_out(flavor: str) -> None:
 
 
 @needs.anndata_acc
-@pytest.mark.parametrize("flavor", ["seurat", "seurat_v3"])
+@pytest.mark.parametrize(
+    "flavor", ["seurat", pytest.param("seurat_v3", marks=needs.skmisc)]
+)
 def test_hvg_batch(flavor: str) -> None:
     """`batch` takes references (or resolvable strings) instead of `batch_key`’s column names."""
     from anndata.acc import A
