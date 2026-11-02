@@ -62,8 +62,21 @@ def test_embedding_density(pl, acc) -> None:
     assert acc.obs["p"] in scatter.vdims
 
 
+def test_embedding_density_groupby(pl, acc) -> None:
+    adata = pbmc68k_reduced()
+    sc.tl.embedding_density(adata, "umap", groupby=acc.obs["phase"])
+    layout = pl.embedding_density(adata, acc.obsm["X_umap"], groupby=acc.obs["phase"])
+    assert len(layout) == adata.obs["phase"].nunique()
+    # strings are always resolved, independent of the preset
+    assert len(
+        pl.embedding_density(adata, acc.obsm["X_umap"], groupby="obs.phase")
+    ) == len(layout)
+
+
 def test_draw_graph(pl, acc) -> None:
     adata = pbmc68k_reduced()
     sc.pp.neighbors(adata, out="obsp.p")
     graph = pl.draw_graph(adata, acc.obsm["X_umap"], acc.obsp["p"])
+    assert len(graph.data) == adata.obsp["p"].nnz
+    graph = pl.draw_graph(adata, acc.obsm["X_umap"], "obsp.p")
     assert len(graph.data) == adata.obsp["p"].nnz
