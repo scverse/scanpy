@@ -8,7 +8,6 @@ from .. import logging as logg
 from .._compat import warn
 from .._keys import _existing_preset_keys
 from .._settings import settings
-from .._utils import _choose_graph
 from ..get._types import LayerAcc, MultiAcc
 from ..get._use import _get_arr, _resolve_obs
 
@@ -124,12 +123,8 @@ def get_init_pos_from_paga(
     adata: AnnData,
     *,
     rng: np.random.Generator,
-    adjacency: CSBase | None = None,
-    neighbors_key: str | None = None,
-    obsp: str | None = None,
+    adjacency: CSBase,
 ) -> NDArray[np.float64]:
-    if adjacency is None:
-        adjacency = _choose_graph(adata, obsp, neighbors_key)
     if "pos" not in adata.uns.get("paga", {}):
         msg = "Plot PAGA first, so that `adata.uns['paga']['pos']` exists."
         raise ValueError(msg)

@@ -205,7 +205,7 @@ def test_metrics_graph(metric, graph: str, deprecated: str) -> None:
         pytest.param(
             lambda: dict(use=A.obsp["foo"], use_graph="foo"),
             TypeError,
-            r"both",
+            r"only one",
             id="both_use",
         ),
         pytest.param(lambda: dict(use_graph="foo"), KeyError, r"foo", id="no_graph"),

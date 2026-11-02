@@ -326,16 +326,22 @@ def _use_graph(
     neighbors_key: str | None = None,
 ) -> CSBase:
     """Choose the connectivities from `use`, or the deprecated `adjacency`/`obsp`/`neighbors_key`."""
-    from .._utils import _choose_graph
-
     if (adjacency is not None) + (obsp is not None) + (use is not None) > 1:
         msg = "Pass only one of `use`, `obsp`, or `adjacency`."
         raise TypeError(msg)
     if adjacency is not None:
         return adjacency
-    if use is not None:
+    if (graph := obsp) is None and use is not None:
+        graph = _graph_key(use)
+    if graph is not None:
         if neighbors_key is not None:
-            msg = "Pass either `use` or `neighbors_key`, not both."
+            msg = "Pass either `use`/`obsp` or `neighbors_key`, not both."
             raise TypeError(msg)
-        return adata.obsp[_graph_key(use)]
-    return _choose_graph(adata, obsp, neighbors_key)
+        return adata.obsp[graph]
+    from .._utils import NeighborsView
+
+    neighbors = NeighborsView(adata, neighbors_key)
+    if "connectivities" not in neighbors:
+        msg = "You need to run `pp.neighbors` first to compute a neighborhood graph."
+        raise ValueError(msg)
+    return neighbors["connectivities"]

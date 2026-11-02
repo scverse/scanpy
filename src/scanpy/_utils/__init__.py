@@ -58,7 +58,6 @@ if TYPE_CHECKING:
 __all__ = [
     "AssoResult",
     "NeighborsView",
-    "_choose_graph",
     "_doc_params",
     "_get_basis",
     "_numba_thread_limit",
@@ -990,26 +989,6 @@ class NeighborsView:
             return self._connectivities is not None
         else:
             return key in self._neighbors_dict
-
-
-def _choose_graph(
-    adata: AnnData, obsp: str | None, neighbors_key: str | None
-) -> CSBase:
-    """Choose connectivities from neighbors or another obsp entry."""
-    if obsp is not None and neighbors_key is not None:
-        msg = "You can't specify both obsp, neighbors_key. Please select only one."
-        raise ValueError(msg)
-
-    if obsp is not None:
-        return adata.obsp[obsp]
-    else:
-        neighbors = NeighborsView(adata, neighbors_key)
-        if "connectivities" not in neighbors:
-            msg = (
-                "You need to run `pp.neighbors` first to compute a neighborhood graph."
-            )
-            raise ValueError(msg)
-        return neighbors["connectivities"]
 
 
 def _resolve_axis(

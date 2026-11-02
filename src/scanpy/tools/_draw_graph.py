@@ -191,13 +191,7 @@ def draw_graph(  # noqa: PLR0912, PLR0913
     elif init_pos in adata.obsm:
         init_coords = cast("NDArray[np.floating]", adata.obsm[init_pos])
     elif init_pos:  # "paga" or True
-        init_coords = get_init_pos_from_paga(
-            adata,
-            adjacency=adjacency,
-            rng=rng,
-            neighbors_key=neighbors_key,
-            obsp=obsp,
-        )
+        init_coords = get_init_pos_from_paga(adata, adjacency=adjacency, rng=rng)
     else:
         _if_legacy_apply_global(rng)
         init_coords = rng.random((adjacency.shape[0], 2))

@@ -10,9 +10,9 @@ import pandas as pd
 from scverse_misc import Deprecation
 
 from .._compat import CSRBase, DaskArray, SpBase, fullname, warn
-from .._utils import NeighborsView
 from ..get._types import AdRef, GraphAcc, LayerAcc, MultiAcc
 from ..get._use import _get_arr, _get_vec, _resolve_obs
+from ..neighbors._common import _use_graph
 
 if TYPE_CHECKING:
     from typing import NoReturn
@@ -90,16 +90,7 @@ def _graph_and_vals(
     """Resolve the graph and values of `gearys_c`/`morans_i` called on an `AnnData`."""
     from anndata.acc import A
 
-    if use is None:
-        g = _get_graph(adata, use_graph=use_graph, neighbors_key=neighbors_key)
-    elif use_graph is not None or neighbors_key is not None:
-        msg = "Cannot specify both `use` and `use_graph`/`neighbors_key`."
-        raise TypeError(msg)
-    elif not isinstance(use := _resolve_obs(use), GraphAcc):
-        msg = f"`use` must point to `.obsp`, was {use!r}"
-        raise TypeError(msg)
-    else:
-        g = adata[use]
+    g = _use_graph(adata, use, obsp=use_graph, neighbors_key=neighbors_key)
 
     if isinstance(vals, str):
         vals = A.resolve(vals)
@@ -119,24 +110,6 @@ def _graph_and_vals(
             obsp=obsp,
         ).T
     return g, vals
-
-
-def _get_graph(
-    adata: AnnData,
-    *,
-    use_graph: str | None = None,
-    neighbors_key: str | None = None,
-) -> CSRBase:
-    if use_graph is not None:
-        if neighbors_key is not None:
-            msg = "Cannot specify both `use_graph` and `neighbors_key`."
-            raise TypeError(msg)
-        return adata.obsp[use_graph]
-    nv = NeighborsView(adata, neighbors_key)
-    if "connectivities" not in nv:
-        msg = "Must run neighbors first."
-        raise ValueError(msg)
-    return nv["connectivities"]
 
 
 @overload
