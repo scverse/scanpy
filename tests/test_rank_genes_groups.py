@@ -442,11 +442,13 @@ def test_illico(
     pbmc.raw.X.sort_indices()
     pbmc_illico = pbmc.copy()
 
+    from anndata.acc import A
+
     reference = pbmc.obs["bulk_labels"].iloc[0] if test == "ovo" else "rest"
     with sc.settings.override(preset=sc.Preset.ScanpyV2Preview):
         sc.tl.rank_genes_groups(
             pbmc_illico,
-            groupby="bulk_labels",
+            groupby=A.obs["bulk_labels"],
             method="wilcoxon",
             reference=reference if test == "ovo" else "rest",
             n_genes=pbmc.n_vars,
@@ -567,14 +569,19 @@ def test_mean_in_log_space(
         obs={"bulk_labels": ["a"] * 10 + ["b"] * 10},
         uns={} if base is None else {"log1p": {"base": base}},
     )
-    with (
-        sc.settings.override(preset=sc.Preset.ScanpyV2Preview)
-        if method == "wilcoxon_illico"
-        else nullcontext()
-    ):
+    if method == "wilcoxon_illico":
+        from anndata.acc import A
+
+        groupby, ctx = (
+            A.obs["bulk_labels"],
+            sc.settings.override(preset=sc.Preset.ScanpyV2Preview),
+        )
+    else:
+        groupby, ctx = "bulk_labels", nullcontext()
+    with ctx:
         rank_genes_groups(
             adata,
-            groupby="bulk_labels",
+            groupby=groupby,
             groups=["a"],
             reference="b",
             method="wilcoxon" if "illico" in method else method,

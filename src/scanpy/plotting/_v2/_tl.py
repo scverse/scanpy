@@ -220,7 +220,7 @@ def embedding_density(
         A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
-        sc.tl.embedding_density(adata, "umap", groupby="phase")
+        sc.tl.embedding_density(adata, A.obsm["umap"], groupby=A.obs["phase"])
         sc.pl.embedding_density(adata, A.obsm["umap"], groupby="phase")
 
     """
