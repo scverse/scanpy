@@ -31,7 +31,7 @@ _AVAIL_MODELS = {"v1.0", "v1.2"}
     use=doc_use_neighbors(meta=True),
     out=doc_out_key(
         "the abstracted graph",
-        default="`.uns['paga']` (and the group sizes to `.uns[f'{{groups}}_sizes']`)",
+        default="`.uns['paga']` (and the group sizes to `.uns[f'{groups}_sizes']`)",
     ),
 )
 @deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
@@ -106,15 +106,24 @@ def paga(
 
     Returns
     -------
-    Returns the following as a :class:`dict` (plus `'sizes'`, the group sizes) if `out=True`, else `None`.
+    Returns the following as a :class:`dict` if `out=True`
+    (plus `'sizes'`, the group sizes, unless `use_rna_velocity`), else `None`.
     By default sets the following fields (see `out` for others):
 
     `adata.uns['paga']['connectivities']` : :class:`numpy.ndarray` (dtype `float`)
         The full adjacency matrix of the abstracted graph, weights correspond to
         confidence in the connectivities of partitions.
+        Unless `use_rna_velocity`.
     `adata.uns['paga']['connectivities_tree']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         The adjacency matrix of the tree-like subgraph that best explains
         the topology.
+        Unless `use_rna_velocity`.
+    `adata.uns['paga']['transitions_confidence']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+        Confidence of transitions between groups, if `use_rna_velocity`.
+    `adata.uns['paga']['groups']` : :class:`str`
+        The `.obs` column `groups` refers to.
+    `adata.uns[f'{{groups}}_sizes']` : :class:`numpy.ndarray` (dtype `int`)
+        The group sizes, unless `use_rna_velocity`.
 
     Notes
     -----

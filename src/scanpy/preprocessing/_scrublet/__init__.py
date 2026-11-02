@@ -16,7 +16,7 @@ from ..._utils import _doc_params, own_deprecations
 from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
 from ...get._out import _out_dests, _write_dests, deprecated_copy
 from ...get._uns import _ref_to_uns
-from ...get._use import _get_arr, _get_vec, _ref_arg, _resolve_obs
+from ...get._use import _get_arr, _get_vec, _ref_arg, _resolve_layer
 from . import pipeline
 from .core import Scrublet
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
     from ..._utils.random import RNGLike, SeedLike
     from ...get._out import OutKind
-    from ...get._types import AdRef, LayerAcc, RepAcc, VecRef, _SetRep
+    from ...get._types import AdRef, LayerAcc, VecRef, _SetRep
     from ...neighbors import _Metric, _MetricFn
 
 
@@ -51,7 +51,7 @@ SCRUBLET_BASES: ScrubletOut[_SetRep, _SetRep] = ScrubletOut(
 @_accepts_legacy_random_state(0)
 @_doc_params(
     rng=doc_rng,
-    use=doc_use("Which matrix holds the raw counts.", legacy=()),
+    use=doc_use("Which matrix holds the raw counts.", legacy=(), layers_only=True),
     out=doc_out_multi(
         dict(
             doublet_score="By default written to `A.obs['doublet_score']`.",
@@ -60,6 +60,7 @@ SCRUBLET_BASES: ScrubletOut[_SetRep, _SetRep] = ScrubletOut(
         example="{'doublet_score': A.obs['scrublet_score']}",
         returns=":class:`~scanpy.pp.ScrubletOut`",
         uns=True,
+        primary=False,
     ),
 )
 @deprecated_arg("batch_key", DEPR_BATCH_KEY)
@@ -234,7 +235,7 @@ def scrublet(  # noqa: PLR0913, PLR0915
     start = logg.info("Running Scrublet")
 
     adata_obs = adata.copy()
-    if (use := _resolve_obs(use)) is not None:
+    if (use := _resolve_layer(use)) is not None:
         adata_obs.X = _get_arr(adata, use)
     # `adata.obs_names` may contain duplicates, and cells may get filtered out below,
     # so use unique positional labels to map results back onto `adata` unambiguously.
@@ -557,13 +558,17 @@ def _scrublet_call_doublets(  # noqa: PLR0913
     return adata_obs
 
 
-@_doc_params(use=doc_use("Which matrix holds the raw counts.", legacy=("layer",)))
+@_doc_params(
+    use=doc_use(
+        "Which matrix holds the raw counts.", legacy=("layer",), layers_only=True
+    )
+)
 @_accepts_legacy_random_state(0)
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 def scrublet_simulate_doublets(
     adata: AnnData,
     *,
-    use: RepAcc | str | None = None,
+    use: LayerAcc | str | None = None,
     layer: str | None = None,
     sim_doublet_ratio: float = 2.0,
     synthetic_doublet_umi_subsampling: float = 1.0,
@@ -610,7 +615,7 @@ def scrublet_simulate_doublets(
         scores for observed transcriptomes and simulated doublets.
 
     """
-    x = _get_arr(adata, _resolve_obs(use), layer=layer)
+    x = _get_arr(adata, _resolve_layer(use), layer=layer)
     scrub = Scrublet(x, rng=rng)
 
     scrub.simulate_doublets(

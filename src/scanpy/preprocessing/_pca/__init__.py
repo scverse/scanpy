@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
     from ..._utils.random import RNGLike, SeedLike
     from ...get._out import OutKind
-    from ...get._types import ArrAcc, Mask, RepAcc, _SetRep
+    from ...get._types import Mask, MultiAcc, RepAcc, _SetRep
 
 
 type MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
@@ -70,6 +70,8 @@ class PcaOut[E = np.ndarray | DaskArray, L = np.ndarray](NamedTuple):
     """The principal components containing the loadings, shape `(n_vars, n_comps)`.
 
     If `mask` was used, rows of variables not selected by it are zero.
+    If `use` is an `.obsm` array, its shape is `(n_columns, n_comps)` instead,
+    and it isn’t written to `.varm` by default.
     """
 
 
@@ -135,7 +137,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     return_info: bool = False,
     mask: Mask | Default | None = Default("adata.var.get('highly_variable')"),
     dtype: DTypeLike = "float32",
-    out: ArrAcc | str | Mapping[str, ArrAcc | str] | bool = False,
+    out: MultiAcc | str | Mapping[str, MultiAcc | str] | bool = False,
     # deprecated
     key_added: str | None = None,
     copy: bool = False,

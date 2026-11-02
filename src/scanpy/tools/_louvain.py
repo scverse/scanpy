@@ -102,8 +102,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     analysis by :cite:t:`Levine2015`.
 
     This requires having run :func:`~scanpy.pp.neighbors` or
-    :func:`~scanpy.external.pp.bbknn` first,
-    or explicitly passing a ``adjacency`` matrix.
+    :func:`~scanpy.pp.bbknn` first (see `use`).
 
     .. array-support:: tl.louvain
 
@@ -126,7 +125,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
         ``'igraph'``
             Built in ``igraph`` method.
     directed
-        Interpret the ``adjacency`` matrix as directed graph?
+        Interpret the graph as directed?
     use_weights
         Use weights from knn graph.
     partition_type
@@ -145,13 +144,14 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
 
     Returns
     -------
-    Returns the cluster labels if `out=True`, else `None`. Sets the following fields:
+    Returns the cluster labels if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.obs['louvain' | key_added]` : :class:`pandas.Series` (dtype ``category``)
+    `adata.obs['louvain']` : :class:`pandas.Series` (dtype ``category``)
         Array of dim (number of samples) that stores the subgroup id
         (``'0'``, ``'1'``, ...) for each cell.
 
-    `adata.uns['louvain' | key_added]['params']` : :class:`dict`
+    `adata.uns['louvain']['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
 

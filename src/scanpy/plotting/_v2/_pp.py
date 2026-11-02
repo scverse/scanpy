@@ -15,17 +15,17 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from anndata.acc import AdRef
 
-    from ...get._types import RepAcc, VecRef
+    from ...get._types import LayerAcc, VecRef
 
 
 def highest_expr_genes(
     adata: AnnData,
     n_top: int = 20,
     *,
-    use: RepAcc | str | None = None,
-    gene_symbols: AdRef | None = None,
+    use: LayerAcc | str | None = None,
+    gene_symbols: AdRef | str | None = None,
 ) -> hv.BoxWhisker:
-    """Get ``n_top`` genes by mean expression.
+    r"""Get ``n_top`` genes by mean expression.
 
     Parameters
     ----------
@@ -37,6 +37,7 @@ def highest_expr_genes(
         The count matrix to use, e.g. `A.layers['counts']`.
     gene_symbols
         Gene symbols to label the genes with, e.g. `A.var['symbol']`.
+        :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d, e.g. `'var.symbol'`.
         Uses `.var_names` by default.
 
     Returns
@@ -57,6 +58,8 @@ def highest_expr_genes(
         sc.pl.highest_expr_genes(adata, use=A.layers["counts"])
 
     """
+    if isinstance(gene_symbols, str):
+        gene_symbols = A.resolve(gene_symbols)
     hxg = _highest_expr_genes(adata, n_top, use=use, gene_symbols=gene_symbols)
     hxg_melted = hxg.melt(var_name="gene", value_name="frac_pct")
     return hv.BoxWhisker(hxg_melted, ["gene"], ["frac_pct"]).opts(

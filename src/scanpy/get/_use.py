@@ -270,12 +270,39 @@ def _resolve_strs(
     return ref
 
 
-def _ref_arg[R: AdRef | str | Collection[AdRef | str] | None](
-    ref: R, legacy: R, *, name: str, legacy_name: str, compat: bool = False
-) -> R:
+@overload
+def _ref_arg(
+    ref: AdRef | str | None,
+    legacy: str | None,
+    *,
+    name: str,
+    legacy_name: str,
+    compat: bool = False,
+) -> AdRef | str | None: ...
+
+
+@overload
+def _ref_arg(
+    ref: AdRef | str | Collection[AdRef | str] | None,
+    legacy: str | Collection[str] | None,
+    *,
+    name: str,
+    legacy_name: str,
+    compat: bool = False,
+) -> AdRef | str | Collection[AdRef | str] | None: ...
+
+
+def _ref_arg(
+    ref: AdRef | str | Collection[AdRef | str] | None,
+    legacy: str | Collection[str] | None,
+    *,
+    name: str,
+    legacy_name: str,
+    compat: bool = False,
+) -> AdRef | str | Collection[AdRef | str] | None:
     """Merge a reference parameter `name` with the deprecated one it replaces.
 
-    The deprecated parameter’s strings keep naming `.obs` columns (except with the `v2` preset).
+    The deprecated parameter’s strings keep naming `.obs` columns, regardless of preset.
     The new one’s are always resolved, unless it was renamed from a positional parameter
     that took column names (`compat`), so positional calls keep working.
     """
@@ -283,7 +310,9 @@ def _ref_arg[R: AdRef | str | Collection[AdRef | str] | None](
         if ref is not None:
             msg = f"Pass either `{name}` or `{legacy_name}`, not both."
             raise TypeError(msg)
-        return _resolve_ref(legacy)
+        if isinstance(legacy, str):
+            return dim_acc(legacy, dim="obs")
+        return [dim_acc(r, dim="obs") if isinstance(r, str) else r for r in legacy]
     if ref is None or compat:
         return ref if ref is None else _resolve_ref(ref)
     return _resolve_strs(ref)
@@ -417,6 +446,14 @@ def _resolve_obs(use: RefAcc | str | None, /, *, rep: bool = False) -> RefAcc | 
             "Representation must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or a "
             f"`MultiAcc` (e.g. `A.obsm[...]`), was {use!r}"
         )
+        raise TypeError(msg)
+    return use
+
+
+def _resolve_layer(use: LayerAcc | str | None) -> LayerAcc | None:
+    """Like `_resolve_obs`, but for functions needing gene-aligned input, i.e. a layer."""
+    if (use := _resolve_obs(use)) is not None and not isinstance(use, LayerAcc):
+        msg = f"`use` must be a layer (e.g. `A.X` or `A.layers[...]`), was {use!r}"
         raise TypeError(msg)
     return use
 

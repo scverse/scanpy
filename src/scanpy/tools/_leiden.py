@@ -151,17 +151,18 @@ def leiden(  # noqa: PLR0913
 
     Returns
     -------
-    Returns the cluster labels if `out=True`, else `None`. Sets the following fields:
+    Returns the cluster labels if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.obs['leiden' | key_added]` : :class:`pandas.Series` (dtype ``category``)
+    `adata.obs['leiden']` : :class:`pandas.Series` (dtype ``category``)
         Array of dim (number of samples) that stores the subgroup id
         (``'0'``, ``'1'``, ...) for each cell.
 
-    `adata.uns['leiden' | key_added]['params']` : :class:`dict`
+    `adata.uns['leiden']['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `n_iterations`,
         and `random_state` (if applicable).
 
-    `adata.uns['leiden' | key_added]['modularity']` : :class:`float`
+    `adata.uns['leiden']['modularity']` : :class:`float`
         The modularity score of the final clustering,
         as calculated by the `flavor`.
         Use :func:`scanpy.metrics.modularity`\ `(adata, mode='calculate' | 'update')`

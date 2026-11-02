@@ -85,6 +85,8 @@ def gearys_c(
         A key of :attr:`~anndata.AnnData.obsm`, i.e. `obsm='k'` is `vals=A.obsm['k']`.
     obsp
         A key of :attr:`~anndata.AnnData.obsp`, i.e. `obsp='k'` is `vals=A.obsp['k']`.
+    use_raw
+        Whether to use `adata.raw.X` for `vals`.
     use_graph
         Key of the graph in :attr:`~anndata.AnnData.obsp`,
         i.e. `use_graph='k'` is `use=A.obsp['k']`.

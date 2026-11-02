@@ -23,7 +23,7 @@ from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
 from .._docs import DEPR_KEY_ADDED, DEPR_NEIGHBORS_KEY, doc_rng
 from .._keys import _EmbeddingKeys, _existing_preset_keys
-from .._utils import _doc_params, get_literal_vals
+from .._utils import _doc_params, get_literal_vals, own_deprecations
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng
 from ..get._out import (
     _dest,
@@ -76,7 +76,7 @@ SCIPY_1_17 = pkg_version("scipy") >= Version("1.17")
 @deprecated_arg("use_rep", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("key_added", DEPR_KEY_ADDED)
 @deprecated_copy
-def neighbors(  # noqa: PLR0912, PLR0913
+def neighbors(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     n_neighbors: int = 15,
     n_pcs: int | None = None,
@@ -165,14 +165,15 @@ def neighbors(  # noqa: PLR0912, PLR0913
 
     Returns
     -------
-    Returns the outputs if `out=True`, else `None`. Sets the following fields:
+    Returns the outputs if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.obsp['connectivities' | f'{{prefix}}_connectivities']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+    `adata.obsp['connectivities']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
-    `adata.obsp['distances' | f'{{prefix}}_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+    `adata.obsp['distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Distance matrix of the nearest neighbors search. Each row (cell) has `n_neighbors`-1 non-zero entries. These are the distances to their `n_neighbors`-1 nearest neighbors (excluding the cell itself).
-    `adata.uns['neighbors' | f'{{prefix}}_neighbors']` : :class:`dict`
+    `adata.uns['neighbors']` : :class:`dict`
         neighbors parameters, and the `.obsp` keys the matrices were written to.
 
     Examples
@@ -214,18 +215,19 @@ def neighbors(  # noqa: PLR0912, PLR0913
         if adata.is_view:  # we shouldn't need this here...
             adata._init_as_actual(adata.copy())
         neighbors_ = Neighbors(adata)
-        neighbors_.compute_neighbors(
-            n_neighbors,
-            n_pcs=n_pcs,
-            use=use,
-            use_rep=use_rep,
-            knn=knn,
-            method=method,
-            transformer=transformer,
-            metric=metric,
-            metric_kwds=metric_kwds,
-            rng=rng,
-        )
+        with own_deprecations():  # `use_rep` already warned above
+            neighbors_.compute_neighbors(
+                n_neighbors,
+                n_pcs=n_pcs,
+                use=use,
+                use_rep=use_rep,
+                knn=knn,
+                method=method,
+                transformer=transformer,
+                metric=metric,
+                metric_kwds=metric_kwds,
+                rng=rng,
+            )
     else:
         params = locals()
         ignored = {
@@ -569,6 +571,7 @@ class Neighbors:
 
     @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
     @_accepts_legacy_random_state(0)
+    @deprecated_arg("use_rep", Deprecation("1.13.0", "Use `use` instead."))
     def compute_neighbors(
         self,
         n_neighbors: int = 30,

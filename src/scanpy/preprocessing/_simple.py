@@ -646,11 +646,8 @@ def regress_out(  # noqa: PLR0912, PLR0915
 
     Returns
     -------
-    Returns `None` if the result was written, else the corrected matrix.
-    Sets the following fields:
-
-    `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse.csr_matrix` (dtype `float`)
-        Corrected count data matrix.
+    Returns the corrected matrix if `out=True`, else `None`.
+    By default overwrites the matrix `use` reads from (see `out` for others).
 
     """
     from joblib import Parallel, delayed

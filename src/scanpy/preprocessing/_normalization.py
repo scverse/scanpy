@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
     from ..get._out import OutKind
-    from ..get._types import ArrAcc, RepAcc, VecRef
+    from ..get._types import RepAcc, VecRef
 
 
 class NormalizeTotalOut[
@@ -191,7 +191,7 @@ def normalize_total(  # noqa: PLR0913
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
     use: RepAcc | str | None = None,
-    out: ArrAcc | str | Mapping[str, ArrAcc | VecRef | str] | bool = False,
+    out: RepAcc | str | Mapping[str, RepAcc | VecRef | str] | bool = False,
     # deprecated
     key_added: str | None = None,
     layer: str | None = None,
@@ -429,7 +429,7 @@ def _normalize_shifted_clr_helper(
     return log_values - row_center[:, None], cell_depths
 
 
-@_doc_params(use=doc_use("Which matrix to normalize."), out=doc_out())
+@_doc_params(use=doc_use("Which matrix to normalize.", legacy=()), out=doc_out())
 def normalize_shifted_clr(
     adata: AnnData,
     *,

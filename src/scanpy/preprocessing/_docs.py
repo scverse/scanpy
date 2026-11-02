@@ -10,7 +10,7 @@ adata
 """
 
 doc_expr_reps = f"""\
-{doc_use("Which matrix to use for expression values.", legacy=("layer",))}
+{doc_use("Which matrix to use for expression values.", legacy=("layer",), layers_only=True)}
 use_raw
     If True, use `adata.raw.X` for expression values instead of `adata.X`.\
 """

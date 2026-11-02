@@ -63,6 +63,7 @@ DPT_BASES: DptOut = DptOut(
         example="{'pseudotime': A.obs['pt']}",
         returns=":class:`~scanpy.tl.DptOut`",
         uns=True,
+        primary=False,
     )
 )
 @deprecated_arg(
@@ -156,7 +157,7 @@ def dpt(
     Returns the outputs as a :class:`~scanpy.tl.DptOut` if `out=True`
     (without the `.uns` entries), else `None`.
     By default sets the following fields (see `out` for others;
-    if `n_branchings==0`, no field `adata.obs['dpt_groups']` will be written):
+    if `n_branchings==0`, only `adata.obs['dpt_pseudotime']` and `adata.uns['iroot']` are written):
 
     `adata.obs['dpt_pseudotime']` : :class:`pandas.Series` (dtype `float`)
         Array of dim (number of samples) that stores the pseudotime of each
@@ -165,6 +166,12 @@ def dpt(
         Array of dim (number of samples) that stores the subgroup id ('0',
         '1', ...) for each cell. The groups  typically correspond to
         'progenitor cells', 'undecided cells' or 'branches' of a process.
+    `adata.obs['dpt_order']`, `adata.obs['dpt_order_indices']` : :class:`pandas.Series` (dtype `int`)
+        The ordering of cells by segment and pseudotime, and its inverse.
+    `adata.uns['dpt_changepoints']`, `adata.uns['dpt_grouptips']` : :class:`numpy.ndarray`
+        The change points separating segments in that ordering, and the tip cells of segments.
+    `adata.uns['iroot']` : :class:`int`
+        The root cell’s index, which might have changed (e.g. when subsampling).
 
     Notes
     -----

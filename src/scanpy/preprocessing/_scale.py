@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
     from ..get._out import OutKind
-    from ..get._types import ArrAcc, Mask, RepAcc, VecRef
+    from ..get._types import Mask, RepAcc, VecRef
 
 # not `type`: Sphinx would render the private name in signatures
 _Array: TypeAlias = CSBase | np.ndarray | DaskArray  # noqa: UP040
@@ -145,7 +145,7 @@ def scale[A: _Array](
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     use: RepAcc | str | None = None,
-    out: ArrAcc | str | Mapping[str, ArrAcc | VecRef | str] | bool = False,
+    out: RepAcc | str | Mapping[str, RepAcc | VecRef | str] | bool = False,
     mask: Mask | None = None,
     # deprecated
     copy: bool = False,
@@ -184,17 +184,19 @@ def scale[A: _Array](
     {use}
     {out}
     copy
-        For array input, whether to leave the input unmodified.
+        Whether to leave the input unmodified:
+        For :class:`~anndata.AnnData` input, return a scaled copy of it.
     {mask}
 
     Returns
     -------
     For array input, returns the scaled matrix.
-    Otherwise, returns the outputs as a :class:`~scanpy.pp.ScaleOut` if `out=True`, else `None`.
-    Sets the following fields:
+    Otherwise, returns the outputs as a :class:`~scanpy.pp.ScaleOut` if `out=True`,
+    a copy of `adata` if `copy=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
     `adata.X` | `adata.layers[...]` : :class:`numpy.ndarray` | :class:`scipy.sparse.csr_matrix` (dtype `float`)
-        Scaled count data matrix.
+        Scaled count data matrix, written where `use` reads from.
     `adata.var['mean']` : :class:`pandas.Series` (dtype `float`)
         Means per gene before scaling.
     `adata.var['std']` : :class:`pandas.Series` (dtype `float`)
@@ -384,7 +386,7 @@ def scale_anndata(
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     use: RepAcc | str | None = None,
-    out: ArrAcc | str | Mapping[str, ArrAcc | VecRef | str] | bool = False,
+    out: RepAcc | str | Mapping[str, RepAcc | VecRef | str] | bool = False,
     mask: Mask | None = None,
     layer: str | None = None,
     obsm: str | None = None,

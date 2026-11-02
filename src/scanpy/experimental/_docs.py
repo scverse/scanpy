@@ -32,7 +32,7 @@ check_values
 """
 
 doc_layer = f"""\
-{doc_use("Which matrix to use as input.", legacy=("layer",))}
+{doc_use("Which matrix to use as input.", legacy=("layer",), layers_only=True)}
 """
 
 doc_input_matrix = f"""\

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 def _ref_to_uns[M: NDArray | None](ref: AdRef | str | M, resolved: M) -> str | M:
-    """Store a vector reference in `.uns` the way its deprecated predecessor was stored.
+    """Store a vector reference in `.uns`, like a deprecated column-name parameter was.
 
     Accessors aren't stored in `.uns` (see https://github.com/scverse/anndata/issues/1979),
     so a column of `.obs`/`.var` becomes its name, and any other reference its `resolved` array.

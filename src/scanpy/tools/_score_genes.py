@@ -23,7 +23,7 @@ from ..get._out import (
     _write_out,
     deprecated_copy,
 )
-from ..get._use import _get_arr, _resolve_obs
+from ..get._use import _get_arr, _resolve_layer
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping, Sequence
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from .._utils.random import RNGLike, SeedLike
     from ..get._out import OutKind
-    from ..get._types import RepAcc, VecRef, _SetRep
+    from ..get._types import LayerAcc, VecRef, _SetRep
 
 
 type _StrIdx = pd.Index[str]
@@ -104,8 +104,8 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
 
 @_doc_params(
     rng=doc_rng,
-    use=doc_use("Which matrix to score on.", legacy=("layer",)),
-    out=doc_out(default="`.obs['score']`"),
+    use=doc_use("Which matrix to score on.", legacy=("layer",), layers_only=True),
+    out=doc_out(default="`.obs['score']`", example="obs.score"),
 )
 @_accepts_legacy_random_state(0)
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
@@ -120,7 +120,7 @@ def score_genes(  # noqa: PLR0913
     ctrl_size: int = 50,
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
-    use: RepAcc | str | None = None,
+    use: LayerAcc | str | None = None,
     out: VecRef | str | bool = False,
     rng: SeedLike | RNGLike | None = None,
     # deprecated
@@ -193,7 +193,7 @@ def score_genes(  # noqa: PLR0913
     start = logg.info(f"computing score {key if out is False else out!r}")
     rng = np.random.default_rng(rng)
     rng = _if_legacy_apply_global(rng)
-    use = _resolve_obs(use)
+    use = _resolve_layer(use)
     if isinstance(ctrl_as_ref, Default):
         ctrl_as_ref = settings.preset.score_genes.ctrl_as_ref
     use_raw = check_use_raw(adata, use_raw, use=use, layer=layer)
@@ -255,7 +255,7 @@ def _check_score_genes_args(
     gene_list: pd.Index[str] | Sequence[str],
     gene_pool: pd.Index[str] | Sequence[str] | None,
     *,
-    use: RepAcc | str | None,
+    use: LayerAcc | str | None,
     layer: str | None,
     use_raw: bool,
 ) -> tuple[pd.Index[str], pd.Index[str], _GetSubset]:
@@ -364,6 +364,7 @@ CELL_CYCLE_BASES: CellCycleOut[_SetRep] = CellCycleOut(
         ),
         example="{'phase': A.obs['cc_phase']}",
         returns=":class:`~scanpy.tl.CellCycleOut`",
+        primary=False,
     )
 )
 @deprecated_copy

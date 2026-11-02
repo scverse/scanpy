@@ -12,7 +12,7 @@ from scipy import sparse
 from scverse_misc import Deprecation, deprecated_arg
 
 from scanpy.get._out import _out_dests, _write_dests
-from scanpy.get._use import _get_arr, _resolve_obs
+from scanpy.get._use import _get_arr, _resolve_layer
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 
 from .._compat import CSBase, CSRBase, DaskArray, warn
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from numpy._typing._array_like import NDArray
 
     from ..get._out import OutKind
-    from ..get._types import ArrAcc, RepAcc
+    from ..get._types import LayerAcc, MultiAcc
 
 
 @_doc_params(
@@ -52,7 +52,7 @@ def describe_obs(  # noqa: PLR0913
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
     percent_top: Collection[int] | None = (50, 100, 200, 500),
-    use: RepAcc | str | None = None,
+    use: LayerAcc | str | None = None,
     layer: str | None = None,
     use_raw: bool = False,
     log1p: bool | None = True,
@@ -94,7 +94,7 @@ def describe_obs(  # noqa: PLR0913
         warn(msg, FutureWarning)
     # Handle whether X is passed
     if x is None:
-        x = _get_arr(adata, _resolve_obs(use), use_raw=use_raw, layer=layer)
+        x = _get_arr(adata, _resolve_layer(use), use_raw=use_raw, layer=layer)
         if isinstance(x, CSBase):
             x.eliminate_zeros()
     obs_metrics = pd.DataFrame(index=adata.obs_names)
@@ -148,7 +148,7 @@ def describe_var(
     *,
     expr_type: str = "counts",
     var_type: str = "genes",
-    use: RepAcc | str | None = None,
+    use: LayerAcc | str | None = None,
     layer: str | None = None,
     use_raw: bool = False,
     inplace: bool = False,
@@ -180,7 +180,7 @@ def describe_var(
     """
     # Handle whether X is passed
     if x is None:
-        x = _get_arr(adata, _resolve_obs(use), use_raw=use_raw, layer=layer)
+        x = _get_arr(adata, _resolve_layer(use), use_raw=use_raw, layer=layer)
         if isinstance(x, CSBase):
             x.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
@@ -240,8 +240,8 @@ def calculate_qc_metrics(  # noqa: PLR0913
     var_type: str = "genes",
     qc_vars: Collection[str] | str = (),
     percent_top: Collection[int] | None = (50, 100, 200, 500),
-    use: RepAcc | str | None = None,
-    out: ArrAcc | str | Mapping[str, ArrAcc | str] | bool | Default = Default(
+    use: LayerAcc | str | None = None,
+    out: MultiAcc | str | Mapping[str, MultiAcc | str] | bool | Default = Default(
         preset=("calculate_qc_metrics", "out")
     ),
     log1p: bool = True,
@@ -270,7 +270,7 @@ def calculate_qc_metrics(  # noqa: PLR0913
     {doc_expr_reps}
     out
         Where to write the metrics.
-        By default (`out=False`), they are written as columns of `.obs` and `.var` (see below).
+        If :data:`False`, they are written as columns of `.obs` and `.var` (see below).
         An accessor like `A.obsm['qc']` writes the metrics tables as whole :class:`~pandas.DataFrame`\ s
         to `.obsm['qc']` and `.varm['qc']` instead.
         A mapping writes only the tables it names, e.g. `{{'obs': A.obsm['qc']}}`.
@@ -285,8 +285,9 @@ def calculate_qc_metrics(  # noqa: PLR0913
 
     Returns
     -------
-    Depending on `out` returns calculated metrics
-    (as :class:`~scanpy.pp.QcMetricsOut`) or updates `adata`'s `obs` and `var`.
+    Returns the calculated metrics (as :class:`~scanpy.pp.QcMetricsOut`) if `out=True`, else `None`.
+    With `out=False`, sets the following columns of `adata.obs` and `adata.var`
+    (an accessor or mapping writes them as tables instead, see `out`):
 
     {doc_obs_qc_returns}
 
@@ -327,7 +328,7 @@ def calculate_qc_metrics(  # noqa: PLR0913
         msg = "Pass either `out` or `inplace`, not both."
         raise TypeError(msg)
     # Pass X so I only have to do it once
-    x = _get_arr(adata, _resolve_obs(use), use_raw=use_raw, layer=layer)
+    x = _get_arr(adata, _resolve_layer(use), use_raw=use_raw, layer=layer)
     if isinstance(x, CSBase):
         x.eliminate_zeros()
 

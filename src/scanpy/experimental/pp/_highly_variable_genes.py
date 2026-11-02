@@ -27,7 +27,7 @@ from ...experimental._docs import (
     doc_layer,
 )
 from ...get._out import _legacy_out
-from ...get._use import _get_arr, _get_vec, _ref_arg, _resolve_obs
+from ...get._use import _get_arr, _get_vec, _ref_arg, _resolve_layer
 from ...preprocessing._distributed import materialize_as_ndarray
 from ...preprocessing._highly_variable_genes import _write_hvg
 
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from ...get._types import AdRef, RepAcc
+    from ...get._types import AdRef, LayerAcc
 
 
 @njit
@@ -141,13 +141,13 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     n_top_genes: int,
     batch_key: AdRef | str | None,
     check_values: bool,
-    use: RepAcc | str | None,
+    use: LayerAcc | str | None,
     layer: str | None,
     subset: bool,
     out: bool,
 ) -> pd.DataFrame | None:
     view_to_actual(adata)
-    use = _resolve_obs(use)
+    use = _resolve_layer(use)
     x = _get_arr(adata, use, layer=layer)
     computed_on = layer or (repr(use) if use is not None else "adata.X")
 
@@ -320,7 +320,7 @@ def highly_variable_genes(  # noqa: PLR0913
     chunksize: int = 1000,
     flavor: Literal["pearson_residuals"] = "pearson_residuals",
     check_values: bool = True,
-    use: RepAcc | str | None = None,
+    use: LayerAcc | str | None = None,
     subset: bool = False,
     out: bool = False,
     # deprecated
@@ -359,7 +359,8 @@ def highly_variable_genes(  # noqa: PLR0913
     Returns
     -------
     If `out=True`, returns the following fields as :class:`~pandas.DataFrame`.
-    Otherwise, `adata.var` is updated with them.
+    Otherwise, `adata.var` is updated with them,
+    and `adata.uns['hvg']` is set to `{{'flavor': 'pearson_residuals', 'computed_on': …}}`.
 
     highly_variable : :class:`bool`
         boolean indicator of highly-variable genes.

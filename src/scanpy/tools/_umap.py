@@ -172,11 +172,12 @@ def umap(  # noqa: PLR0913
 
     Returns
     -------
-    Returns the embedding if `out=True`, else `None`. Sets the following fields:
+    Returns the embedding if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.obsm['X_umap' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm['X_umap']` : :class:`numpy.ndarray` (dtype `float`)
         UMAP coordinates of data.
-    `adata.uns['umap' | key_added]` : :class:`dict`
+    `adata.uns['umap']` : :class:`dict`
         UMAP parameters.
 
     """

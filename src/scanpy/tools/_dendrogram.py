@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     use_rep=doc_use_rep,
     out=doc_out_key(
         "the dendrogram information",
-        default="`.uns[f'dendrogram_{{groupby}}']` (with `groupby` joined by `_`)",
+        default="`.uns[f'dendrogram_{groupby}']` (with `groupby` joined by `_`)",
         key_added=(
             "Name of the :attr:`~anndata.AnnData.uns` entry to write to instead "
             "(until there are `.uns` accessors)."
@@ -96,7 +96,7 @@ def dendrogram(  # noqa: PLR0913
     {use_rep}
     var_names
         List of var_names to use for computing the hierarchical clustering.
-        If `var_names` is given, then `use_rep` and `n_pcs` are ignored.
+        If `var_names` is given, then `use` and `n_pcs` are ignored.
     use_raw
         Only when `var_names` is not None.
         Use `raw` attribute of `adata` if present.
@@ -118,7 +118,7 @@ def dendrogram(  # noqa: PLR0913
     -------
     Returns a `dict` with dendrogram information if `out=True`, else `None`. Sets the following field:
 
-    `adata.uns[f'dendrogram_{{group_by}}' | key_added]` : :class:`dict`
+    `adata.uns[f'dendrogram_{{groupby}}' | key_added]` : :class:`dict`
         Dendrogram information.
 
     Examples

@@ -10,7 +10,6 @@ import pandas as pd
 from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
-from .._docs import DEPR_KEY_ADDED
 from .._utils._doctests import doctest_needs
 from ..get._out import _legacy_out
 
@@ -72,11 +71,13 @@ def _calc_jaccard(markers1: dict, markers2: dict):
     return jacc_results
 
 
+# writing the result was never implemented, so there’s nothing to replace these with
+_DEPR_NO_WRITE = Deprecation("1.13.0", "Omit it, the result can only be returned.")
+
+
 @doctest_needs("leidenalg")
-@deprecated_arg("key_added", DEPR_KEY_ADDED)
-@deprecated_arg(
-    "inplace", Deprecation("1.13.0", "Use `out=False` instead of `inplace=True`.")
-)
+@deprecated_arg("key_added", _DEPR_NO_WRITE)
+@deprecated_arg("inplace", _DEPR_NO_WRITE)
 def marker_gene_overlap(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     reference_markers: dict[str, set] | dict[str, list],

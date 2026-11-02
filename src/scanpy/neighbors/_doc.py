@@ -14,7 +14,7 @@ neighbors_key
 doc_use = r"""use
     Use the indicated representation:
     a :class:`~anndata.acc.LayerAcc` (e.g. `A.X`, `A.layers[...]`) or
-    :class:`~anndata.acc.MultiAcc` (e.g. `A.obsm[...]`, `A.varm[...]`).
+    :class:`~anndata.acc.MultiAcc` (e.g. `A.obsm[...]`).
     :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d, e.g. `'obsm.pca'`.
 
     If `None`, the representation is chosen automatically:

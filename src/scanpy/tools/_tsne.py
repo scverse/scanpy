@@ -116,11 +116,12 @@ def tsne(  # noqa: PLR0913
 
     Returns
     -------
-    Returns the embedding if `out=True`, else `None`. Sets the following fields:
+    Returns the embedding if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.obsm['X_tsne' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm['X_tsne']` : :class:`numpy.ndarray` (dtype `float`)
         tSNE coordinates of data.
-    `adata.uns['tsne' | key_added]` : :class:`dict`
+    `adata.uns['tsne']` : :class:`dict`
         tSNE parameters.
 
     """

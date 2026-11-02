@@ -9,6 +9,7 @@ import pandas as pd
 from fast_array_utils import stats
 
 from .._utils import own_deprecations
+from ..get._use import _resolve_layer
 from ..preprocessing._normalization import normalize_total
 
 if TYPE_CHECKING:
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from ..get._types import RepAcc, VecRef
+    from ..get._types import LayerAcc, VecRef
 
 
 __all__ = ["dot_area", "highest_expr_genes"]
@@ -26,7 +27,7 @@ def highest_expr_genes(
     adata: AnnData,
     n_top: int,
     *,
-    use: RepAcc | str | None = None,
+    use: LayerAcc | str | None = None,
     layer: str | None = None,
     gene_symbols: VecRef | None = None,
 ) -> pd.DataFrame:
@@ -42,7 +43,7 @@ def highest_expr_genes(
     n_top
         Number of top genes to return.
     use
-        Matrix to pull data from.
+        Count matrix to pull data from, e.g. `A.layers['counts']`.
     layer
         Layer to pull data from (for the legacy API).
     gene_symbols
@@ -56,7 +57,7 @@ def highest_expr_genes(
     """
     with own_deprecations():
         norm_expr = normalize_total(
-            adata, target_sum=100, use=use, out=True, layer=layer
+            adata, target_sum=100, use=_resolve_layer(use), out=True, layer=layer
         ).normalized
     mean_percent = stats.mean(norm_expr, axis=0)
     top_idx = np.argsort(mean_percent)[::-1][:n_top]

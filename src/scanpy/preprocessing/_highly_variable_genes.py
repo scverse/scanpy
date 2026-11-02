@@ -26,7 +26,7 @@ from .._utils import (
 )
 from ..get import aggregate
 from ..get._out import _legacy_out
-from ..get._use import _get_arr, _get_vec, _ref_arg, _resolve_obs
+from ..get._use import _get_arr, _get_vec, _ref_arg, _resolve_layer
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._settings.presets import HVGFlavor
-    from ..get._types import AdRef, RepAcc
+    from ..get._types import AdRef, LayerAcc
 
 
 @singledispatch
@@ -125,7 +125,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
     flavor: Literal["seurat_v3", "seurat_v3_paper"] = "seurat_v3",
-    use: RepAcc | str | None = None,
+    use: LayerAcc | str | None = None,
     layer: str | None = None,
     n_top_genes: int = 2000,
     batch_key: AdRef | str | None = None,
@@ -376,7 +376,7 @@ class HvgArgs(TypedDict):
 def _highly_variable_genes_single_batch(
     adata: AnnData,
     *,
-    use: RepAcc | str | None = None,
+    use: LayerAcc | str | None = None,
     layer: str | None = None,
     filter_unexpressed_genes: bool = False,
     **kwargs: Unpack[HvgArgs],
@@ -575,7 +575,7 @@ def _highly_variable_genes_batched(
     adata: AnnData,
     batch_key: AdRef | str,
     *,
-    use: RepAcc | str | None,
+    use: LayerAcc | str | None,
     layer: str | None,
     **kwargs: Unpack[HvgArgs],
 ) -> pd.DataFrame:
@@ -644,7 +644,11 @@ def _highly_variable_genes_batched(
 
 
 @_doc_params(
-    use=doc_use("Which matrix to use for expression values.", legacy=("layer",)),
+    use=doc_use(
+        "Which matrix to use for expression values.",
+        legacy=("layer",),
+        layers_only=True,
+    ),
     out=doc_out_key(
         "the metrics",
         default="the `.var` columns and `.uns['hvg']` listed below",
@@ -658,7 +662,7 @@ def _highly_variable_genes_batched(
 def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
-    use: RepAcc | str | None = None,
+    use: LayerAcc | str | None = None,
     layer: str | None = None,
     n_top_genes: int | None = None,
     min_disp: float = 0.5,
@@ -771,8 +775,10 @@ def highly_variable_genes(  # noqa: PLR0913
     Returns
     -------
     Returns a :class:`pandas.DataFrame` with calculated metrics if `out=True`, else `None`.
-    By default sets the following fields (see `out` for others):
+    Otherwise sets the following fields:
 
+    `adata.uns['hvg']` : :class:`dict`
+        `{{'flavor': flavor}}`
     `adata.var['highly_variable']` : :class:`pandas.Series` (dtype `bool`)
         boolean indicator of highly-variable genes
     `adata.var['means']` : :class:`pandas.Series` (dtype `float`)
@@ -803,7 +809,7 @@ def highly_variable_genes(  # noqa: PLR0913
     out = _legacy_out(out, "inplace", None if inplace else True)
     batch = _ref_arg(batch, batch_key, name="batch", legacy_name="batch_key")
     start = logg.info("extracting highly variable genes")
-    use = _resolve_obs(use)
+    use = _resolve_layer(use)
 
     if not isinstance(adata, AnnData):
         msg = (

@@ -69,6 +69,9 @@ def _write_out[V](
         return None
     if out is True:
         return val
+    if out is not False:
+        msg = f"`out` must be a `bool` or an accessor, was {out!r}"
+        raise TypeError(msg)
     _set_arr(adata, val, use, **choices)
     return None
 

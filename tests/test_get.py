@@ -578,8 +578,11 @@ def test_get_arr_errors(kw: sc.get._Rep, cls: type[Exception], msg: str) -> None
 
 @pytest.mark.parametrize(
     "out",
-    [None, pytest.param("obsm.p", marks=needs.anndata_acc)],
-    ids=["default", "acc"],
+    [
+        pytest.param(None, id="default"),
+        pytest.param("obsm.p", marks=needs.anndata_acc, id="acc"),
+        pytest.param("obsm.X_pca", marks=needs.anndata_acc, id="acc-default"),
+    ],
 )
 def test_pca(out: str | None) -> None:
     """`get.pca`’s `use` finds what `pp.pca` wrote with the same `out`."""

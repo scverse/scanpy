@@ -31,11 +31,10 @@ def harmony_integrate(
     """Translate the 1.12 API (`.obs`/`.obsm` keys) to :func:`scanpy.pp.harmony_integrate`’s."""
     from anndata.acc import A
 
-    from ...get._use import _resolve_ref
     from ...preprocessing import harmony_integrate
 
     keys = [key] if isinstance(key, str) else key
-    batch = [A.obs[r] if isinstance(r := _resolve_ref(k), str) else r for k in keys]
+    batch = [A.obs[k] if isinstance(k, str) else k for k in keys]
     return harmony_integrate(
         adata, batch, use=A.obsm[basis], out=A.obsm[adjusted_basis], **kwargs
     )

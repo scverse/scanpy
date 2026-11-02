@@ -123,16 +123,17 @@ def bbknn(  # noqa: PLR0913
 
     Returns
     -------
-    Returns the outputs if `out=True`, else `None`. Sets the following fields:
+    Returns the outputs if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.obsp['connectivities' | f'{{prefix}}_connectivities']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+    `adata.obsp['connectivities']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
-    `adata.obsp['distances' | f'{{prefix}}_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+    `adata.obsp['distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Distance matrix of the batch balanced nearest neighbors search.
         Each row (cell) has ``neighbors_within_batch`` × ``n_batches`` - 1 non-zero entries:
         its nearest neighbors in each batch, excluding the cell itself.
-    `adata.uns['neighbors' | f'{{prefix}}_neighbors']` : :class:`dict`
+    `adata.uns['neighbors']` : :class:`dict`
         neighbors parameters, and the `.obsp` keys the matrices were written to.
 
     Examples

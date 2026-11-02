@@ -54,7 +54,8 @@ type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular",
         example="A.obsm['fa']",
         default=(
             "`.obsm['X_draw_graph_{layout}']` and `.uns['draw_graph']` "
-            "(`.obsm['graph_{layout}']` if :attr:`scanpy.settings.preset` is "
+            "(`.obsm['graph_{layout}']` and `.uns['graph_{layout}']` "
+            "if :attr:`scanpy.settings.preset` is "
             ":attr:`~scanpy.Preset.ScanpyV2Preview`)"
         ),
     ),
@@ -139,6 +140,8 @@ def draw_graph(  # noqa: PLR0912, PLR0913
         `obsp` and `neighbors_key` at the same time.
     copy
         Return a copy instead of writing to adata.
+    key_added_ext
+        Replaces `layout` in the default key, i.e. writes `.obsm['X_draw_graph_{{key_added_ext}}']`.
     **kwds
         Parameters of chosen igraph layout. See e.g.
         :meth:`~igraph.GraphBase.layout_fruchterman_reingold` :cite:p:`Fruchterman1991`.
@@ -151,7 +154,7 @@ def draw_graph(  # noqa: PLR0912, PLR0913
 
     `adata.obsm['X_draw_graph_{{layout}}']` : :class:`numpy.ndarray` (dtype `float`)
         Coordinates of graph layout. E.g. for `layout='fa'` (the default),
-        the field is called `'X_draw_graph_fa'`. `key_added_ext` overwrites `layout`.
+        the field is called `'X_draw_graph_fa'`.
     `adata.uns['draw_graph']`: :class:`dict`
         `draw_graph` parameters.
 

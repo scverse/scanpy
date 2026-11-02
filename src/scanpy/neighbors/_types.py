@@ -10,6 +10,8 @@ from .._compat import CSRBase  # runtime: `NeighborsOut`’s default
 if TYPE_CHECKING:
     from typing import Any, NotRequired, Self
 
+    from numpy.typing import NDArray
+
     from .._utils.random import _LegacyRandom
 
 __all__ = [
@@ -113,6 +115,6 @@ class NeighborsParams(TypedDict):
 
 
 class BbknnParams(NeighborsParams):
-    batches: list[str | int | None]
+    batches: str | NDArray  # see `scanpy.get._uns._ref_to_uns`
     neighbors_within_batch: int
     trim: int

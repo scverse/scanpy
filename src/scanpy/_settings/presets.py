@@ -188,6 +188,9 @@ class Preset(enum.StrEnum):
 
     - change all functions using `igraph` to no longer create duplicate edges,
       slightly changing community detection and modularity scores.
+    - :meth:`~anndata.acc.AdAcc.resolve` strings passed to parameters that used to take
+      column or key names (e.g. `groupby`), so `'obs.x'` instead of `'x'`.
+      Deprecated parameters keep taking names.
     """
 
     @preset_property

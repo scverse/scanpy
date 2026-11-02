@@ -12,7 +12,7 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
 from ..._compat import CSBase, warn
-from ..._docs import doc_out, doc_use
+from ..._docs import doc_out, doc_out_key, doc_use
 from ..._keys import _embedding_keys
 from ..._settings import Default
 from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
@@ -21,7 +21,6 @@ from ...experimental._docs import (
     doc_adata,
     doc_check_values,
     doc_dist_params,
-    doc_inplace,
     doc_input_matrix,
     doc_pca_chunk,
 )
@@ -34,7 +33,14 @@ from ...get._out import (
     _write_out,
     deprecated_copy,
 )
-from ...get._use import _check_mask, _get_arr, _mask_arg, _mask_hvg, _resolve_obs
+from ...get._use import (
+    _check_mask,
+    _get_arr,
+    _mask_arg,
+    _mask_hvg,
+    _resolve_layer,
+    _resolve_obs,
+)
 from ...preprocessing._docs import doc_mask_var
 from ...preprocessing._pca import PCA_KINDS, PcaOut, _pca_dests, pca
 
@@ -151,7 +157,7 @@ def normalize_pearson_residuals(
     `.uns['pearson_residuals_normalization']['clip']`
          The used value of the clipping parameter.
     `.uns['pearson_residuals_normalization']['computed_on']`
-         The name of the layer on which the residuals were computed.
+         Where the residuals were computed on, e.g. `"A.layers['counts']"` or `'adata.X'`.
 
     """
     out = _legacy_out(out, "inplace", None if inplace else True)
@@ -225,14 +231,16 @@ def _write_pca_from(
     pca_chunk=doc_pca_chunk,
     mask=doc_mask_var,
     check_values=doc_check_values,
-    use=doc_use("Which count matrix to use as input.", legacy=()),
-    inplace=doc_inplace,
+    use=doc_use("Which count matrix to use as input.", legacy=(), layers_only=True),
+    out=doc_out_key(
+        "the Pearson residual-based PCA results",
+        default="`adata` (see below)",
+    ),
 )
 @_accepts_legacy_random_state(0)
 @deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
 @deprecated_arg(
-    "inplace",
-    Deprecation("1.13.0", "Copy `adata` before calling this function instead."),
+    "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
 )
 def normalize_pearson_residuals_pca(  # noqa: PLR0913
     adata: AnnData,
@@ -245,6 +253,7 @@ def normalize_pearson_residuals_pca(  # noqa: PLR0913
     mask: Mask | Default | None = Default("adata.var.get('highly_variable')"),
     check_values: bool = True,
     use: LayerAcc | str | None = None,
+    out: bool = False,
     # deprecated
     inplace: bool = True,
     mask_var: Mask | None = None,
@@ -266,12 +275,14 @@ def normalize_pearson_residuals_pca(  # noqa: PLR0913
     {mask}
     {check_values}
     {use}
-    {inplace}
+    {out}
+    inplace
+        `inplace=False` is `out=True`.
 
     Returns
     -------
-    If `inplace=False`, returns the Pearson residual-based PCA results (as :class:`~anndata.AnnData`
-    object). If `inplace=True`, updates `adata` with the following fields:
+    If `out=True`, returns the Pearson residual-based PCA results (as :class:`~anndata.AnnData`
+    object). Otherwise, updates `adata` with the following fields:
 
     `.uns['pearson_residuals_normalization']['pearson_residuals_df']`
         The subset of highly variable genes, normalized by Pearson residuals.
@@ -287,21 +298,21 @@ def normalize_pearson_residuals_pca(  # noqa: PLR0913
         PCA representation of data after gene selection (if applicable) and Pearson
         residual normalization.
     `.varm['PCs']`
-        The principal components containing the loadings. When `inplace=True` and
-        `mask_var is not None`, this will contain empty rows for the genes not
-        selected.
+        The principal components containing the loadings. If `mask` selects genes,
+        this will contain empty rows for the genes not selected.
     `.uns['pca']['variance_ratio']`
         Ratio of explained variance.
     `.uns['pca']['variance']`
         Explained variance, equivalent to the eigenvalues of the covariance matrix.
 
     """
+    out = _legacy_out(out, "inplace", None if inplace else True)
     key, dests = _pca_kwargs_dests(kwargs_pca)
     keys = _embedding_keys("pca", key)
     mask = _mask_hvg(adata, _mask_arg(mask, mask_var, dim="var"))
     mask_var = _check_mask(adata, mask, "var")
 
-    x, var = _get_arr(adata, _resolve_obs(use)), adata.var[[]]
+    x, var = _get_arr(adata, _resolve_layer(use)), adata.var[[]]
     if mask_var is not None:
         x, var = x[:, mask_var], var[mask_var]
     adata_pca = AnnData(x.copy(), obs=adata.obs[[]], var=var)
@@ -311,12 +322,11 @@ def normalize_pearson_residuals_pca(  # noqa: PLR0913
     )
     pca(adata_pca, n_comps=n_comps, rng=rng, **kwargs_pca)
 
-    if inplace:
-        norm_settings = adata_pca.uns["pearson_residuals_normalization"]
-        norm_dict = dict(**norm_settings, pearson_residuals_df=adata_pca.to_df())
-        _write_pca_from(adata, adata_pca, dests, mask_var)
-        adata.uns[keys.uns] = adata_pca.uns[keys.uns]
-        adata.uns["pearson_residuals_normalization"] = norm_dict
-        return None
-    else:
+    if out is True:
         return adata_pca
+    norm_settings = adata_pca.uns["pearson_residuals_normalization"]
+    norm_dict = dict(**norm_settings, pearson_residuals_df=adata_pca.to_df())
+    _write_pca_from(adata, adata_pca, dests, mask_var)
+    adata.uns[keys.uns] = adata_pca.uns[keys.uns]
+    adata.uns["pearson_residuals_normalization"] = norm_dict
+    return None

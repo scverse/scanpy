@@ -11,14 +11,13 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from .._compat import CSBase
 from .._docs import DEPR_RAW
-from ._types import LayerAcc
-from ._use import _get_arr, _resolve_obs
+from ._use import _get_arr, _resolve_layer, _resolve_obs
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
     from typing import Literal
 
-    from ._types import MultiAcc
+    from ._types import LayerAcc, MultiAcc
 
 
 # --------------------------------------------------------------------------------
@@ -247,6 +246,8 @@ def obs_df(
         :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d, e.g. `'layers.counts'`.
     gene_symbols
         Column of `adata.var` to search for `keys` in.
+    layer
+        A key of :attr:`~anndata.AnnData.layers`, i.e. `layer='k'` is `use=A.layers['k']`.
     use_raw
         Whether to get expression values from `adata.raw`.
 
@@ -359,6 +360,8 @@ def var_df(
     use
         Which layer of `adata` to use as expression values, e.g. `A.layers['counts']`.
         :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d, e.g. `'layers.counts'`.
+    layer
+        A key of :attr:`~anndata.AnnData.layers`, i.e. `layer='k'` is `use=A.layers['k']`.
 
     Returns
     -------
@@ -409,13 +412,6 @@ def var_df(
     return df
 
 
-def _resolve_layer(use: LayerAcc | str | None) -> LayerAcc | None:
-    if (use := _resolve_obs(use)) is not None and not isinstance(use, LayerAcc):
-        msg = f"`use` must be a layer (e.g. `A.X` or `A.layers[...]`), was {use!r}"
-        raise TypeError(msg)
-    return use
-
-
 def pca(adata: AnnData, *, use: MultiAcc | str | None = None) -> AnnData:
     r"""Return PCA results as an :class:`~anndata.AnnData` indexed by component.
 
@@ -458,16 +454,21 @@ def pca(adata: AnnData, *, use: MultiAcc | str | None = None) -> AnnData:
         sc.get.pca(adata)
 
     """
-    from .._keys import _embedding_keys, _EmbeddingKeys
+    from .._keys import _embedding_keys
     from .._settings import Default
-    from ._out import _dest, _dest_key
-    from ._use import _resolve_obs
+    from ..preprocessing._pca import PCA_KINDS, _pca_dests
+    from ._out import _out_dests
 
-    keys = (
-        _embedding_keys("pca", Default())
-        if use is None
-        else _EmbeddingKeys(*[_dest_key(_dest(_resolve_obs(use, rep=True)))] * 2)
+    # find the `.uns` entry the way `pp.pca(out=use)` named it
+    key, _ = _out_dests(
+        False if use is None else _resolve_obs(use),
+        None,
+        dests=_pca_dests,
+        kinds=PCA_KINDS,
+        uns=True,
+        default=Default(),
     )
+    keys = _embedding_keys("pca", key)
     info = adata.uns[keys.uns]
     x = adata.obsm[keys.obsm]
     n_comps = x.shape[1]

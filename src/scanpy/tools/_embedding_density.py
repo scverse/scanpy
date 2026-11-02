@@ -14,7 +14,7 @@ from .._settings import Default
 from .._utils import _doc_params, _get_basis_key, sanitize_anndata
 from ..get._out import _out_key
 from ..get._types import MultiAcc
-from ..get._use import _obs_col, _resolve_ref
+from ..get._use import _obs_col, _resolve_obs, _resolve_ref
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -144,15 +144,17 @@ def embedding_density(  # noqa: PLR0912, PLR0915
         if not isinstance(use, Default):
             msg = "Pass either `use` or `basis`, not both."
             raise TypeError(msg)
-        use = basis
+        use = basis  # deprecated, so its strings stay basis names under every preset
+    elif isinstance(use, str):
+        use = _resolve_ref(use, vec=False)
     basis = use
     groupby = _obs_col(groupby, param="groupby")
     if isinstance(basis, Default):
         basis = "umap"  # found in `X_umap` or `umap`
-    elif isinstance(basis, str):
-        basis = _resolve_ref(basis, vec=False)
     if isinstance(basis, MultiAcc):
-        basis_key, basis = basis.k, basis.k.removeprefix("X_")
+        basis = _resolve_obs(basis)  # embeddings are in `.obsm`, not `.varm`
+        basis_key = basis.k if basis.k in adata.obsm else None
+        basis = basis.k.removeprefix("X_")
     else:
         basis = basis.lower()
         if basis == "fa":

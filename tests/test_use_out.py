@@ -135,6 +135,35 @@ def test_legacy_layer_deprecated(
 
 
 @pytest.mark.parametrize(
+    ("call", "legacy"),
+    [
+        pytest.param(sc.pp.regress_out, dict(keys="batch"), id="regress_out"),
+        pytest.param(sc.pp.combat, dict(key="batch"), id="combat"),
+        pytest.param(
+            lambda a, **kw: sc.pp.highly_variable_genes(a, flavor="seurat", **kw),
+            dict(batch_key="batch"),
+            id="hvg",
+        ),
+        pytest.param(
+            sc.tl.embedding_density, dict(basis="umap"), id="embedding_density"
+        ),
+    ],
+)
+@needs.scanpy2
+def test_legacy_names_v2(
+    adata: AnnData, call: Callable[..., object], legacy: dict[str, str]
+) -> None:
+    """Deprecated params keep naming columns/bases, even with the `v2` preset."""
+    sc.pp.log1p(adata)
+    adata.obsm["X_umap"] = adata.X[:, :2]
+    with (
+        sc.settings.override(preset=sc.Preset.ScanpyV2Preview),
+        pytest.warns(FutureWarning, match=r"is deprecated"),
+    ):
+        call(adata, **legacy)
+
+
+@pytest.mark.parametrize(
     "call",
     [
         pytest.param(
@@ -581,6 +610,37 @@ def test_pearson_residuals_inplace_deprecated(adata: AnnData) -> None:
     assert {"X", "theta", "clip", "computed_on"} <= set(legacy)
     np.testing.assert_array_equal(legacy["X"], res)
     assert not adata.uns
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        pytest.param(
+            lambda a, **kw: sc.experimental.pp.normalize_pearson_residuals_pca(
+                a, n_comps=2, **kw
+            ),
+            id="normalize_pearson_residuals_pca",
+        ),
+        pytest.param(
+            lambda a, **kw: sc.experimental.pp.recipe_pearson_residuals(
+                a, n_top_genes=3, n_comps=2, **kw
+            )[0],
+            id="recipe_pearson_residuals",
+        ),
+    ],
+)
+def test_pearson_residuals_pca_out_true(
+    adata: AnnData, call: Callable[..., AnnData]
+) -> None:
+    """`out=True` returns the subset `AnnData` like `inplace=False` did, writing nothing."""
+    orig = adata.copy()
+    res = call(adata, out=True)
+    with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
+        legacy = call(adata, inplace=False)
+    np.testing.assert_array_equal(res.obsm["X_pca"], legacy.obsm["X_pca"])
+    assert not adata.uns
+    assert not adata.obsm
+    assert list(adata.var.columns) == list(orig.var.columns)
 
 
 def test_pearson_residuals_pca_kwargs_out(adata: AnnData) -> None:

@@ -195,7 +195,7 @@ def combat(  # noqa: PLR0915
 
     """
     out = _legacy_out(out, "inplace", None if inplace else True)
-    use = _resolve_obs(use)
+    use = _resolve_obs(use, rep=True)
     # check the input
     if isinstance(batch, Default):
         batch = None if key is not None else dim_acc("batch", dim="obs")

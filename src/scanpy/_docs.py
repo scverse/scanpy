@@ -82,8 +82,16 @@ mask_{dim}
 """
 
 
-def doc_use(desc: str, *, legacy: tuple[str, ...] = ("layer", "obsm")) -> str:
-    """Docs for a `use` parameter and the deprecated parameters it replaces."""
+def doc_use(
+    desc: str,
+    *,
+    legacy: tuple[str, ...] = ("layer", "obsm"),
+    layers_only: bool = False,
+) -> str:
+    """Docs for a `use` parameter and the deprecated parameters it replaces.
+
+    `layers_only` is for functions needing gene-aligned input, i.e. not `.obsm`.
+    """
     # no trailing newline: the caller’s `{use}` is followed by its own one
     legacy_docs = "".join(
         f"\n{name}\n"
@@ -95,18 +103,24 @@ def doc_use(desc: str, *, legacy: tuple[str, ...] = ("layer", "obsm")) -> str:
     return f"""\
 use
     {desc}
-    Given by an accessor, e.g. `A.X`, `A.layers['counts']` or `A.obsm['pca']`.
+    Given by an accessor, e.g. {"`A.X` or `A.layers['counts']`" if layers_only else "`A.X`, `A.layers['counts']` or `A.obsm['pca']`"}.
     :class:`str`\\ s are :meth:`anndata.acc.AdAcc.resolve`\\ d, e.g. `'layers.counts'`.\
 {legacy_docs}\
 """
 
 
-def doc_out(*, default: str = "the place `use` reads from") -> str:
-    """Docs for an `out` parameter of a function with one output, e.g. a matrix."""
+def doc_out(
+    *, default: str = "the place `use` reads from", example: str = "layers.scaled"
+) -> str:
+    """Docs for an `out` parameter of a function with one output, e.g. a matrix.
+
+    `example` is a resolvable string, e.g. `'obs.score'` for `A.obs['score']`.
+    """
+    kind, key = example.split(".", 1)
     return f"""\
 out
-    Where to write the result, e.g. `A.layers['scaled']`.
-    :class:`str`\\ s are :meth:`anndata.acc.AdAcc.resolve`\\ d, e.g. `'layers.scaled'`.
+    Where to write the result, e.g. `A.{kind}[{key!r}]`.
+    :class:`str`\\ s are :meth:`anndata.acc.AdAcc.resolve`\\ d, e.g. `{example!r}`.
     If :data:`True`, the result is returned instead of written.
     If :data:`False`, it is written to {default}.\
 """

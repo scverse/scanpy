@@ -27,6 +27,7 @@ from .._utils import (
     _doc_params,
     _numba_thread_limit,
     check_nonnegative_integers,
+    check_use_raw,
     dim_acc,
     get_literal_vals,
     raise_not_implemented_error_if_backed_type,
@@ -35,7 +36,13 @@ from ..get import aggregate
 from ..get._aggregated import _chan_combine
 from ..get._out import _out_key, deprecated_copy
 from ..get._uns import _use_to_uns
-from ..get._use import _check_mask, _get_arr, _mask_arg, _obs_col, _resolve_obs
+from ..get._use import (
+    _check_mask,
+    _get_arr,
+    _mask_arg,
+    _obs_col,
+    _resolve_layer,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -43,7 +50,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from ..get._types import AdRef, Mask, RepAcc
+    from ..get._types import AdRef, LayerAcc, Mask
 
 
 type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
@@ -260,7 +267,7 @@ class _RankGenes:
         mask_var: NDArray[np.bool] | None = None,
         reference: Literal["rest"] | str = "rest",
         use_raw: bool = True,
-        use: RepAcc | str | None = None,
+        use: LayerAcc | str | None = None,
         layer: str | None = None,
         comp_pts: bool = False,
     ) -> None:
@@ -761,7 +768,9 @@ def _build_stats_dataframe(
 
 @_doc_params(
     mask=doc_mask("Select subset of genes to use in statistical tests.", dim="var"),
-    use=doc_use("Which matrix to perform tests on.", legacy=("layer",)),
+    use=doc_use(
+        "Which matrix to perform tests on.", legacy=("layer",), layers_only=True
+    ),
     out=doc_out_key(
         "the results",
         default="`.uns['rank_genes_groups']`",
@@ -789,7 +798,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     method: DETest | Default = Default(preset=("rank_genes_groups", "method")),
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
-    use: RepAcc | str | None = None,
+    use: LayerAcc | str | None = None,
     mean_in_log_space: bool | Default = Default(
         preset=("rank_genes_groups", "mean_in_log_space")
     ),
@@ -922,7 +931,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     )
     groupby = _obs_col(groupby, param="groupby")
     if use is not None:
-        use = _resolve_obs(use, rep=True)
+        use = _resolve_layer(use)
     mask = _mask_arg(mask, mask_var, dim="var")
     if isinstance(mean_in_log_space, Default):
         mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
@@ -941,11 +950,10 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     mask_var = _check_mask(adata, mask, "var")
 
-    if use_raw is None:
-        use_raw = adata.raw is not None
-    elif use_raw is True and adata.raw is None:
+    if use_raw is True and adata.raw is None:
         msg = "Received `use_raw=True`, but `adata.raw` is empty."
         raise ValueError(msg)
+    use_raw = check_use_raw(adata, use_raw, use=use, layer=layer)
 
     if "only_positive" in kwds:
         rankby_abs = not kwds.pop("only_positive")  # backwards compat
@@ -1097,7 +1105,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     *,
     key: str | None = None,
     groupby: AdRef | str | None = None,
-    use: RepAcc | str | None = None,
+    use: LayerAcc | str | None = None,
     use_raw: bool | None = None,
     min_in_group_fraction: float = 0.25,
     min_fold_change: float = 1,
@@ -1163,7 +1171,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     if groupby is None:
         groupby = adata.uns[key]["params"]["groupby"]
 
-    use = _resolve_obs(use)
+    use = _resolve_layer(use)
     if use_raw is None:
         use_raw = adata.uns[key]["params"]["use_raw"] if use is None else False
 
