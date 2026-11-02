@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -26,6 +25,7 @@ from ._docs import doc_use_neighbors
 from ._utils import _choose_representation_compat, get_init_pos_from_paga
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from typing import Any, Literal
 
     from anndata import AnnData
@@ -46,8 +46,7 @@ type _InitPos = Literal["paga", "spectral", "random"]
         extra=(
             "\n    UMAP lays out more than `2 * n_components` connected components using data,"
             " by default the representation :func:`~scanpy.pp.neighbors` used."
-            "\n    If there is none, pass a mapping like"
-            " `{'graph': A.obsp['k'], 'rep': A.obsm['pca']}`."
+            "\n    If there is none, pass `rep`."
         ),
     ),
     out=doc_out_key(
@@ -79,10 +78,8 @@ def umap(  # noqa: PLR0913
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap"] = "umap",
-    use: GraphAcc
-    | str
-    | Mapping[Literal["graph", "rep"], GraphAcc | RepAcc | str]
-    | None = None,
+    use: GraphAcc | str | None = None,
+    rep: RepAcc | str | None = None,
     out: MultiAcc | str | bool = False,
     # deprecated
     neighbors_key: str | None = None,
@@ -161,6 +158,10 @@ def umap(  # noqa: PLR0913
         ``'umap'``
             Umap’s simplical set embedding.
     {use}
+    rep
+        The data to lay out more than `2 * n_components` connected components with,
+        e.g. `A.obsm['pca']`, if not the representation :func:`~scanpy.pp.neighbors` used.
+        :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d, e.g. `'obsm.pca'`.
     {out}
     neighbors_key
         Umap looks in
@@ -183,10 +184,7 @@ def umap(  # noqa: PLR0913
     rng = np.random.default_rng(rng)
     key = _out_key(out, key_added, kind="obsm", default=Default())
 
-    graph, rep = (
-        (use.get("graph"), use.get("rep")) if isinstance(use, Mapping) else (use, None)
-    )
-    neighbors = _neighbors_view(adata, graph, neighbors_key)
+    neighbors = _neighbors_view(adata, use, neighbors_key)
     if neighbors is None or "connectivities" not in neighbors:
         msg = "Did not find a neighborhood graph. Run `sc.pp.neighbors` first."
         raise ValueError(msg)
@@ -293,7 +291,7 @@ def _umap_data(
     if (n := connected_components(conns)[0]) > 2 * n_components:
         msg = (
             f"The graph has {n} connected components, so UMAP needs data to lay them out. "
-            "Pass e.g. `use={'graph': A.obsp[...], 'rep': A.obsm['pca']}`."
+            "Pass e.g. `rep=A.obsm['pca']`."
         )
         raise ValueError(msg)
     return None

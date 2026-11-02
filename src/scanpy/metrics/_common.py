@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
 from dataclasses import InitVar, dataclass, field
 from functools import singledispatch
 from typing import TYPE_CHECKING, ClassVar, overload
@@ -11,13 +10,12 @@ import pandas as pd
 from scverse_misc import Deprecation
 
 from .._compat import CSRBase, DaskArray, SpBase, fullname, warn
-from .._docs import doc_use
 from .._utils import NeighborsView
-from ..get._types import AdRef, GraphAcc
+from ..get._types import AdRef, GraphAcc, LayerAcc, MultiAcc
 from ..get._use import _get_arr, _get_vec, _resolve_obs
 
 if TYPE_CHECKING:
-    from typing import Literal, NoReturn
+    from typing import NoReturn
 
     from anndata import AnnData
     from numpy.typing import NDArray
@@ -25,22 +23,13 @@ if TYPE_CHECKING:
     from ..get._types import ArrAcc, VecRef
 
     type _Vals = NDArray | SpBase | DaskArray | pd.DataFrame | pd.Series
-    type _MetricUse = (
-        ArrAcc | VecRef | Mapping[Literal["graph", "vals"], ArrAcc | VecRef]
-    )
 
 
-__all__ = ["DEPR_GRAPH", "DOC_USE", "_SparseMetric", "_graph_and_vals"]
+__all__ = ["DEPR_GRAPH", "DEPR_VALS", "_SparseMetric", "_graph_and_vals"]
 
 
-DOC_USE = doc_use(
-    "Which values to compute on, e.g. `A.obsm['X_pca']` or the 1D `A.obs['n_genes']`.\n"
-    "    Can also be a mapping with the keys `'vals'` (the values) and `'graph'` (an `.obsp` graph,\n"
-    "    by default the connectivities :func:`~scanpy.pp.neighbors` wrote),\n"
-    "    e.g. `use=dict(graph=A.obsp['foo_connectivities'], vals=A.obsm['X_pca'])`.",
-    legacy=("layer", "obsm", "obsp"),
-)
-DEPR_GRAPH = Deprecation("1.13.0", "Use `use=dict(graph=A.obsp[...])` instead.")
+DEPR_GRAPH = Deprecation("1.13.0", "Use `use=A.obsp[...]` instead.")
+DEPR_VALS = Deprecation("1.13.0", "Use `vals=A....` instead.")
 
 
 @dataclass
@@ -88,9 +77,9 @@ class _SparseMetric(ABC):
 
 def _graph_and_vals(
     adata: AnnData,
-    use: _MetricUse | None,
+    use: GraphAcc | str | None,
     *,
-    vals: _Vals | None,
+    vals: _Vals | ArrAcc | VecRef | None,
     use_graph: str | None,
     neighbors_key: str | None,
     use_raw: bool,
@@ -101,45 +90,35 @@ def _graph_and_vals(
     """Resolve the graph and values of `gearys_c`/`morans_i` called on an `AnnData`."""
     from anndata.acc import A
 
-    if not isinstance(use, Mapping):
-        use = {} if use is None else dict(vals=use)
-    if unknown := use.keys() - {"graph", "vals"}:
-        msg = f"Unknown key(s) {sorted(unknown)} in `use`, valid are ['graph', 'vals']"
-        raise TypeError(msg)
-
-    if (graph := use.get("graph")) is None:
+    if use is None:
         g = _get_graph(adata, use_graph=use_graph, neighbors_key=neighbors_key)
     elif use_graph is not None or neighbors_key is not None:
-        msg = "Cannot specify both `use['graph']` and `use_graph`/`neighbors_key`."
+        msg = "Cannot specify both `use` and `use_graph`/`neighbors_key`."
         raise TypeError(msg)
-    elif not isinstance(graph := _resolve_obs(graph), GraphAcc):
-        msg = f"`use['graph']` must point to `.obsp`, was {graph!r}"
+    elif not isinstance(use := _resolve_obs(use), GraphAcc):
+        msg = f"`use` must point to `.obsp`, was {use!r}"
         raise TypeError(msg)
     else:
-        g = adata[graph]
+        g = adata[use]
 
-    # not `@deprecated_arg`, which can’t compare positionally passed arrays to `None`
-    if vals is not None:
-        warn(
-            "The argument vals is deprecated and will be removed in the future. "
-            "Use `use` instead.",
-            FutureWarning,
-        )
-        if "vals" in use:
-            msg = "Cannot specify both `vals` and `use`."
-            raise TypeError(msg)
-        return g, vals
-    if isinstance(src := use.get("vals"), str):
-        src = A.resolve(src)
-    if isinstance(src, AdRef):
+    if isinstance(vals, str):
+        vals = A.resolve(vals)
+    if isinstance(vals, AdRef):
         if use_raw or layer is not None or obsm is not None or obsp is not None:
-            msg = "`use` cannot be combined with `layer`/`use_raw`/`obsm`/`obsp`"
+            msg = "`vals` cannot be combined with `layer`/`use_raw`/`obsm`/`obsp`"
             raise TypeError(msg)
         # e.g. `.obs` columns are pandas arrays
-        return g, np.asarray(_get_vec(adata, src, dim="obs"))
-    return g, _get_arr(
-        adata, _resolve_obs(src), use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp
-    ).T
+        return g, np.asarray(_get_vec(adata, vals, dim="obs"))
+    if vals is None or isinstance(vals, GraphAcc | LayerAcc | MultiAcc):
+        return g, _get_arr(
+            adata,
+            _resolve_obs(vals),
+            use_raw=use_raw,
+            layer=layer,
+            obsm=obsm,
+            obsp=obsp,
+        ).T
+    return g, vals
 
 
 def _get_graph(

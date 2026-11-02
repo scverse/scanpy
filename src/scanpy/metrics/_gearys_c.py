@@ -8,40 +8,42 @@ from typing import TYPE_CHECKING, cast
 import numba
 import numpy as np
 from fast_array_utils.numba import njit
-from scverse_misc import Deprecation, deprecated_arg
+from scverse_misc import deprecated_arg
 
 from .._compat import CSRBase
 from .._docs import DEPR_RAW
 from .._utils import _doc_params
 from ..neighbors._doc import doc_neighbors_key
-from ._common import DEPR_GRAPH, DOC_USE, _graph_and_vals, _SparseMetric
+from ..tools._docs import doc_use_neighbors
+from ._common import DEPR_GRAPH, DEPR_VALS, _graph_and_vals, _SparseMetric
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from ._common import _MetricUse, _Vals
+    from ..get._types import ArrAcc, GraphAcc, VecRef
+    from ._common import _Vals
 
 
 @singledispatch
 @_doc_params(
     neighbors_key=doc_neighbors_key,
-    use=DOC_USE,
+    use=doc_use_neighbors(),
 )
 @deprecated_arg("use_graph", DEPR_GRAPH)
 @deprecated_arg("neighbors_key", DEPR_GRAPH)
-@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
-@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
-@deprecated_arg("obsp", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("layer", DEPR_VALS)
+@deprecated_arg("obsm", DEPR_VALS)
+@deprecated_arg("obsp", DEPR_VALS)
 @deprecated_arg("use_raw", DEPR_RAW)
 def gearys_c(
     adata_or_graph: AnnData | CSRBase,
     /,
-    vals: _Vals | None = None,
+    vals: _Vals | ArrAcc | VecRef | None = None,
     *,
     use_graph: str | None = None,
     neighbors_key: str | None = None,
-    use: _MetricUse | None = None,
+    use: GraphAcc | str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     obsp: str | None = None,
@@ -67,17 +69,25 @@ def gearys_c(
     Params
     ------
     adata_or_graph
-        AnnData object containing a graph (see ``use_graph``) or the graph itself.
+        AnnData object containing a graph (see ``use``) or the graph itself.
         See the examples for more info.
     vals
         Values to calculate Geary's C for.
         If this is two dimensional, should be of shape `(n_features, n_cells)`.
         Otherwise should be of shape `(n_cells,)`.
-        Deprecated if `adata_or_graph` is an :class:`~anndata.AnnData`, use `use` instead.
+        If `adata_or_graph` is an :class:`~anndata.AnnData`, this can be an accessor,
+        e.g. `A.obsm['X_pca']` or the 1D `A.obs['n_genes']`
+        (:class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d, e.g. `'obsm.X_pca'`),
+        by default `A.X`.
+    layer
+        A key of :attr:`~anndata.AnnData.layers`, i.e. `layer='k'` is `vals=A.layers['k']`.
+    obsm
+        A key of :attr:`~anndata.AnnData.obsm`, i.e. `obsm='k'` is `vals=A.obsm['k']`.
+    obsp
+        A key of :attr:`~anndata.AnnData.obsp`, i.e. `obsp='k'` is `vals=A.obsp['k']`.
     use_graph
-        Key to use for graph in anndata object.
-        If not provided, default neighbors connectivities will be used instead.
-        (See ``neighbors_key`` below.)
+        Key of the graph in :attr:`~anndata.AnnData.obsp`,
+        i.e. `use_graph='k'` is `use=A.obsp['k']`.
     {neighbors_key}
     {use}
 
@@ -96,7 +106,7 @@ def gearys_c(
         from anndata.acc import A
 
         pbmc = sc.datasets.pbmc68k_processed()
-        pc_c = sc.metrics.gearys_c(pbmc, use=A.obsm["X_pca"])
+        pc_c = sc.metrics.gearys_c(pbmc, A.obsm["X_pca"])
 
     It's equivalent to call the function directly on the underlying arrays:
 

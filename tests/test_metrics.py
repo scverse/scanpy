@@ -61,41 +61,38 @@ def test_consistency(metric) -> None:
 @needs.anndata_acc
 @pytest.mark.usefixtures("_threading")
 def test_consistency_use(metric) -> None:
-    """Selecting `vals` via `use` matches passing the same array directly."""
+    """Selecting `vals` via an accessor matches passing the same array directly."""
     pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
     equality_check = partial(np.testing.assert_allclose, atol=1e-11)
 
     equality_check(
-        metric(pbmc, use="obsm.X_pca"),
+        metric(pbmc, "obsm.X_pca"),
         metric(g, pbmc.obsm["X_pca"].T),
     )
     equality_check(
-        metric(pbmc, use=A.obs["percent_mito"]),
+        metric(pbmc, A.obs["percent_mito"]),
         metric(g, pbmc.obs["percent_mito"]),
     )
 
-    all_genes = metric(pbmc, use="layers.raw")
-    first_gene = metric(pbmc, use=A.layers["raw"][:, pbmc.var_names[0]])
+    all_genes = metric(pbmc, "layers.raw")
+    first_gene = metric(pbmc, A.layers["raw"][:, pbmc.var_names[0]])
     np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
 
     # Test that results are similar for sparse and dense reps of same data
     equality_check(
-        metric(pbmc, use="layers.raw"),
+        metric(pbmc, "layers.raw"),
         metric(g, pbmc.layers["raw"].T.toarray()),
     )
 
 
 @needs.anndata_acc
-def test_vals_deprecated(metric) -> None:
-    """Passing `vals` with an `AnnData` warns, but matches `use`."""
+def test_vals_array(metric) -> None:
+    """Passing `vals` as an array with an `AnnData` matches passing an accessor."""
     pbmc = pbmc68k_reduced()
-    expected = metric(pbmc, use=A.obs["percent_mito"])
-    for kw in [dict(vals=pbmc.obs["percent_mito"]), {}]:
-        args = () if kw else (pbmc.obs["percent_mito"],)
-        with pytest.warns(FutureWarning, match=r"argument vals is deprecated"):
-            np.testing.assert_allclose(metric(pbmc, *args, **kw), expected)
+    expected = metric(pbmc, A.obs["percent_mito"])
+    np.testing.assert_allclose(metric(pbmc, pbmc.obs["percent_mito"]), expected)
 
 
 @pytest.mark.parametrize(
@@ -181,17 +178,17 @@ def test_graph_metrics_w_constant_values(
     ],
 )
 def test_metrics_graph(metric, graph: str, deprecated: str) -> None:
-    """`use['graph']` picks the graph, like the deprecated `use_graph`/`neighbors_key`."""
+    """`use` picks the graph, like the deprecated `use_graph`/`neighbors_key`."""
     rng = np.random.default_rng()
     adata = AnnData(rng.normal(size=(10, 20)))
     sc.pp.neighbors(adata, out=A.obsp["foo"])  # also writes `.uns['foo']`
-    expected = metric(adata, use=dict(graph=A.obsp["foo"], vals=A.X))
+    expected = metric(adata, use=A.obsp["foo"])
     with pytest.warns(FutureWarning, match=rf"argument {deprecated} is deprecated"):
-        res = metric(adata, use=A.X, **{deprecated: graph})
+        res = metric(adata, **{deprecated: graph})
     np.testing.assert_allclose(res, expected)
     # only the graph is needed
     adata = AnnData(adata.X, obsp=dict(bar=adata.obsp["foo"]))
-    metric(adata, use=dict(graph="obsp.bar"))
+    metric(adata, use="obsp.bar")
 
 
 @needs.anndata_acc
@@ -206,7 +203,7 @@ def test_metrics_graph(metric, graph: str, deprecated: str) -> None:
             id="both",
         ),
         pytest.param(
-            lambda: dict(use=dict(graph=A.obsp["foo"]), use_graph="foo"),
+            lambda: dict(use=A.obsp["foo"], use_graph="foo"),
             TypeError,
             r"both",
             id="both_use",
@@ -214,12 +211,7 @@ def test_metrics_graph(metric, graph: str, deprecated: str) -> None:
         pytest.param(lambda: dict(use_graph="foo"), KeyError, r"foo", id="no_graph"),
         pytest.param(lambda: dict(neighbors_key="bar"), KeyError, r"bar", id="no_key"),
         pytest.param(dict, KeyError, r"neighbors.*uns", id="nothing"),
-        pytest.param(
-            lambda: dict(use=dict(foo=A.X)), TypeError, r"Unknown", id="unknown"
-        ),
-        pytest.param(
-            lambda: dict(use=dict(graph=A.X)), TypeError, r"obsp", id="not_graph"
-        ),
+        pytest.param(lambda: dict(use=A.X), TypeError, r"obsp", id="not_graph"),
     ],
 )
 def test_metrics_graph_params_errors(

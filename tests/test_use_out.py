@@ -757,6 +757,22 @@ ROUND_TRIPS = [
         lambda a, **kw: sc.tl.dpt(a, n_dcs=3, out=True, **kw).pseudotime,
         id="diffmap-dpt",
     ),
+    pytest.param(
+        lambda a, **kw: sc.pp.neighbors(a, n_neighbors=5, **kw),
+        "obsp.nn",
+        lambda a, **kw: sc.metrics.gearys_c(a, "obsm.X_pca", **kw),
+        id="neighbors-gearys_c",
+    ),
+    pytest.param(
+        lambda a, **kw: (
+            sc.pp.neighbors(a, n_neighbors=5),
+            sc.pp.pca(a, n_comps=3, **kw),
+        ),
+        "obsm.p",
+        # the values are `gearys_c`’s secondary input, so they go to `vals`, not `use`
+        lambda a, use="obsm.X_pca": sc.metrics.gearys_c(a, use),
+        id="pca-gearys_c",
+    ),
 ]
 
 
@@ -809,6 +825,6 @@ def test_umap_graph_needs_rep() -> None:
     with pytest.raises(ValueError, match=r"5 connected components"):
         sc.tl.umap(adata, use=A.obsp["g"], out=True)
     emb = sc.tl.umap(
-        adata, use=dict(graph=A.obsp["g"], rep=A.obsm["r"]), rng=0, maxiter=10, out=True
+        adata, use=A.obsp["g"], rep=A.obsm["r"], rng=0, maxiter=10, out=True
     )
     assert emb.shape == (adata.n_obs, 2)
