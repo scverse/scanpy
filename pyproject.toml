@@ -130,7 +130,6 @@ docs = [
     "sphinx-exec-jupyter[holoviews]>=0.4.2",
     "sphinx-issues>=5.0.1",
     "sphinxcontrib-bibtex",
-    "sphinxcontrib-katex",
 ]
 test-min = [
     "dependency-groups",    # for CI scripts doctests
