@@ -32,13 +32,11 @@ def _set_arr(
 
     The inverse of `_get_arr`; see there for the accessor/`choices` split.
     """
-    if out is not None:
-        if any(v not in (None, False) for v in choices.values()):
-            msg = "`out` cannot be combined with `layer`/`obsm`/`obsp`/`varm`/`varp`"
-            raise TypeError(msg)
-        choices = _dest(out)
+    if out is not None and any(v not in {None, False} for v in choices.values()):
+        msg = "`out` cannot be combined with `layer`/`obsm`/`obsp`/`varm`/`varp`"
+        raise TypeError(msg)
 
-    match [(k, v) for k, v in choices.items() if v not in {None, False}]:
+    match list(_use_dest(out, **choices).items()):
         case []:
             adata.X = val
         case [("layer", layer)]:
@@ -255,7 +253,7 @@ def _out_dests[D: tuple, K: tuple](
                 return default, defaults
             result = _follow_primary(first, defaults)
         case Mapping():
-            result = _resolve_mapping(out, kinds, names)
+            result = _resolve_mapping(out, kinds, names, defaults)
         case _:
             what = (
                 "a `bool`, an accessor for the primary output, or"
@@ -286,13 +284,16 @@ def _check_kind(kinds: tuple, name: str, acc: ArrAcc | VecRef) -> _SetRep:
 
 
 def _resolve_mapping[D: tuple](
-    out: Mapping[str, ArrAcc | VecRef], kinds: tuple, names: tuple[str, ...]
+    out: Mapping[str, ArrAcc | VecRef],
+    kinds: tuple,
+    names: tuple[str, ...],
+    defaults: D,
 ) -> D:
     if unknown := out.keys() - set(names):
         msg = f"Unknown output(s) {sorted(unknown)}, valid are {names}"
         raise TypeError(msg)
     resolved = {name: _check_kind(kinds, name, acc) for name, acc in out.items()}
-    return type(kinds)(*(resolved.get(name) for name in names))
+    return type(defaults)(*(resolved.get(name) for name in names))
 
 
 def _follow_primary[D: tuple](first: _SetRep, defaults: D) -> D:
