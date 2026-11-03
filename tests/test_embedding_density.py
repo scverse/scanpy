@@ -46,13 +46,6 @@ def test_embedding_density_groupby(basis: str, components: list[int]) -> None:
         )
 
 
-def test_embedding_density_plot():
-    # Test that sc.pl.embedding_density() runs without error
-    adata = pbmc68k_reduced()
-    sc.tl.embedding_density(adata, "umap")
-    sc.pl.embedding_density(adata, "umap", key="umap_density", show=False)
-
-
 @pytest.mark.parametrize(
     "small",
     [
@@ -76,3 +69,10 @@ def test_embedding_density_groupby_degenerate_group(small: list[list[int]]) -> N
     density = adata.obs["umap_density_group"]
     assert density[adata.obs["group"] == "b"].isna().all()
     assert density[adata.obs["group"] == "a"].between(0, 1).all()
+
+
+def test_embedding_density_plot():
+    # Test that sc.pl.embedding_density() runs without error
+    adata = pbmc68k_reduced()
+    sc.tl.embedding_density(adata, "umap")
+    sc.pl.embedding_density(adata, "umap", key="umap_density", show=False)

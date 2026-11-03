@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .. import logging as logg
-from .._compat import warn
 from .._utils import _get_basis_key, sanitize_anndata
 
 if TYPE_CHECKING:
@@ -16,24 +15,39 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-def _calc_density(x: np.ndarray, y: np.ndarray):
-    """Calculate the density of points in 2 dimensions."""
+def _calc_density(
+    x: np.ndarray, y: np.ndarray, *, group: tuple[str, str] | None = None
+) -> np.ndarray:
+    """Calculate the density of points in 2 dimensions.
+
+    Returns `NaN`s if there are too few points or they lie on a line or point.
+    """
     from scipy.stats import gaussian_kde
+
+    from .._compat import warn
 
     # Calculate the point density
     xy = np.vstack([x, y])
-    z = gaussian_kde(xy)(xy)
+    if xy.shape[1] >= 3:  # a 2D KDE needs at least 3 points
+        try:
+            z = gaussian_kde(xy)(xy)
+        except np.linalg.LinAlgError:  # points on a line or point
+            pass
+        else:
+            # Scale between 0 and 1
+            return (z - z.min()) / (z.max() - z.min())
 
-    min_z = np.min(z)
-    max_z = np.max(z)
+    if group is None:
+        what = "The embedding"
+    else:
+        groupby, cat = group
+        what = f"Category {cat!r} of {groupby!r}"
+    msg = f"{what} has too few cells or degenerate coordinates, so its density is NaN."
+    warn(msg, UserWarning)
+    return np.full(xy.shape[1], np.nan)
 
-    # Scale between 0 and 1
-    scaled_z = (z - min_z) / (max_z - min_z)
 
-    return scaled_z
-
-
-def embedding_density(  # noqa: PLR0912, PLR0915
+def embedding_density(  # noqa: PLR0912
     adata: AnnData,
     basis: str = "umap",
     *,
@@ -168,31 +182,15 @@ def embedding_density(  # noqa: PLR0912, PLR0915
         categories = adata.obs[groupby].cat.categories
 
         density_values = np.zeros(adata.n_obs)
-        skipped = []
 
         for cat in categories:
             cat_mask = adata.obs[groupby] == cat
             embed_x = adata.obsm[basis_key][cat_mask, components[0]]
             embed_y = adata.obsm[basis_key][cat_mask, components[1]]
 
-            # a 2D KDE needs at least 3 points that do not lie on a line or point
-            if cat_mask.sum() < 3:
-                dens_embed = np.nan
-                skipped.append(cat)
-            else:
-                try:
-                    dens_embed = _calc_density(embed_x, embed_y)
-                except np.linalg.LinAlgError:
-                    dens_embed = np.nan
-                    skipped.append(cat)
+            dens_embed = _calc_density(embed_x, embed_y, group=(groupby, cat))
             density_values[cat_mask] = dens_embed
 
-        if skipped:
-            msg = (
-                f"Categories {skipped} of {groupby!r} have too few cells "
-                "or degenerate coordinates, so their density is set to NaN."
-            )
-            warn(msg, UserWarning)
         adata.obs[density_covariate] = density_values
     else:  # if groupby is None
         # Calculate the density over the whole embedding without subsetting
