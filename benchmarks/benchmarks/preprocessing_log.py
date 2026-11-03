@@ -79,6 +79,7 @@ class NeighborsSuite:
 
     params: tuple[list[Dataset]] = (["bmmc", "lung93k"],)
     param_names = ("dataset",)
+    timeout = 180  # pynndescent’s JIT compilation takes long, and `--quick`/`peakmem_*` don’t warm up
 
     def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
@@ -87,6 +88,8 @@ class NeighborsSuite:
             sc.pp.pca(adata)  # so we time the kNN search, not the PCA
             adata.uns["batch_key"] = batch_key
             adata.write_zarr(f"{dataset}.zarr")
+
+    setup_cache.timeout = 600  # reading lung93k takes longer than asv’s 60s default, and class `timeout` doesn’t apply here
 
     def setup(self, dataset: Dataset) -> None:
         self.adata = ad.read_zarr(f"{dataset}.zarr")
@@ -115,6 +118,8 @@ class HVGSuite:  # noqa: D101
         obs = np.arange(adata.shape[0])
         np.random.default_rng().shuffle(obs)
         adata[obs].write_zarr("lung93k_shuffled.zarr")
+
+    setup_cache.timeout = 600  # reading lung93k takes longer than asv’s 60s default, and class `timeout` doesn’t apply here
 
     def setup(
         self,
