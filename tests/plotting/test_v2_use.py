@@ -34,6 +34,7 @@ def test_highest_expr_genes(pl, acc) -> None:
     assert set(plot.data["gene"]) <= set(adata.var["symbol"])
 
 
+@pytest.mark.usefixtures("acc")  # loads the holoviews plotting extension
 def test_highly_variable_genes(pl) -> None:
     adata = pbmc3k()
     sc.pp.filter_genes(adata, min_cells=3)
