@@ -100,7 +100,7 @@ def test_read_10x(
 def test_read_10x_mtx_int(
     data_10x: Path, genes: Literal["symbols", "ids"], other_col: str
 ) -> None:
-    str_dt = "str" if pd.options.future.infer_string else "object"
+    str_dt = pd.Series(["x"]).dtype
 
     adata = sc.io.read_10x_mtx(
         data_10x / "int-ids", var_names=f"gene_{genes}", compressed=False

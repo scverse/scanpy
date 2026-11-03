@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, NamedTuple
 import numpy as np
 import scipy as sp
 from scipy.sparse.csgraph import minimum_spanning_tree
+from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
 from .. import logging as logg
@@ -321,73 +322,8 @@ class PAGA:
         # entry ij means transition from j to i
         self.transitions_confidence = transitions_conf.T
 
-    def compute_transitions_old(self):
-        import igraph
 
-        g = _utils.get_igraph_from_adjacency(
-            self._adata.uns["velocyto_transitions"],
-            directed=True,
-        )
-        vc = igraph.VertexClustering(
-            g, membership=self._adata.obs[self._groups_key].cat.codes.values
-        )
-        # this stores all single-cell edges in the cluster graph
-        cg_full = vc.cluster_graph(combine_edges=False)
-        # this is the boolean version that simply counts edges in the clustered graph
-        g_bool = _utils.get_igraph_from_adjacency(
-            self._adata.uns["velocyto_transitions"].astype("bool"),
-            directed=True,
-        )
-        vc_bool = igraph.VertexClustering(
-            g_bool, membership=self._adata.obs[self._groups_key].cat.codes.values
-        )
-        cg_bool = vc_bool.cluster_graph(combine_edges="sum")  # collapsed version
-        transitions = cg_bool.get_adjacency_sparse(attribute="weight")
-        total_n = self._neighbors.n_neighbors * np.array(vc_bool.sizes())
-        transitions_ttest = transitions.copy()
-        transitions_confidence = transitions.copy()
-        from scipy.stats import ttest_1samp
-
-        for i in range(transitions.shape[0]):
-            neighbors = transitions[i].nonzero()[1]
-            for j in neighbors:
-                forward = cg_full.es.select(_source=i, _target=j)["weight"]
-                backward = cg_full.es.select(_source=j, _target=i)["weight"]
-                # backward direction: add minus sign
-                values = np.array(list(forward) + list(-np.array(backward)))
-                # require some minimal number of observations
-                if len(values) < 5:
-                    transitions_ttest[i, j] = 0
-                    transitions_ttest[j, i] = 0
-                    transitions_confidence[i, j] = 0
-                    transitions_confidence[j, i] = 0
-                    continue
-                t, prob = ttest_1samp(values, 0.0)
-                if t > 0:
-                    # number of outgoing edges greater than number of ingoing edges
-                    # i.e., transition from i to j
-                    transitions_ttest[i, j] = -np.log10(max(prob, 1e-10))
-                    transitions_ttest[j, i] = 0
-                else:
-                    transitions_ttest[j, i] = -np.log10(max(prob, 1e-10))
-                    transitions_ttest[i, j] = 0
-                # geom_mean
-                geom_mean = np.sqrt(total_n[i] * total_n[j])
-                diff = (len(forward) - len(backward)) / geom_mean
-                if diff > 0:
-                    transitions_confidence[i, j] = diff
-                    transitions_confidence[j, i] = 0
-                else:
-                    transitions_confidence[j, i] = -diff
-                    transitions_confidence[i, j] = 0
-        transitions_ttest.eliminate_zeros()
-        transitions_confidence.eliminate_zeros()
-        # transpose in order to match convention of stochastic matrices
-        # entry ij means transition from j to i
-        self.transitions_ttest = transitions_ttest.T
-        self.transitions_confidence = transitions_confidence.T
-
-
+@deprecated(Deprecation("1.13.0"))
 def paga_degrees(adata: AnnData) -> list[int]:
     """Compute the degree of each node in the abstracted graph.
 
@@ -408,6 +344,7 @@ def paga_degrees(adata: AnnData) -> list[int]:
     return degrees
 
 
+@deprecated(Deprecation("1.13.0"))
 def paga_expression_entropies(adata: AnnData) -> list[float]:
     """Compute the median expression entropy for each node-group.
 
@@ -444,6 +381,7 @@ class PAGAComparePathsResult(NamedTuple):
     n_paths: int
 
 
+@deprecated(Deprecation("1.13.0"))
 def paga_compare_paths(  # noqa: PLR0912, PLR0915
     adata1: AnnData,
     adata2: AnnData,

@@ -23,11 +23,10 @@ from .._utils._doctests import doctest_skipif
 from .._utils.random import _legacy_random_state, _LegacyRng
 from ..get import _check_mask
 from ..get.get import MultiAcc, _ref_from_json, _rep_from_json
-from ..neighbors import FlatTree
 from ._utils import _choose_representation_compat
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import Iterable
 
     from anndata import AnnData
     from pynndescent import NNDescent
@@ -35,7 +34,6 @@ if TYPE_CHECKING:
 
     from .._keys import _EmbeddingKeys
     from ..get.get import RepAcc
-    from ..neighbors import RPForestDict
 
 
 @doctest_skipif(reason="illustrative short example but not runnable")
@@ -151,27 +149,6 @@ def ingest(
 
     logg.info("    finished", time=start)
     return ing.to_adata(inplace=inplace)
-
-
-def _rp_forest_generate(
-    rp_forest_dict: RPForestDict,
-) -> Generator[FlatTree, None, None]:
-    props = FlatTree._fields
-    num_trees = len(rp_forest_dict[props[0]]["start"]) - 1
-
-    for i in range(num_trees):
-        tree = []
-        for prop in props:
-            start = rp_forest_dict[prop]["start"][i]
-            end = rp_forest_dict[prop]["start"][i + 1]
-            tree.append(rp_forest_dict[prop]["data"][start:end])
-        yield FlatTree(*tree)
-
-    tree = []
-    for prop in props:
-        start = rp_forest_dict[prop]["start"][num_trees]
-        tree.append(rp_forest_dict[prop]["data"][start:])
-    yield FlatTree(*tree)
 
 
 class _DimDict(MutableMapping):
@@ -304,21 +281,6 @@ class Ingest:
             n_neighbors=self._n_neighbors,
             init_graph=init_indices,
             random_state=_legacy_random_state(rng),
-        )
-
-        # temporary hack for the broken forest storage
-        from pynndescent.rp_trees import make_forest
-
-        current_random_state = check_random_state(self._nnd_idx.random_state)
-        self._nnd_idx._rp_forest = make_forest(
-            self._nnd_idx._raw_data,
-            self._nnd_idx.n_neighbors,
-            self._nnd_idx.n_search_trees,
-            self._nnd_idx.leaf_size,
-            self._nnd_idx.rng_state,
-            current_random_state,
-            self._nnd_idx.n_jobs,
-            self._nnd_idx._angular_trees,
         )
 
     def _init_neighbors(self, adata: AnnData, neighbors_key: str | None) -> None:

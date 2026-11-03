@@ -205,14 +205,3 @@ Visualize hierarchical clustering results as a heatmap.
    pl.rank_genes_groups_matrixplot
    pl.rank_genes_groups_tracksplot
 ```
-
-### Simulations
-
-```{eval-rst}
-.. autosummary::
-   :nosignatures:
-   :toctree: generated/
-
-   pl.sim
-
-```

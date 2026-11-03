@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from scverse_misc import Deprecation, deprecated
+
 from ... import logging as logg
 from ..._compat import CSBase
 from ..._utils.random import _accepts_legacy_random_state
@@ -14,6 +16,14 @@ if TYPE_CHECKING:
     from ..._utils.random import RNGLike, SeedLike
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Compose :func:`~scanpy.pp.normalize_total`, :func:`~scanpy.pp.log1p`, "
+        ":func:`~scanpy.pp.highly_variable_genes`, :func:`~scanpy.pp.scale`, "
+        "and :func:`~scanpy.pp.pca` instead.",
+    )
+)
 @_accepts_legacy_random_state(0)
 def recipe_weinreb17(
     adata: AnnData,

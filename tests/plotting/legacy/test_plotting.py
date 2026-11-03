@@ -13,7 +13,6 @@ import pytest
 import seaborn as sns
 from anndata import AnnData
 from matplotlib.testing.compare import compare_images
-from packaging.version import Version
 
 import scanpy as sc
 from scanpy._compat import pkg_version
@@ -34,17 +33,12 @@ if TYPE_CHECKING:
 
     from matplotlib.axes import Axes
 
-# The matplotlib>=3.11 reference images were captured with pandas 3,
-# so they already reflect seaborn’s broken pandas-3 violin plot rendering;
-# the matplotlib<3.11 set (rendered before pandas 3 was released) still needs the xfail.
-# See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-SEABORN_PANDAS3_XFAIL = pkg_version("pandas").major >= 3 and pkg_version(
-    "matplotlib"
-) < Version("3.11")
+# With pandas 3.0, seaborn assigns `hue` palette colors to the wrong violins.
+SEABORN_PANDAS30_XFAIL = pkg_version("pandas").release[:2] == (3, 0)
 
-xfail_seaborn_pandas3 = (
-    [pytest.mark.xfail(reason="seaborn violin plot is incompatible with pandas 3")]
-    if SEABORN_PANDAS3_XFAIL
+xfail_seaborn_pandas30 = (
+    [pytest.mark.xfail(reason="seaborn violin hue colors are wrong with pandas 3.0")]
+    if SEABORN_PANDAS30_XFAIL
     else []
 )
 
@@ -286,8 +280,6 @@ params_dotplot_matrixplot_stacked_violin = [
             dendrogram=True,
         ),
         id="stacked_violin",
-        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-        marks=xfail_seaborn_pandas3,
     ),
     pytest.param(
         partial(
@@ -299,8 +291,6 @@ params_dotplot_matrixplot_stacked_violin = [
             title='scale var, layer="test"',
         ),
         id="stacked_violin_std_scale_var_dict",
-        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-        marks=xfail_seaborn_pandas3,
     ),
     pytest.param(
         partial(
@@ -314,7 +304,7 @@ params_dotplot_matrixplot_stacked_violin = [
         ),
         id="stacked_violin_std_scale_group",
         # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-        marks=xfail_seaborn_pandas3,
+        marks=xfail_seaborn_pandas30,
     ),
     pytest.param(
         partial(
@@ -326,8 +316,6 @@ params_dotplot_matrixplot_stacked_violin = [
             figsize=(8, 2.5),
         ),
         id="stacked_violin_no_cat_obs",
-        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-        marks=xfail_seaborn_pandas3,
     ),
 ]
 
@@ -462,13 +450,10 @@ def test_stacked_violin_obj(plot_cmp, plt):
 
 
 # checking for https://github.com/scverse/scanpy/issues/3152
-def test_stacked_violin_swap_axes_match(
-    request: pytest.FixtureRequest, plot_cmp
-) -> None:
-    if SEABORN_PANDAS3_XFAIL:
-        reason = "seaborn violin plot is incompatible with pandas 3"
-        request.applymarker(pytest.mark.xfail(reason=reason))
-
+@pytest.mark.xfail(
+    SEABORN_PANDAS30_XFAIL, reason="seaborn violin hue colors are wrong with pandas 3.0"
+)
+def test_stacked_violin_swap_axes_match(plot_cmp) -> None:
     pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(
         pbmc,
@@ -574,8 +559,8 @@ def test_violin(subtests: pytest.Subtests, exit_stack: ExitStack, plot_cmp) -> N
             rotation=90,
         )
         with context.xfail(
-            SEABORN_PANDAS3_XFAIL,
-            reason="seaborn violin plot is incompatible with pandas 3",
+            SEABORN_PANDAS30_XFAIL,
+            reason="seaborn violin hue colors are wrong with pandas 3.0",
             raises=AssertionError,
         ):
             plot_cmp("violin_multi_panel_with_groupby")
@@ -619,8 +604,8 @@ def test_violin(subtests: pytest.Subtests, exit_stack: ExitStack, plot_cmp) -> N
         )
         assert len(plt.gcf().axes) == 3
         with context.xfail(
-            SEABORN_PANDAS3_XFAIL,
-            reason="seaborn violin plot is incompatible with pandas 3",
+            SEABORN_PANDAS30_XFAIL,
+            reason="seaborn violin hue colors are wrong with pandas 3.0",
             raises=AssertionError,
         ):
             plot_cmp("violin_ncols_with_groupby")
@@ -777,8 +762,6 @@ _RANK_GENES_GROUPS_PARAMS = [
             groups=["3", "0", "5"],
         ),
         id="stacked_violin",
-        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-        marks=xfail_seaborn_pandas3,
     ),
     pytest.param(
         partial(sc.pl.rank_genes_groups_dotplot, n_genes=4, show=False),
@@ -919,7 +902,7 @@ _RANK_GENES_GROUPS_PARAMS = [
         ),
         id="violin",
         # https://github.com/mwaskom/seaborn/issues/3893
-        marks=xfail_seaborn_pandas3,
+        marks=xfail_seaborn_pandas30,
     ),
     pytest.param(
         partial(
@@ -933,7 +916,7 @@ _RANK_GENES_GROUPS_PARAMS = [
         ),
         id="violin_not_raw",
         # https://github.com/mwaskom/seaborn/issues/3893
-        marks=xfail_seaborn_pandas3,
+        marks=xfail_seaborn_pandas30,
     ),
 ]
 
@@ -972,6 +955,29 @@ def test_rank_genes_group_axes(plot_cmp):
     assert len(axes) == 11
     plot_cmp("ranked_genes_ax")
     plt.close()
+
+
+@pytest.mark.parametrize(
+    ("plot_func", "kwargs"),
+    [
+        pytest.param(sc.pl.rank_genes_groups, {}, id="rank_genes_groups"),
+        pytest.param(
+            sc.pl.rank_genes_groups_dotplot,
+            {"dendrogram": False},
+            id="shared-rank-genes-groups-plots",
+        ),
+    ],
+)
+def test_rank_genes_groups_single_group_string(
+    plot_func: Callable[..., Any], kwargs: dict[str, Any]
+) -> None:
+    adata = pbmc68k_reduced()
+    sc.tl.rank_genes_groups(adata, "bulk_labels")
+
+    result = plot_func(adata, groups="Dendritic", n_genes=2, show=False, **kwargs)
+
+    assert result is not None
+    plt.close("all")
 
 
 @pytest.fixture(scope="session")
@@ -1129,6 +1135,21 @@ def test_genes_symbols(plot_cmp, id, fn):
 
     fn(adata, symbols, "cell_type", dendrogram=True, gene_symbols="symbols", show=False)
     plot_cmp(f"{id}_gene_symbols")
+
+
+@pytest.mark.parametrize(
+    "fn",
+    [
+        sc.pl.heatmap,
+        sc.pl.tracksplot,
+        sc.pl.dotplot,
+        sc.pl.matrixplot,
+        sc.pl.stacked_violin,
+    ],
+)
+def test_var_names_gene_symbols_documented(fn):
+    """Docs must state that `gene_symbols` changes where `var_names` are looked up."""
+    assert "adata.var[gene_symbols]" in fn.__doc__
 
 
 @pytest.fixture(scope="session")

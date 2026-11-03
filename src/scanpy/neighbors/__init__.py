@@ -6,7 +6,7 @@ import contextlib
 import sys
 from inspect import signature
 from textwrap import indent
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING
 
 if sys.version_info < (3, 15):
     from types import MappingProxyType as frozendict  # noqa: N813
@@ -272,13 +272,6 @@ def neighbors(  # noqa: PLR0913
         ),
     )
     return adata if copy else None
-
-
-class FlatTree(NamedTuple):  # noqa: D101
-    hyperplanes: None
-    offsets: None
-    children: None
-    indices: None
 
 
 def _make_forest_dict(forest):

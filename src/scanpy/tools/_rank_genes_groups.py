@@ -121,7 +121,7 @@ def _ranks(
     /,
     mask_obs: NDArray[np.bool] | None = None,
     mask_obs_rest: NDArray[np.bool] | None = None,
-) -> Generator[tuple[NDArray[np.float64], int, int], None, None]:
+) -> Generator[tuple[NDArray[np.float64], int, int]]:
     n_genes = x.shape[1]
 
     if isinstance(x, CSBase):
@@ -459,7 +459,7 @@ class _RankGenes:
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
-    ) -> Generator[_TestResult, None, None]:
+    ) -> Generator[_TestResult]:
         from scipy import stats
 
         for group_index, (mask_obs, mean_group, var_group) in enumerate(
@@ -508,7 +508,7 @@ class _RankGenes:
 
             yield group_index, scores, pvals
 
-    def wilcoxon(self, *, tie_correct: bool) -> Generator[_TestResult, None, None]:
+    def wilcoxon(self, *, tie_correct: bool) -> Generator[_TestResult]:
         from scipy import stats
 
         n_genes = self.X.shape[1]
@@ -585,7 +585,7 @@ class _RankGenes:
 
                 yield group_index, scores[group_index], pvals
 
-    def logreg(self, **kwds) -> Generator[_TestResult, None, None]:
+    def logreg(self, **kwds) -> Generator[_TestResult]:
         # if reference is not set, then the groups listed will be compared to the rest
         # if reference is set, then the groups listed will be compared only to the other groups listed
         from sklearn.linear_model import LogisticRegression
@@ -616,7 +616,7 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def illico(self, *, tie_correct: bool) -> Generator[_TestResult, None, None]:
+    def illico(self, *, tie_correct: bool) -> Generator[_TestResult]:
         from illico import asymptotic_wilcoxon
 
         adata = AnnData(
@@ -1070,17 +1070,45 @@ def filter_rank_genes_groups(  # noqa: PLR0912
     To preserve the original structure of adata.uns['rank_genes_groups'],
     filtered genes are set to `NaN`.
 
+    The log2 fold changes and fractions of expressing cells are taken from
+    the :func:`~scanpy.tl.rank_genes_groups` results if they are stored there
+    (`'logfoldchanges'`, and `'pts'` and `'pts_rest'` if `pts=True` was passed),
+    `groupby` and `use_raw` are the same as for that call,
+    and it compared each group to `reference='rest'`.
+    Otherwise, they are computed from the expression values,
+    comparing each group to all other cells.
+
     Parameters
     ----------
     adata
+        Annotated data matrix containing the results of
+        :func:`~scanpy.tl.rank_genes_groups`.
     key
+        The key in `adata.uns` where the results of
+        :func:`~scanpy.tl.rank_genes_groups` are stored (its `key_added`).
+        Defaults to `'rank_genes_groups'`.
     groupby
+        The key of the observations grouping to consider.
+        Defaults to the one used for :func:`~scanpy.tl.rank_genes_groups`.
     layer
+        Key from `adata.layers` whose values are used when fractions or
+        fold changes are computed. Defaults to `adata.X` (or `adata.raw`,
+        see `use_raw`). Unlike `use_raw`, it is not taken from the results.
     use_raw
+        Use `raw` attribute of `adata` when fractions or fold changes are computed.
+        Defaults to the value used for :func:`~scanpy.tl.rank_genes_groups`,
+        or to `False` if `layer` is specified.
     key_added
+        The key in `adata.uns` the filtered results are saved to.
     min_in_group_fraction
+        Only keep genes expressed (i.e. with a non-zero value) in more than
+        this fraction of the cells in the group.
     min_fold_change
+        Only keep genes whose log2 fold change between the group and
+        all other cells is greater than this. See `compare_abs`.
     max_out_group_fraction
+        Only keep genes expressed in less than this fraction of the cells
+        outside the group.
     compare_abs
         If `True`, compare absolute values of log fold change with `min_fold_change`.
 
