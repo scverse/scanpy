@@ -23,9 +23,12 @@ from .._utils import (
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 
 if TYPE_CHECKING:
+    from typing import TypeAlias
+
     from numpy.typing import ArrayLike, NDArray
 
-type _Array = CSBase | np.ndarray | DaskArray
+# not `type`: Sphinx would render the private name in signatures
+_Array: TypeAlias = CSBase | np.ndarray | DaskArray  # noqa: UP040
 
 
 @singledispatch
