@@ -27,11 +27,14 @@ from ..get import _check_mask, _get_arr, _set_obs_rep
 from ..get.get import AdRef, _mask_arg
 
 if TYPE_CHECKING:
+    from typing import TypeAlias
+
     from numpy.typing import ArrayLike, NDArray
 
     from ..get.get import Mask
 
-type _Array = CSBase | np.ndarray | DaskArray
+# not `type`: Sphinx would render the private name in signatures
+_Array: TypeAlias = CSBase | np.ndarray | DaskArray  # noqa: UP040
 
 
 @singledispatch

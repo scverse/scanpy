@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
+from anndata import AnnData
 from anndata.tests.helpers import assert_equal
 from sklearn.metrics import silhouette_score
 
@@ -51,6 +52,36 @@ def test_covariates():
     design = _design_matrix(df, key, batch_cats)
 
     assert len(design.columns) == 4 + len(batch_cats) - 1
+
+
+@pytest.mark.parametrize("covariates", [["cond"], ["cond", "donor"]])
+def test_categorical_covariates(covariates: list[str]) -> None:
+    """Categorical covariates are modeled, so their effect survives batch correction."""
+    rng = np.random.default_rng(0)
+    batch = rng.integers(0, 3, 600)
+    treated = rng.random(600) < np.where(batch == 0, 0.8, 0.2)
+    cond_effect = rng.normal(0, 2, 10)
+    x = (
+        5
+        + rng.normal(0, 2, (3, 10))[batch]
+        + np.outer(treated, cond_effect)
+        + rng.normal(0, 0.5, (600, 10))
+    )
+    adata = AnnData(x)
+    adata.obs = pd.DataFrame(
+        dict(
+            batch=batch.astype(str),
+            cond=np.where(treated, "treated", "ctrl"),
+            donor=rng.choice(["d0", "d1", "d2"], 600),
+        ),
+        index=adata.obs_names,
+    ).astype("category")
+
+    corrected = sc.pp.combat(adata, "batch", covariates=covariates, inplace=False)
+
+    np.testing.assert_allclose(
+        corrected[treated].mean(0) - corrected[~treated].mean(0), cond_effect, atol=0.2
+    )
 
 
 def test_combat_obs_names():

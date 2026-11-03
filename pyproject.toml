@@ -123,18 +123,13 @@ docs = [
     "plotly",
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[dask-ml,leiden,paga,plotting,scanpy2,scrublet]",
-    "scanpydoc>=0.17.4",
-    "scverse-misc[sphinx]",
+    "scverse-doc[full]>=0.4",
+    "scverse-misc[sphinx]>=0.1.7",
     "sphinx>=9.1",
     "sphinx-autodoc-typehints>=3.13.5",
-    "sphinx-book-theme>=1.1",
-    "sphinx-copybutton",
-    "sphinx-design",
     "sphinx-exec-jupyter[holoviews]>=0.4.2",
     "sphinx-issues>=5.0.1",
     "sphinxcontrib-bibtex",
-    "sphinxcontrib-katex",
-    "sphinxext-opengraph",                                   # for nice cards when sharing on social
 ]
 test-min = [
     "dependency-groups",    # for CI scripts doctests
@@ -290,6 +285,13 @@ filterwarnings = [
     "ignore:Consolidated metadata is currently not part:UserWarning",
     # joblib fallback to serial mode in restricted multiprocessing environments
     "ignore:.*joblib will operate in serial mode:UserWarning",
+    # anndata≤0.13.4 accesses options deprecated in pandas 3.1
+    # (no `::anndata` module filter: `pytest.warns` re-emits warnings with module="warnings")
+    "ignore:The '(future\\.infer_string|mode\\.chained_assignment)' option is deprecated",
+    # anndata≤0.13.4 uses `inplace=True` when reading legacy zarr (fixed in scverse/anndata#2671)
+    "ignore:The inplace keyword in DataFrame\\.set_index is deprecated::anndata\\.",
+    # anndata<0.12.18 passes arguments deprecated in scverse-misc 0.1
+    "ignore:The (decorator_name|docstring_style) argument is deprecated:DeprecationWarning",
 ]
 junit_family = "xunit1"
 markers = [
