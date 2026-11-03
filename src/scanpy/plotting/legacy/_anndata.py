@@ -885,9 +885,6 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
         )
         hue_key = user_hue or groupby
         kwds["hue"] = hue_key
-        if hue_key == groupby:
-            # hue == x, seaborn wrongly detects need for dodging with pandas 3
-            kwds.setdefault("dodge", False)
         if kwds.get("palette") is None:
             if isinstance(adata.obs[hue_key].dtype, CategoricalDtype):
                 _utils.add_colors_for_categorical_sample_annotation(adata, hue_key)
