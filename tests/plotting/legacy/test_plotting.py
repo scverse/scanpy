@@ -674,6 +674,33 @@ def test_violin(subtests: pytest.Subtests, exit_stack: ExitStack, plot_cmp) -> N
         plt.close(fig)
 
 
+@pytest.mark.parametrize(
+    "kw",
+    [
+        pytest.param(dict(groupby="bulk_labels"), id="groupby"),
+        pytest.param(dict(multi_panel=True), id="multi_panel"),
+    ],
+)
+def test_violin_hue_stripplot(kw: dict[str, object]) -> None:
+    sc.pl.violin(pbmc68k_reduced(), "n_genes", hue="phase", show=False, **kw)
+    for ax in plt.gcf().axes:
+        strips = [
+            c
+            for c in ax.collections
+            if isinstance(c, mpl.collections.PathCollection) and len(c.get_offsets())
+        ]
+        # points are split like the violins (one strip per hue level) …
+        assert len(strips) > 1
+        centers = {
+            round(float(np.asarray(c.get_offsets())[:, 0].mean()), 1) for c in strips
+        }
+        assert len(centers) == len(strips)
+        # … and stay black
+        for c in strips:
+            np.testing.assert_array_equal(c.get_facecolor()[:, :3], 0)
+    plt.close("all")
+
+
 # TODO: Generalize test to more plotting types
 def test_violin_without_raw(tmp_path):
     # https://github.com/scverse/scanpy/issues/1546
