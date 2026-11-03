@@ -23,6 +23,7 @@ from .._utils import (
 )
 from ..get import _get_arr, aggregate
 from ._distributed import materialize_as_ndarray
+from ._highly_variable_genes_poisson import _highly_variable_genes_poisson
 from ._simple import filter_genes
 
 if TYPE_CHECKING:
@@ -647,13 +648,14 @@ def highly_variable_genes(  # noqa: PLR0913
     filter_unexpressed_genes: bool | None = None,
     check_values: bool = True,
 ) -> pd.DataFrame | None:
-    """Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
+    """Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019,Andrews2019`.
 
-    Expects logarithmized data, except when `flavor='seurat_v3'`/`'seurat_v3_paper'`, in which count
-    data is expected.
+    Expects logarithmized data, except when `flavor='seurat_v3'`/`'seurat_v3_paper'`/
+    `'poisson_gene_selection'`, in which count data is expected.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
-    :cite:p:`Satija2015`, Cell Ranger :cite:p:`Zheng2017`, and Seurat v3 :cite:p:`Stuart2019`.
+    :cite:p:`Satija2015`, Cell Ranger :cite:p:`Zheng2017`, and Seurat v3 :cite:p:`Stuart2019`,
+    or ranks genes by zero enrichment based on M3Drop :cite:p:`Andrews2019`.
 
     `'seurat_v3'`/`'seurat_v3_paper'` requires `scikit-misc` package. If you plan to use this flavor, consider
     installing `scanpy` with this optional dependency: `scanpy[skmisc]`.
@@ -671,6 +673,19 @@ def highly_variable_genes(  # noqa: PLR0913
     by the normalized variance.
     Only if `batch_key` is not `None`, the two flavors differ: For `flavor='seurat_v3'`, genes are first sorted by the median (across batches) rank, with ties broken by the number of batches a gene is a HVG.
     For `flavor='seurat_v3_paper'`, genes are first sorted by the number of batches a gene is a HVG, with ties broken by the median (across batches) rank.
+
+    For `flavor='poisson_gene_selection'` :cite:p:`Andrews2019`, genes are ranked by how
+    strongly their zeros are enriched relative to a Poisson null model.
+    Counts of gene `g` in cell `c` are modeled as Poisson with rate `p_g * L_c`,
+    where `p_g` is the gene's share of all counts and `L_c` the cell's library size,
+    giving an expected zero fraction `p_exp`.
+    Genes are ranked by the zero-enrichment probability `p_obs * (1 - p_exp)`,
+    where `p_obs` is the observed zero fraction.
+    This is the closed form of the probability that `scvi-tools`' `poisson_gene_selection`
+    estimates by Monte-Carlo sampling, and matches the `rapids-singlecell` implementation.
+    Requires raw counts and selects `n_top_genes` genes (default 2000).
+    With `batch_key`, genes are first sorted by the number of batches in which they are
+    among the top `n_top_genes`, with ties broken by the median (across batches) rank.
 
     The following may help when comparing to Seurat's naming:
     If `batch_key=None` and `flavor='seurat'`, this mimics Seurat's `FindVariableFeatures(…, method='mean.var.plot')`.
@@ -691,18 +706,19 @@ def highly_variable_genes(  # noqa: PLR0913
         If provided, use `adata.layers[layer]` for expression values instead of `adata.X`.
     n_top_genes
         Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'`.
+        Defaults to 2000 if `flavor='poisson_gene_selection'`.
     min_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`.
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`/`'poisson_gene_selection'`.
     max_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`.
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`/`'poisson_gene_selection'`.
     min_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`.
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`/`'poisson_gene_selection'`.
     max_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`.
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`/`'poisson_gene_selection'`.
     span
         The fraction of the data (cells) used when estimating the variance in the loess
         model fit if `flavor='seurat_v3'`.
@@ -711,6 +727,7 @@ def highly_variable_genes(  # noqa: PLR0913
         done with respect to each bin. If just a single gene falls into a bin,
         the normalized dispersion is artificially set to 1. You'll be informed
         about this if you set `settings.verbosity = 4`.
+        Ignored if `flavor='poisson_gene_selection'`.
     flavor
         Choose the flavor for identifying highly variable genes
         (default depends on :attr:`scanpy.settings.preset` property :attr:`~scanpy.Preset.highly_variable_genes`).
@@ -728,12 +745,16 @@ def highly_variable_genes(  # noqa: PLR0913
         by how many batches they are a HVG. For dispersion-based flavors ties are broken
         by normalized dispersion. For `flavor = 'seurat_v3_paper'`, ties are broken by the median
         (across batches) rank based on within-batch normalized variance.
+        For `flavor='poisson_gene_selection'`, ties are broken by the median (across batches)
+        rank based on within-batch zero-enrichment probability.
     filter_unexpressed_genes
         If `True`, remove genes that are not expressed in at least one cell from highly variable genes computation (does NOT remove the gene in-place).
         Disabled by default and ignored if `batch_key` is set, since filtering always enabled for batch-aware mode.
+        Ignored if `flavor='poisson_gene_selection'`, where unexpressed genes get a zero-enrichment
+        probability of 0 and are ranked last.
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
-        Only used if `flavor='seurat_v3'`/`'seurat_v3_paper'`.
+        Only used if `flavor='seurat_v3'`/`'seurat_v3_paper'`/`'poisson_gene_selection'`.
 
     Returns
     -------
@@ -759,6 +780,22 @@ def highly_variable_genes(  # noqa: PLR0913
         If `batch_key` is given, this denotes in how many batches genes are detected as HVG
     `adata.var['highly_variable_intersection']` : :class:`pandas.Series` (dtype `bool`)
         If `batch_key` is given, this denotes the genes that are highly variable in all batches
+    `adata.var['observed_fraction_zeros']` : :class:`pandas.Series` (dtype `float`)
+        For `flavor='poisson_gene_selection'`, observed fraction of zeros per gene,
+        median in the case of multiple batches
+    `adata.var['expected_fraction_zeros']` : :class:`pandas.Series` (dtype `float`)
+        For `flavor='poisson_gene_selection'`, expected fraction of zeros per gene
+        under the Poisson model, median in the case of multiple batches
+    `adata.var['prob_zero_enrichment']` : :class:`pandas.Series` (dtype `float`)
+        For `flavor='poisson_gene_selection'`, zero-enrichment probability per gene,
+        median in the case of multiple batches
+    `adata.var['prob_zero_enrichment_rank']` : :class:`pandas.Series` (dtype `float`)
+        For `flavor='poisson_gene_selection'`, 0-based rank of the gene by zero-enrichment
+        probability, where *higher* means more enriched (as in `scvi-tools` and
+        `rapids-singlecell`), median in the case of multiple batches
+    `adata.var['prob_zero_enriched_nbatches']` : :class:`pandas.Series` (dtype `int`)
+        If `batch_key` is given and `flavor='poisson_gene_selection'`,
+        in how many batches genes are among the top `n_top_genes`
 
     """
     if isinstance(flavor, Default):
@@ -787,6 +824,17 @@ def highly_variable_genes(  # noqa: PLR0913
             batch_key=batch_key,
             check_values=check_values,
             span=span,
+            subset=subset,
+            inplace=inplace,
+        )
+
+    if flavor == "poisson_gene_selection":
+        return _highly_variable_genes_poisson(
+            adata,
+            layer=layer,
+            n_top_genes=n_top_genes,
+            batch_key=batch_key,
+            check_values=check_values,
             subset=subset,
             inplace=inplace,
         )
