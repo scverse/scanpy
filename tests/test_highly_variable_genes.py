@@ -156,30 +156,6 @@ def test_no_filter_genes(flavor):
     assert adata.var["highly_variable"].sum() == 10000
 
 
-@pytest.mark.filterwarnings("ignore:Variable names are not unique:UserWarning")
-@pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
-def test_batched_duplicate_var_names(flavor: Literal["seurat", "cell_ranger"]):
-    """Genes sharing a name are still separate genes (#4432)."""
-    rng = np.random.default_rng(0)
-    x = rng.negative_binomial(3, 0.3, (300, 120)).astype(np.float32)
-    x[:150, 0] = 0  # unexpressed in batch "a", so filtered out there
-    obs = pd.DataFrame({"batch": pd.Categorical(np.repeat(["a", "b"], 150))})
-    obs.index = obs.index.astype(str)
-
-    def hvg(var_names: list[str]) -> pd.DataFrame:
-        adata = AnnData(x.copy(), obs=obs, var=pd.DataFrame(index=var_names))
-        if flavor == "seurat":
-            sc.pp.log1p(adata)
-        return sc.pp.highly_variable_genes(
-            adata, flavor=flavor, n_top_genes=30, batch_key="batch", inplace=False
-        )
-
-    unique = hvg([f"g{i}" for i in range(120)])
-    dup = hvg([f"g{i % 100}" for i in range(120)])
-    assert dup["highly_variable"].sum() == 30
-    assert_frame_equal(dup.reset_index(drop=True), unique.reset_index(drop=True))
-
-
 def _check_pearson_hvg_columns(output_df: pd.DataFrame, n_top_genes: int):
     assert pd.api.types.is_float_dtype(output_df["residual_variances"].dtype)
 
@@ -512,6 +488,60 @@ def test_compare_to_seurat_v3():
     )
     assert len(gene_intersection_paper) / 2000 > 0.95
     assert len(gene_intersection_impl) / 2000 < 0.95
+
+
+@pytest.mark.filterwarnings("ignore:Variable names are not unique:UserWarning")
+@pytest.mark.parametrize(
+    "flavor",
+    [
+        "seurat",
+        "cell_ranger",
+        pytest.param("seurat_v3", marks=needs.skmisc),
+        pytest.param("seurat_v3_paper", marks=needs.skmisc),
+    ],
+)
+@pytest.mark.parametrize("batch_key", [None, "batch"])
+@pytest.mark.parametrize("inplace", [False, True])
+@pytest.mark.parametrize("subset", [False, True])
+def test_duplicate_var_names(
+    flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"],
+    batch_key: Literal["batch"] | None,
+    *,
+    inplace: bool,
+    subset: bool,
+) -> None:
+    """Genes sharing a name are still separate genes (#4432)."""
+    rng = np.random.default_rng(0)
+    x = rng.negative_binomial(3, 0.3, (300, 120)).astype(np.float32)
+    x[:150, 0] = 0  # unexpressed in batch "a", so filtered out there
+    adata = AnnData(x)
+    adata.obs["batch"] = pd.Categorical(np.repeat(["a", "b"], 150))
+    if flavor == "seurat":
+        sc.pp.log1p(adata)
+    adata_dup = adata.copy()
+    duplicate_names = pd.Index([f"g{i % 100}" for i in range(adata.n_vars)])
+    adata_dup.var_names = duplicate_names
+
+    results = [
+        sc.pp.highly_variable_genes(
+            a,
+            flavor=flavor,
+            n_top_genes=30,
+            batch_key=batch_key,
+            inplace=inplace,
+            subset=subset,
+        )
+        for a in [adata, adata_dup]
+    ]
+    expected, result = (adata.var, adata_dup.var) if inplace else results
+    assert isinstance(expected, pd.DataFrame)
+    assert isinstance(result, pd.DataFrame)
+    assert result["highly_variable"].sum() == 30
+
+    expected.index = duplicate_names[expected.index.astype(int)]
+    if "gene_name" in expected.columns:
+        expected["gene_name"] = expected.index
+    assert_frame_equal(result, expected)
 
 
 @needs.skmisc
