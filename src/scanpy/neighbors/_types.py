@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Literal, Protocol, TypedDict
 
 import numpy as np
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-    from typing import Any, NotRequired, Self, TypeAlias
+    from typing import Any, NotRequired, Self
 
     from .._compat import CSRBase
     from .._utils.random import _LegacyRandom
-
-    # TODO: make `type` when https://github.com/sphinx-doc/sphinx/pull/13508 is released
-    RPForestDict: TypeAlias = Mapping[str, Mapping[str, np.ndarray]]  # noqa: UP040
 
 __all__ = [
     "KnnTransformerLike",
@@ -27,6 +23,8 @@ __all__ = [
     "_MetricScipySpatial",
     "_MetricSparseCapable",
 ]
+
+type RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
 type _Method = Literal["umap", "gauss", "jaccard"]
 type _KnownTransformer = Literal["pynndescent", "sklearn"]
