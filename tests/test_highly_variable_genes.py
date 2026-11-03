@@ -509,8 +509,8 @@ def test_compare_to_seurat_v3():
     ],
 )
 @pytest.mark.parametrize("batch_key", [None, "batch"])
-@pytest.mark.parametrize("inplace", [False, True])
-@pytest.mark.parametrize("subset", [False, True])
+@pytest.mark.parametrize("inplace", [False, True], ids=["copy", "inplace"])
+@pytest.mark.parametrize("subset", [False, True], ids=["all", "subset"])
 def test_duplicate_var_names(
     flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"],
     batch_key: Literal["batch"] | None,
@@ -536,7 +536,7 @@ def test_duplicate_var_names(
             flavor=flavor,
             n_top_genes=30,
             batch_key=batch_key,
-            inplace=inplace,
+            out=not inplace,
             subset=subset,
         )
         for a in [adata, adata_dup]
