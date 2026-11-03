@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import singledispatch, wraps
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numba
 import numpy as np
@@ -29,7 +29,7 @@ from ._docs import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Mapping
+    from collections.abc import Collection
 
     from anndata import AnnData
     from numpy._typing._array_like import NDArray
@@ -205,7 +205,7 @@ def describe_var(
     return var_metrics
 
 
-class QcMetricsOut(NamedTuple):
+class QcMetricsResult(NamedTuple):
     """Outputs of :func:`~scanpy.pp.calculate_qc_metrics`."""
 
     obs: pd.DataFrame
@@ -214,7 +214,14 @@ class QcMetricsOut(NamedTuple):
     """Per-variable metrics, see :func:`~scanpy.pp.calculate_qc_metrics`."""
 
 
-QC_METRICS_KINDS: QcMetricsOut[set[OutKind], set[OutKind]] = QcMetricsOut(
+class QcMetricsOut(TypedDict, total=False):
+    """Where a mapping `out` of :func:`~scanpy.pp.calculate_qc_metrics` writes each output, see :class:`~scanpy.pp.QcMetricsResult`."""
+
+    obs: MultiAcc | str
+    var: MultiAcc | str
+
+
+QC_METRICS_KINDS: QcMetricsResult[set[OutKind], set[OutKind]] = QcMetricsResult(
     {"obsm"}, {"varm"}
 )
 """Where a mapping `out` can write the outputs of `pp.calculate_qc_metrics`."""
@@ -241,7 +248,7 @@ def calculate_qc_metrics(  # noqa: PLR0913
     qc_vars: Collection[str] | str = (),
     percent_top: Collection[int] | None = (50, 100, 200, 500),
     use: LayerAcc | str | None = None,
-    out: MultiAcc | str | Mapping[str, MultiAcc | str] | bool | Default = Default(
+    out: MultiAcc | str | QcMetricsOut | bool | Default = Default(
         preset=("calculate_qc_metrics", "out")
     ),
     log1p: bool = True,
@@ -250,7 +257,7 @@ def calculate_qc_metrics(  # noqa: PLR0913
     layer: str | None = None,
     use_raw: bool = False,
     inplace: bool | None = None,
-) -> QcMetricsOut | None:
+) -> QcMetricsResult | None:
     r"""Calculate quality control metrics.
 
     Calculates a number of qc metrics for an AnnData object, see section
@@ -275,7 +282,7 @@ def calculate_qc_metrics(  # noqa: PLR0913
         to `.obsm['qc']` and `.varm['qc']` instead.
         A mapping writes only the tables it names, e.g. `{{'obs': A.obsm['qc']}}`.
         :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d.
-        If :data:`True`, they are returned as a :class:`~scanpy.pp.QcMetricsOut` instead of written.
+        If :data:`True`, they are returned as a :class:`~scanpy.pp.QcMetricsResult` instead of written.
         The default depends on :attr:`scanpy.settings.preset`:
         :data:`True` for :attr:`~scanpy.Preset.ScanpyV1`, :data:`False` for :attr:`~scanpy.Preset.ScanpyV2Preview`.
     log1p
@@ -285,7 +292,7 @@ def calculate_qc_metrics(  # noqa: PLR0913
 
     Returns
     -------
-    Returns the calculated metrics (as :class:`~scanpy.pp.QcMetricsOut`) if `out=True`, else `None`.
+    Returns the calculated metrics (as :class:`~scanpy.pp.QcMetricsResult`) if `out=True`, else `None`.
     With `out=False`, sets the following columns of `adata.obs` and `adata.var`
     (an accessor or mapping writes them as tables instead, see `out`):
 
@@ -355,7 +362,7 @@ def calculate_qc_metrics(  # noqa: PLR0913
         log1p=log1p,
     )
 
-    vals = QcMetricsOut(obs_metrics, var_metrics)
+    vals = QcMetricsResult(obs_metrics, var_metrics)
     match out:
         case True:
             return vals
@@ -367,7 +374,7 @@ def calculate_qc_metrics(  # noqa: PLR0913
                 out,
                 None,
                 # what a single accessor names after itself (`out=False` writes columns instead)
-                dests=lambda _: QcMetricsOut(dict(obsm="qc"), dict(varm="qc")),
+                dests=lambda _: QcMetricsResult(dict(obsm="qc"), dict(varm="qc")),
                 kinds=QC_METRICS_KINDS,
             )
             _write_dests(adata, vals, dests)

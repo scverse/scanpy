@@ -42,7 +42,7 @@ from ...get._use import (
     _resolve_obs,
 )
 from ...preprocessing._docs import doc_mask_var
-from ...preprocessing._pca import PCA_KINDS, PcaOut, _pca_dests, pca
+from ...preprocessing._pca import PCA_KINDS, PcaResult, _pca_dests, pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -192,7 +192,7 @@ def normalize_pearson_residuals(
 
 def _pca_kwargs_dests(
     kwargs_pca: Mapping[str, Any],
-) -> tuple[str | Default | None, PcaOut[_SetRep | None, _SetRep | None]]:
+) -> tuple[str | Default | None, PcaResult[_SetRep | None, _SetRep | None]]:
     """Where `pca(**kwargs_pca)` writes, see `_write_pca_from`."""
     if kwargs_pca.get("out") is True:
         msg = "`kwargs_pca['out']=True` is not supported."
@@ -210,7 +210,7 @@ def _pca_kwargs_dests(
 def _write_pca_from(
     adata: AnnData,
     adata_pca: AnnData,
-    dests: PcaOut[_SetRep | None, _SetRep | None],
+    dests: PcaResult[_SetRep | None, _SetRep | None],
     mask_var: np.ndarray | None,
 ) -> None:
     """Copy PCA outputs from `adata_pca` (`adata` subset to `mask_var`) to `adata`."""
@@ -222,7 +222,7 @@ def _write_pca_from(
         padded = np.zeros(shape=(adata.n_vars, loadings.shape[1]))
         padded[mask_var] = loadings
         loadings = padded
-    _write_dests(adata, PcaOut(embedding, loadings), dests)
+    _write_dests(adata, PcaResult(embedding, loadings), dests)
 
 
 @_doc_params(

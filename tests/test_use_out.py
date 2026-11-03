@@ -11,7 +11,7 @@ from anndata.tests.helpers import asarray
 from scipy import sparse
 
 import scanpy as sc
-from scanpy.neighbors import NeighborsOut
+from scanpy.neighbors import NeighborsResult
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 
@@ -337,6 +337,34 @@ def test_out_multi_mapping(adata: AnnData) -> None:
     sc.tl.umap(adata, use=A.obsp["c"])  # readers find it
 
 
+@pytest.mark.parametrize(
+    ("call", "out"),
+    [
+        pytest.param(
+            lambda a, **kw: sc.pp.neighbors(a, n_neighbors=3, **kw),
+            dict(connectivities="obsp.x", distances="obsp.x"),
+            id="neighbors",
+        ),
+        pytest.param(
+            lambda a, **kw: sc.pp.scale(a, zero_center=True, **kw),
+            dict(mean="var.x", std="var.x"),
+            id="scale",
+        ),
+        pytest.param(
+            sc.pp.scrublet,
+            dict(doublet_score="obs.x", predicted_doublet="obs.x"),
+            id="scrublet",
+        ),
+    ],
+)
+def test_out_mapping_same_place(
+    adata: AnnData, call: Callable[..., object], out: dict[str, str]
+) -> None:
+    """Two outputs can’t be written to the same place."""
+    with pytest.raises(ValueError, match=r"same place"):
+        call(adata, out=out)
+
+
 def test_out_multi_primary(adata: AnnData) -> None:
     """A single accessor names the primary output, the others follow its key."""
     from anndata.acc import A
@@ -364,17 +392,12 @@ def test_out_multi_primary(adata: AnnData) -> None:
             lambda acc: dict(embedding=acc.obsm["X_pca"], loadings=acc.varm["PCs"]),
             id="pca",
         ),
-        pytest.param(
-            lambda a, **kw: sc.pp.pca(a, n_comps=2, **kw),
-            lambda acc: acc.obsm["X_pca"],
-            id="pca-single",
-        ),
     ],
 )
 def test_out_default_places_is_default(
     adata: AnnData, call: Callable[..., object], out: Callable[[object], object]
 ) -> None:
-    """Naming the default places in `out` does exactly what `out=False` does."""
+    """Naming the default places in a mapping `out` does exactly what `out=False` does."""
     from anndata.acc import A
 
     expected = adata.copy()
@@ -430,7 +453,7 @@ def test_out_transform_primary(
 
 def test_out_multi_true(adata: AnnData) -> None:
     res = sc.pp.neighbors(adata, n_neighbors=3, out=True)
-    assert isinstance(res, NeighborsOut)
+    assert isinstance(res, NeighborsResult)
     assert res.distances.shape == res.connectivities.shape == (adata.n_obs,) * 2
     assert not adata.obsp
     assert "neighbors" not in adata.uns
@@ -526,7 +549,7 @@ def test_pca_out_true(adata: AnnData) -> None:
     """`out=True` returns embedding and (mask-padded) loadings, writing nothing."""
     adata.var["highly_variable"] = [True, True, True, False, True]
     res = sc.pp.pca(adata, n_comps=2, out=True)
-    assert isinstance(res, sc.pp.PcaOut)
+    assert isinstance(res, sc.pp.PcaResult)
     assert res.embedding.shape == (adata.n_obs, 2)
     assert res.loadings.shape == (adata.n_vars, 2)
     np.testing.assert_array_equal(res.loadings[3], 0)
@@ -557,7 +580,7 @@ def test_normalize_total_out(adata: AnnData) -> None:
     from anndata.acc import A
 
     res = sc.pp.normalize_total(adata, target_sum=1, out=True)
-    assert isinstance(res, sc.pp.NormalizeTotalOut)
+    assert isinstance(res, sc.pp.NormalizeTotalResult)
     assert res.norm_factor.shape == (adata.n_obs,)
     np.testing.assert_array_equal(adata.X, _orig(adata))
 
@@ -587,7 +610,7 @@ def test_normalize_total_single_acc(adata: AnnData) -> None:
 def test_scale_out_true_writes_nothing(adata: AnnData) -> None:
     var_before = adata.var.copy()
     res = sc.pp.scale(adata, zero_center=True, out=True)
-    assert isinstance(res, sc.pp.ScaleOut)
+    assert isinstance(res, sc.pp.ScaleResult)
     assert res.scaled.shape == adata.shape
     assert res.mean.shape == res.std.shape == (adata.n_vars,)
     np.testing.assert_array_equal(adata.X, _orig(adata))
@@ -724,6 +747,19 @@ UNS_FOLLOWS_OUT = [
         "obsp.k",
         "k",
         id="neighbors",
+    ),
+    # a single accessor at the primary output’s default place isn’t special-cased
+    pytest.param(
+        lambda a, **kw: sc.pp.pca(a, n_comps=2, **kw),
+        "obsm.X_pca",
+        "X_pca",
+        id="pca-default",
+    ),
+    pytest.param(
+        lambda a, **kw: sc.pp.neighbors(a, n_neighbors=3, **kw),
+        "obsp.connectivities",
+        "connectivities",
+        id="neighbors-default",
     ),
 ]
 

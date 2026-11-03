@@ -84,13 +84,16 @@ Compute densities on embeddings.
 
 ## Output types
 
-Functions with several outputs return these if passed `out=True`.
+Functions with several outputs return a `…Result` if passed `out=True`,
+and take a `…Out` mapping as `out` to write each output to a place of choice.
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
    :toctree: generated/
 
+   tl.CellCycleResult
    tl.CellCycleOut
+   tl.DptResult
    tl.DptOut
 ```

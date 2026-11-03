@@ -125,7 +125,7 @@ def test_cell_demultiplexing(hashed: Hashed) -> None:
 @needs.anndata_acc
 def test_out_true(adata: AnnData) -> None:
     res = sc.pp.hashsolo(adata, A.obs[HASHES], out=True)
-    assert isinstance(res, sc.pp.HashsoloOut)
+    assert isinstance(res, sc.pp.HashsoloResult)
     assert "hashsolo" not in adata.obs
     assert not adata.obsm
     assert res.classification.shape == (adata.n_obs,)

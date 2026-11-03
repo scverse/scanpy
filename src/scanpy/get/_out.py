@@ -208,7 +208,7 @@ def _out_key[D: str | Default | None](
 
 
 def _out_dests[D: tuple, K: tuple](
-    out: ArrAcc | VecRef | Mapping[str, ArrAcc | VecRef] | bool,  # noqa: FBT001
+    out: ArrAcc | VecRef | Mapping[str, object] | bool,  # noqa: FBT001
     key_added: str | None,
     *,
     dests: Callable[[str | Default | None], D],
@@ -230,10 +230,11 @@ def _out_dests[D: tuple, K: tuple](
     Otherwise returns a key for naming `.uns` entries and the destinations:
     `default` and `dests(default)` for `out=False`,
     `key_added` and `dests(key_added)` for the deprecated `key_added`,
-    and the primary output’s key for an accessor or mapping
-    (or `default` if that is where `out=False` would write it).
+    and the primary output’s key for an accessor,
+    or for a mapping (unless that is where `out=False` would write it, then `default`).
 
-    A single accessor (if `primary`) names the primary output `k`, the others follow it:
+    A single accessor (if `primary`) names the primary output `k`, the others follow it
+    (even if `k` is the primary output’s default place):
     an output in a kind of place no other output goes to is named `k` too,
     else `{k}_{name}`, and outputs `out=False` doesn’t write stay unwritten.
     If the primary output is `.X`, the others go to their defaults.
@@ -250,13 +251,13 @@ def _out_dests[D: tuple, K: tuple](
             return True
         case False:
             return default, defaults
-        case AdRef() | RefAcc() | str() if primary:
-            first = _check_kind(kinds, names[0], out)
-            if first == defaults[0]:  # naming the default place is `out=False`
-                return default, defaults
-            result = _follow_primary(first, defaults)
+        case GraphAcc() | LayerAcc() | MultiAcc() | AdRef() | str() if primary:
+            result = _follow_primary(_check_kind(kinds, names[0], out), defaults)
+            # no special case for the default place: only `out=False` means the defaults
+            key = _dest_key(result[0])
         case Mapping():
             result = _resolve_mapping(out, kinds, names, defaults)
+            key = None if result[0] == defaults[0] else _dest_key(result[0])
         case _:
             what = (
                 "a `bool`, an accessor for the primary output, or"
@@ -273,9 +274,7 @@ def _out_dests[D: tuple, K: tuple](
             f"was {out!r}"
         )
         raise TypeError(msg)
-    if result[0] == defaults[0] or (key := _dest_key(result[0])) is None:
-        return default, result
-    return key, result
+    return default if key is None else key, result
 
 
 def _check_kind(kinds: tuple, name: str, acc: ArrAcc | VecRef) -> _SetRep:
@@ -287,7 +286,7 @@ def _check_kind(kinds: tuple, name: str, acc: ArrAcc | VecRef) -> _SetRep:
 
 
 def _resolve_mapping[D: tuple](
-    out: Mapping[str, ArrAcc | VecRef],
+    out: Mapping[str, object],
     kinds: tuple,
     names: tuple[str, ...],
     defaults: D,
@@ -295,7 +294,16 @@ def _resolve_mapping[D: tuple](
     if unknown := out.keys() - set(names):
         msg = f"Unknown output(s) {sorted(unknown)}, valid are {names}"
         raise TypeError(msg)
-    resolved = {name: _check_kind(kinds, name, acc) for name, acc in out.items()}
+    resolved: dict[str, _SetRep] = {}
+    for name, acc in out.items():
+        if not isinstance(acc, GraphAcc | LayerAcc | MultiAcc | AdRef | str):
+            msg = f"Output {name!r} must be an accessor, was {acc!r}"
+            raise TypeError(msg)
+        resolved[name] = _check_kind(kinds, name, acc)
+    places = Counter(tuple(d.items()) for d in resolved.values())
+    if dupes := [n for n, d in resolved.items() if places[tuple(d.items())] > 1]:
+        msg = f"Outputs {dupes} can’t be written to the same place, was {out!r}"
+        raise ValueError(msg)
     return type(defaults)(*(resolved.get(name) for name in names))
 
 

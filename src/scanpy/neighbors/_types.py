@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Literal, NamedTuple, Protocol, TypedDict
 
 import numpy as np
 
-from .._compat import CSRBase  # runtime: `NeighborsOut`’s default
+from .._compat import CSRBase  # runtime: `NeighborsResult`’s default
 
 if TYPE_CHECKING:
     from typing import Any, NotRequired, Self
@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._utils.random import _LegacyRandom
+    from ..get._types import GraphAcc
 
 __all__ = [
     "KnnTransformerLike",
@@ -20,6 +21,7 @@ __all__ = [
     "NeighborsDict",
     "NeighborsOut",
     "NeighborsParams",
+    "NeighborsResult",
     "_KnownTransformer",
     "_Method",
     "_Metric",
@@ -87,13 +89,20 @@ class KwdsForTransformer(TypedDict):
     rng: NotRequired[np.random.Generator]
 
 
-class NeighborsOut[T = CSRBase](NamedTuple):
+class NeighborsResult[T = CSRBase](NamedTuple):
     """Outputs of :func:`~scanpy.pp.neighbors` and :func:`~scanpy.pp.bbknn`."""
 
     connectivities: T
     """Weighted adjacency matrix of the neighborhood graph."""
     distances: T
     """Distances to each observation’s nearest neighbors."""
+
+
+class NeighborsOut(TypedDict, total=False):
+    """Where a mapping `out` of :func:`~scanpy.pp.neighbors` and :func:`~scanpy.pp.bbknn` writes each output, see :class:`~scanpy.pp.NeighborsResult`."""
+
+    connectivities: GraphAcc | str
+    distances: GraphAcc | str
 
 
 class NeighborsDict[P: NeighborsParams](TypedDict):

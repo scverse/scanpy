@@ -208,7 +208,7 @@ out
     Where to write the outputs.\
 {primary_doc}
     A mapping from output names to accessors writes only the outputs it names,
-    e.g. `{example}`.
+    each to a different place, e.g. `{example}`.
     :class:`str`\\ s are :meth:`anndata.acc.AdAcc.resolve`\\ d.{uns_doc}
     If :data:`True`, they are returned as a {returns} instead of written.
     If :data:`False`, they are written to their default locations.

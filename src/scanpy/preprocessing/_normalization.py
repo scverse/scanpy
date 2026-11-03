@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from operator import truediv
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numba
 import numpy as np
@@ -27,15 +27,13 @@ from ..get._use import _get_arr, _resolve_obs
 from ._simple import log1p
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from anndata import AnnData
 
     from ..get._out import OutKind
     from ..get._types import RepAcc, VecRef
 
 
-class NormalizeTotalOut[
+class NormalizeTotalResult[
     M = np.ndarray | CSRBase | DaskArray,
     V = np.ndarray | DaskArray,
 ](NamedTuple):
@@ -47,8 +45,15 @@ class NormalizeTotalOut[
     """The normalization factor (counts per cell before normalization, divided by `target_sum`)."""
 
 
-NORMALIZE_TOTAL_KINDS: NormalizeTotalOut[set[OutKind], set[OutKind]] = (
-    NormalizeTotalOut({"layer", "obsm"}, {"obs"})
+class NormalizeTotalOut(TypedDict, total=False):
+    """Where a mapping `out` of :func:`~scanpy.pp.normalize_total` writes each output, see :class:`~scanpy.pp.NormalizeTotalResult`."""
+
+    normalized: RepAcc | str
+    norm_factor: VecRef
+
+
+NORMALIZE_TOTAL_KINDS: NormalizeTotalResult[set[OutKind], set[OutKind]] = (
+    NormalizeTotalResult({"layer", "obsm"}, {"obs"})
 )
 """Where `out` can write the outputs of `pp.normalize_total`."""
 
@@ -173,7 +178,7 @@ def _normalize_total_helper(
             ),
         ),
         example="{'normalized': A.layers['normalized']}",
-        returns=":class:`~scanpy.pp.NormalizeTotalOut`",
+        returns=":class:`~scanpy.pp.NormalizeTotalResult`",
         key_added="`key_added='k'` is `out={'normalized': <use>, 'norm_factor': A.obs['k']}`.",
     ),
 )
@@ -191,14 +196,14 @@ def normalize_total(  # noqa: PLR0913
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Mapping[str, RepAcc | VecRef | str] | bool = False,
+    out: RepAcc | str | NormalizeTotalOut | bool = False,
     # deprecated
     key_added: str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> AnnData | NormalizeTotalOut | dict[str, np.ndarray] | None:
+) -> AnnData | NormalizeTotalResult | dict[str, np.ndarray] | None:
     """Normalize counts per cell.
 
     Normalize each cell by total counts over all genes,
@@ -249,7 +254,7 @@ def normalize_total(  # noqa: PLR0913
 
     Returns
     -------
-    Returns the outputs as a :class:`~scanpy.pp.NormalizeTotalOut` if `out=True`, else `None`.
+    Returns the outputs as a :class:`~scanpy.pp.NormalizeTotalResult` if `out=True`, else `None`.
     The deprecated `inplace=False` returns them as a :class:`dict` instead.
 
     Example
@@ -305,7 +310,7 @@ def normalize_total(  # noqa: PLR0913
     dests = _out_dests(
         out,
         key_added,
-        dests=lambda key: NormalizeTotalOut(
+        dests=lambda key: NormalizeTotalResult(
             src, None if key is None else dict(obs=key)
         ),
         kinds=NORMALIZE_TOTAL_KINDS,
@@ -346,7 +351,7 @@ def normalize_total(  # noqa: PLR0913
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
         warn("Some cells have zero counts", UserWarning)
 
-    vals = NormalizeTotalOut(x, counts_per_cell)
+    vals = NormalizeTotalResult(x, counts_per_cell)
     logg.info("    finished ({time_passed})", time=start)
     if dests is True:
         if not inplace:  # deprecated, returns what it did in 1.12

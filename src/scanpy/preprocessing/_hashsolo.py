@@ -31,7 +31,7 @@ A negative two highest barcodes
 from __future__ import annotations
 
 from itertools import product
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numpy as np
 import pandas as pd
@@ -47,14 +47,14 @@ from ..get._types import MultiAcc
 from ..get._use import _get_arr, _get_vec
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Mapping
+    from collections.abc import Collection
 
     from anndata import AnnData
     from anndata.acc import AdRef
     from numpy.typing import ArrayLike, NDArray
 
     from ..get._out import OutKind
-    from ..get._types import ArrAcc, VecRef, _SetRep
+    from ..get._types import VecRef, _SetRep
 
 
 # smaller than what log-counts can resolve
@@ -237,7 +237,7 @@ def _get_hashes(
     return data, np.arange(data.shape[1]).astype(str)
 
 
-class HashsoloOut[C = pd.Series, P = pd.DataFrame](NamedTuple):
+class HashsoloResult[C = pd.Series, P = pd.DataFrame](NamedTuple):
     """Outputs of :func:`~scanpy.pp.hashsolo`."""
 
     classification: C
@@ -246,12 +246,21 @@ class HashsoloOut[C = pd.Series, P = pd.DataFrame](NamedTuple):
     """Probability of the `negative`, `singlet`, and `doublet` hypothesis."""
 
 
-HASHSOLO_KINDS: HashsoloOut[set[OutKind], set[OutKind]] = HashsoloOut({"obs"}, {"obsm"})
+class HashsoloOut(TypedDict, total=False):
+    """Where a mapping `out` of :func:`~scanpy.pp.hashsolo` writes each output, see :class:`~scanpy.pp.HashsoloResult`."""
+
+    classification: VecRef
+    probabilities: MultiAcc | str
+
+
+HASHSOLO_KINDS: HashsoloResult[set[OutKind], set[OutKind]] = HashsoloResult(
+    {"obs"}, {"obsm"}
+)
 """Where `out` can write the outputs of `pp.hashsolo`."""
 
 
-def _hashsolo_dests(prefix: str) -> HashsoloOut[_SetRep, _SetRep]:
-    return HashsoloOut(dict(obs=prefix), dict(obsm=prefix))
+def _hashsolo_dests(prefix: str) -> HashsoloResult[_SetRep, _SetRep]:
+    return HashsoloResult(dict(obs=prefix), dict(obsm=prefix))
 
 
 @doctest_needs("anndata_acc")
@@ -268,7 +277,7 @@ def _hashsolo_dests(prefix: str) -> HashsoloOut[_SetRep, _SetRep]:
             ),
         ),
         example="{'classification': A.obs['hto']}",
-        returns=":class:`~scanpy.pp.HashsoloOut`",
+        returns=":class:`~scanpy.pp.HashsoloResult`",
     ),
 )
 def hashsolo(
@@ -278,8 +287,8 @@ def hashsolo(
     priors: tuple[float, float, float] = (0.01, 0.8, 0.19),
     pre_existing_clusters: AdRef | str | None = None,
     n_noise_barcodes: int | None = None,
-    out: VecRef | Mapping[str, ArrAcc | VecRef | str] | bool = False,
-) -> HashsoloOut | None:
+    out: VecRef | HashsoloOut | bool = False,
+) -> HashsoloResult | None:
     r"""Probabilistic demultiplexing of cell hashing data using HashSolo :cite:p:`Bernstein2020`.
 
     .. array-support:: pp.hashsolo
@@ -315,7 +324,7 @@ def hashsolo(
 
     Returns
     -------
-    Returns the outputs as a :class:`~scanpy.pp.HashsoloOut` if `out=True`, else `None`.
+    Returns the outputs as a :class:`~scanpy.pp.HashsoloResult` if `out=True`, else `None`.
     By default sets the following fields (see `out` for others):
 
     `adata.obs['hashsolo']` : :class:`~pandas.Categorical` (shape `(n_obs,)`)
@@ -381,7 +390,7 @@ def hashsolo(
     classification[most_likely_hypothesis == 0] = "Negative"
     classification[most_likely_hypothesis == 2] = "Doublet"
 
-    vals = HashsoloOut(
+    vals = HashsoloResult(
         classification.astype("category"),
         pd.DataFrame(
             probs, columns=["negative", "singlet", "doublet"], index=adata.obs_names

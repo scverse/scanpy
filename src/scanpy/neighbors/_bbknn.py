@@ -27,7 +27,7 @@ from ._common import (
 )
 from ._connectivity import umap
 from ._doc import doc_n_pcs, doc_out, doc_use
-from ._types import NeighborsOut
+from ._types import NeighborsResult
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -39,8 +39,14 @@ if TYPE_CHECKING:
 
     from .._compat import CSRBase
     from .._utils.random import RNGLike, SeedLike
-    from ..get._types import ArrAcc, RepAcc
-    from ._types import KnnTransformerLike, _KnownTransformer, _Metric, _MetricFn
+    from ..get._types import GraphAcc, RepAcc
+    from ._types import (
+        KnnTransformerLike,
+        NeighborsOut,
+        _KnownTransformer,
+        _Metric,
+        _MetricFn,
+    )
 
 
 @doctest_needs("anndata_acc")
@@ -57,8 +63,8 @@ def bbknn(  # noqa: PLR0913
     metric_kwds: Mapping[str, Any] = frozendict({}),
     trim: int | None = None,
     rng: SeedLike | RNGLike | None = None,
-    out: ArrAcc | str | Mapping[str, ArrAcc | str] | bool = False,
-) -> NeighborsOut | None:
+    out: GraphAcc | str | NeighborsOut | bool = False,
+) -> NeighborsResult | None:
     r"""Compute a batch balanced neighborhood graph of observations :cite:p:`Polanski2019`.
 
     Batch balanced kNN alters the kNN procedure to identify each cell’s top neighbors
@@ -215,7 +221,7 @@ def bbknn(  # noqa: PLR0913
         connectivities = _trim(connectivities, trim)
     logg.debug("computed connectivities", time=start_connect)
 
-    vals = NeighborsOut(connectivities, distances)
+    vals = NeighborsResult(connectivities, distances)
     if dests is True:
         logg.info("    finished", time=start)
         return vals

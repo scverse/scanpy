@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Literal, NamedTuple, overload
+from typing import TYPE_CHECKING, Literal, NamedTuple, TypedDict, overload
 
 import numpy as np
 from anndata import AnnData
@@ -28,7 +28,7 @@ from .._docs import doc_mask_var
 from ._compat import _pca_compat_sparse
 
 if TYPE_CHECKING:
-    from collections.abc import Container, Mapping
+    from collections.abc import Container
     from collections.abc import Set as AbstractSet
     from typing import LiteralString
 
@@ -61,7 +61,7 @@ type SvdSolvPCACustom = Literal["covariance_eigh"]
 type SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 
 
-class PcaOut[E = np.ndarray | DaskArray, L = np.ndarray](NamedTuple):
+class PcaResult[E = np.ndarray | DaskArray, L = np.ndarray](NamedTuple):
     """Outputs of :func:`~scanpy.pp.pca`."""
 
     embedding: E
@@ -75,19 +75,26 @@ class PcaOut[E = np.ndarray | DaskArray, L = np.ndarray](NamedTuple):
     """
 
 
-PCA_KINDS: PcaOut[set[OutKind], set[OutKind]] = PcaOut({"obsm"}, {"varm"})
+class PcaOut(TypedDict, total=False):
+    """Where a mapping `out` of :func:`~scanpy.pp.pca` writes each output, see :class:`~scanpy.pp.PcaResult`."""
+
+    embedding: MultiAcc | str
+    loadings: MultiAcc | str
+
+
+PCA_KINDS: PcaResult[set[OutKind], set[OutKind]] = PcaResult({"obsm"}, {"varm"})
 """Where `out` can write the outputs of `pp.pca`."""
 
 
 def _pca_dests(
     key_added: str | Default | None, *, multi: bool = False
-) -> PcaOut[_SetRep | None, _SetRep | None]:
+) -> PcaResult[_SetRep | None, _SetRep | None]:
     """Where `key_added` put the outputs of `pp.pca`.
 
     If `multi` (PCA ran on an `.obsm` array), the loadings went to `.uns` instead.
     """
     keys = _embedding_keys("pca", key_added)
-    return PcaOut(dict(obsm=keys.obsm), None if multi else dict(varm=keys.varm))
+    return PcaResult(dict(obsm=keys.obsm), None if multi else dict(varm=keys.varm))
 
 
 @_doc_params(
@@ -111,7 +118,7 @@ def _pca_dests(
             ),
         ),
         example="{'embedding': A.obsm['pca']}",
-        returns=":class:`~scanpy.pp.PcaOut`",
+        returns=":class:`~scanpy.pp.PcaResult`",
         uns=True,
         key_added=(
             "`key_added='k'` is `out={'embedding': A.obsm['k'], 'loadings': A.varm['k']}`."
@@ -137,14 +144,14 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     return_info: bool = False,
     mask: Mask | Default | None = Default("adata.var.get('highly_variable')"),
     dtype: DTypeLike = "float32",
-    out: MultiAcc | str | Mapping[str, MultiAcc | str] | bool = False,
+    out: MultiAcc | str | PcaOut | bool = False,
     # deprecated
     key_added: str | None = None,
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
     mask_var: Mask | None = None,
-) -> AnnData | PcaOut | np.ndarray | CSBase | None:
+) -> AnnData | PcaResult | np.ndarray | CSBase | None:
     r"""Principal component analysis :cite:p:`Pedregosa2011`.
 
     Computes PCA coordinates, loadings and variance decomposition.
@@ -251,7 +258,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     If `return_info=True` was passed, it returns a tuple of
     the PCA representation, components, variance ratio and variance.
 
-    Otherwise, it returns the outputs as a :class:`~scanpy.pp.PcaOut` if `out=True`, else `None`.
+    Otherwise, it returns the outputs as a :class:`~scanpy.pp.PcaResult` if `out=True`, else `None`.
     By default sets the following fields (see `out` for others):
 
     `.obsm['X_pca']` : :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
@@ -429,7 +436,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         if mask_var is not None and not multi:
             loadings = np.zeros(shape=(adata.n_vars, n_comps))
             loadings[mask_var] = pca_.components_.T
-        vals = PcaOut(x_pca, loadings)
+        vals = PcaResult(x_pca, loadings)
         if dests is True:
             logg.info("    finished", time=logg_start)
             return vals

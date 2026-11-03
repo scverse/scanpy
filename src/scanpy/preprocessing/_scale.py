@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from functools import singledispatch
 from operator import truediv
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numba
 import numpy as np
 from anndata import AnnData
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
-from numpy.typing import NDArray  # runtime: `ScaleOut`’s default
+from numpy.typing import NDArray  # runtime: `ScaleResult`’s default
 from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
@@ -30,7 +30,6 @@ from ..get._types import AdRef
 from ..get._use import _check_mask, _get_arr, _mask_arg, _resolve_obs
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
     from typing import TypeAlias
 
     from numpy.typing import ArrayLike
@@ -42,7 +41,7 @@ if TYPE_CHECKING:
 _Array: TypeAlias = CSBase | np.ndarray | DaskArray  # noqa: UP040
 
 
-class ScaleOut[
+class ScaleResult[
     M = np.ndarray | CSBase | DaskArray,
     V = NDArray[np.float64] | DaskArray,
 ](NamedTuple):
@@ -56,7 +55,15 @@ class ScaleOut[
     """Standard deviations per variable before scaling."""
 
 
-SCALE_KINDS: ScaleOut[set[OutKind], set[OutKind]] = ScaleOut(
+class ScaleOut(TypedDict, total=False):
+    """Where a mapping `out` of :func:`~scanpy.pp.scale` writes each output, see :class:`~scanpy.pp.ScaleResult`."""
+
+    scaled: RepAcc | str
+    mean: VecRef
+    std: VecRef
+
+
+SCALE_KINDS: ScaleResult[set[OutKind], set[OutKind]] = ScaleResult(
     {"layer", "obsm"}, {"var"}, {"var"}
 )
 """Where `out` can write the outputs of `pp.scale`."""
@@ -74,7 +81,7 @@ doc_out_scale = doc_out_multi(
         ),
     ),
     example="{'scaled': A.layers['scaled']}",
-    returns=":class:`~scanpy.pp.ScaleOut`",
+    returns=":class:`~scanpy.pp.ScaleResult`",
 )
 
 
@@ -145,14 +152,14 @@ def scale[A: _Array](
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Mapping[str, RepAcc | VecRef | str] | bool = False,
+    out: RepAcc | str | ScaleOut | bool = False,
     mask: Mask | None = None,
     # deprecated
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: Mask | None = None,
-) -> AnnData | A | ScaleOut | None:
+) -> AnnData | A | ScaleResult | None:
     """Scale data to unit variance and zero mean.
 
     .. note::
@@ -191,7 +198,7 @@ def scale[A: _Array](
     Returns
     -------
     For array input, returns the scaled matrix.
-    Otherwise, returns the outputs as a :class:`~scanpy.pp.ScaleOut` if `out=True`,
+    Otherwise, returns the outputs as a :class:`~scanpy.pp.ScaleResult` if `out=True`,
     a copy of `adata` if `copy=True`, else `None`.
     By default sets the following fields (see `out` for others):
 
@@ -386,12 +393,12 @@ def scale_anndata(
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Mapping[str, RepAcc | VecRef | str] | bool = False,
+    out: RepAcc | str | ScaleOut | bool = False,
     mask: Mask | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: Mask | None = None,
-) -> ScaleOut | None:
+) -> ScaleResult | None:
     use = _resolve_obs(use)
     mask = _mask_arg(mask, mask_obs, dim="obs")
     str_mean_std = ("mean", "std")
@@ -406,7 +413,7 @@ def scale_anndata(
     dests = _out_dests(
         out,
         None,
-        dests=lambda _: ScaleOut(
+        dests=lambda _: ScaleResult(
             src, dict(var=str_mean_std[0]), dict(var=str_mean_std[1])
         ),
         kinds=SCALE_KINDS,
@@ -414,7 +421,7 @@ def scale_anndata(
     view_to_actual(adata)
     x = _get_arr(adata, use, layer=layer, obsm=obsm)
     raise_not_implemented_error_if_backed_type(x, "scale")
-    vals = ScaleOut(
+    vals = ScaleResult(
         *_scale(
             x,
             zero_center=zero_center,

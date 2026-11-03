@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numba
 import numpy as np
@@ -26,7 +26,7 @@ from ..get._out import (
 from ..get._use import _get_arr, _resolve_layer
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Mapping, Sequence
+    from collections.abc import Callable, Generator, Sequence
     from typing import Literal
 
     from anndata import AnnData
@@ -336,7 +336,7 @@ def _nan_means(
     return np.nanmean(x, axis=axis, dtype=dtype)
 
 
-class CellCycleOut[V = pd.Series](NamedTuple):
+class CellCycleResult[V = pd.Series](NamedTuple):
     """Outputs of :func:`~scanpy.tl.score_genes_cell_cycle`."""
 
     s_score: V
@@ -347,10 +347,20 @@ class CellCycleOut[V = pd.Series](NamedTuple):
     """The cell cycle phase (`S`, `G2M` or `G1`) for each cell."""
 
 
-CELL_CYCLE_KINDS: CellCycleOut[set[OutKind]] = CellCycleOut({"obs"}, {"obs"}, {"obs"})
+class CellCycleOut(TypedDict, total=False):
+    """Where a mapping `out` of :func:`~scanpy.tl.score_genes_cell_cycle` writes each output, see :class:`~scanpy.tl.CellCycleResult`."""
+
+    s_score: VecRef
+    g2m_score: VecRef
+    phase: VecRef
+
+
+CELL_CYCLE_KINDS: CellCycleResult[set[OutKind]] = CellCycleResult(
+    {"obs"}, {"obs"}, {"obs"}
+)
 """Where `out` can write the outputs of `tl.score_genes_cell_cycle`."""
 
-CELL_CYCLE_BASES: CellCycleOut[_SetRep] = CellCycleOut(
+CELL_CYCLE_BASES: CellCycleResult[_SetRep] = CellCycleResult(
     dict(obs="S_score"), dict(obs="G2M_score"), dict(obs="phase")
 )
 
@@ -363,7 +373,7 @@ CELL_CYCLE_BASES: CellCycleOut[_SetRep] = CellCycleOut(
             phase="By default written to `A.obs['phase']`.",
         ),
         example="{'phase': A.obs['cc_phase']}",
-        returns=":class:`~scanpy.tl.CellCycleOut`",
+        returns=":class:`~scanpy.tl.CellCycleResult`",
         primary=False,
     )
 )
@@ -373,11 +383,11 @@ def score_genes_cell_cycle(
     *,
     s_genes: Sequence[str],
     g2m_genes: Sequence[str],
-    out: Mapping[str, VecRef | str] | bool = False,
+    out: CellCycleOut | bool = False,
     # deprecated
     copy: bool = False,
     **kwargs,
-) -> AnnData | CellCycleOut | None:
+) -> AnnData | CellCycleResult | None:
     """Score cell cycle genes :cite:p:`Satija2015`.
 
     Given two lists of genes associated to S phase and G2M phase, calculates
@@ -403,7 +413,7 @@ def score_genes_cell_cycle(
 
     Returns
     -------
-    Returns the outputs as a :class:`~scanpy.tl.CellCycleOut` if `out=True`, else `None`.
+    Returns the outputs as a :class:`~scanpy.tl.CellCycleResult` if `out=True`, else `None`.
     By default sets the following fields (see `out` for others):
 
     `adata.obs['S_score']` : :class:`pandas.Series` (dtype `object`)
@@ -446,7 +456,7 @@ def score_genes_cell_cycle(
     # if all scores are negative, it's G1...
     phase[(s_score < 0) & (g2m_score < 0)] = "G1"
 
-    vals = CellCycleOut(s_score, g2m_score, phase)
+    vals = CellCycleResult(s_score, g2m_score, phase)
     if dests is True:
         return vals
     _write_dests(adata, vals, dests[1])

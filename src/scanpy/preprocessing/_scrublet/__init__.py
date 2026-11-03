@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numpy as np
 import pandas as pd
@@ -21,8 +21,6 @@ from . import pipeline
 from .core import Scrublet
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from numpy.typing import NDArray
 
     from ..._utils.random import RNGLike, SeedLike
@@ -31,7 +29,7 @@ if TYPE_CHECKING:
     from ...neighbors import _Metric, _MetricFn
 
 
-class ScrubletOut[S = NDArray[np.float64], P = NDArray[np.bool]](NamedTuple):
+class ScrubletResult[S = NDArray[np.float64], P = NDArray[np.bool]](NamedTuple):
     """Outputs of :func:`~scanpy.pp.scrublet`."""
 
     doublet_score: S
@@ -40,10 +38,19 @@ class ScrubletOut[S = NDArray[np.float64], P = NDArray[np.bool]](NamedTuple):
     """Boolean indicating predicted doublet status."""
 
 
-SCRUBLET_KINDS: ScrubletOut[set[OutKind], set[OutKind]] = ScrubletOut({"obs"}, {"obs"})
+class ScrubletOut(TypedDict, total=False):
+    """Where a mapping `out` of :func:`~scanpy.pp.scrublet` writes each output, see :class:`~scanpy.pp.ScrubletResult`."""
+
+    doublet_score: VecRef
+    predicted_doublet: VecRef
+
+
+SCRUBLET_KINDS: ScrubletResult[set[OutKind], set[OutKind]] = ScrubletResult(
+    {"obs"}, {"obs"}
+)
 """Where `out` can write the outputs of `pp.scrublet`."""
 
-SCRUBLET_BASES: ScrubletOut[_SetRep, _SetRep] = ScrubletOut(
+SCRUBLET_BASES: ScrubletResult[_SetRep, _SetRep] = ScrubletResult(
     dict(obs="doublet_score"), dict(obs="predicted_doublet")
 )
 
@@ -58,7 +65,7 @@ SCRUBLET_BASES: ScrubletOut[_SetRep, _SetRep] = ScrubletOut(
             predicted_doublet="By default written to `A.obs['predicted_doublet']`.",
         ),
         example="{'doublet_score': A.obs['scrublet_score']}",
-        returns=":class:`~scanpy.pp.ScrubletOut`",
+        returns=":class:`~scanpy.pp.ScrubletResult`",
         uns=True,
         primary=False,
     ),
@@ -86,11 +93,11 @@ def scrublet(  # noqa: PLR0913, PLR0915
     verbose: bool = True,
     rng: SeedLike | RNGLike | None = None,
     use: LayerAcc | str | None = None,
-    out: Mapping[str, VecRef | str] | bool = False,
+    out: ScrubletOut | bool = False,
     # deprecated
     copy: bool = False,
     batch_key: str | None = None,
-) -> AnnData | ScrubletOut | None:
+) -> AnnData | ScrubletResult | None:
     """Predict doublets using Scrublet :cite:p:`Wolock2019`.
 
     Predict cell doublets using a nearest-neighbor classifier of observed
@@ -185,7 +192,7 @@ def scrublet(  # noqa: PLR0913, PLR0915
 
     Returns
     -------
-    Returns the outputs as a :class:`~scanpy.pp.ScrubletOut` if `out=True`
+    Returns the outputs as a :class:`~scanpy.pp.ScrubletResult` if `out=True`
     (without the `.uns` entry), else `None`.
     By default sets the following fields (see `out` for others):
 
@@ -343,7 +350,9 @@ def scrublet(  # noqa: PLR0913, PLR0915
 
     # Copy outcomes to input object from our processed version
     scrubbed_obs = scrubbed_obs.reindex(positions)
-    vals = ScrubletOut(*(scrubbed_obs[name].to_numpy() for name in ScrubletOut._fields))
+    vals = ScrubletResult(
+        *(scrubbed_obs[name].to_numpy() for name in ScrubletResult._fields)
+    )
     logg.info("    Scrublet finished", time=start)
 
     if dests is True:

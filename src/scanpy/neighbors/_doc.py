@@ -45,14 +45,14 @@ _doc_outs = dict(
 doc_out = doc_out_multi(
     _doc_outs,
     example="{'connectivities': A.obsp['conns']}",
-    returns=":class:`~scanpy.pp.NeighborsOut`",
+    returns=":class:`~scanpy.pp.NeighborsResult`",
     uns=True,
 )
 
 doc_out_key_added = doc_out_multi(
     _doc_outs,
     example="{'connectivities': A.obsp['conns']}",
-    returns=":class:`~scanpy.pp.NeighborsOut`",
+    returns=":class:`~scanpy.pp.NeighborsResult`",
     uns=True,
     key_added=(
         "`key_added='k'` wrote `.obsp['k_connectivities']`, `.obsp['k_distances']`, "

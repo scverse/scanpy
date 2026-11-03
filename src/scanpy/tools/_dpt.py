@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ from ..get._out import _out_dests, _set_arr, deprecated_copy
 from ..neighbors import Neighbors, OnFlySymMatrix, _diffmap_keys
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
 
     from anndata import AnnData
     from numpy.typing import NDArray
@@ -24,10 +24,10 @@ if TYPE_CHECKING:
     from ..get._types import GraphAcc, MultiAcc, VecRef
 
 
-__all__ = ["DPT", "DptOut", "dpt"]
+__all__ = ["DPT", "DptOut", "DptResult", "dpt"]
 
 
-class DptOut(NamedTuple):
+class DptResult(NamedTuple):
     """Outputs of :func:`~scanpy.tl.dpt`.
 
     Each is `None` if not computed:
@@ -44,11 +44,20 @@ class DptOut(NamedTuple):
     """The cell indices in that ordering."""
 
 
-DPT_KINDS: DptOut = DptOut({"obs"}, {"obs"}, {"obs"}, {"obs"})
+class DptOut(TypedDict, total=False):
+    """Where a mapping `out` of :func:`~scanpy.tl.dpt` writes each output, see :class:`~scanpy.tl.DptResult`."""
+
+    pseudotime: VecRef
+    groups: VecRef
+    order: VecRef
+    order_indices: VecRef
+
+
+DPT_KINDS: DptResult = DptResult({"obs"}, {"obs"}, {"obs"}, {"obs"})
 """Where `out` can write the outputs of `tl.dpt`."""
 
-DPT_BASES: DptOut = DptOut(
-    *(dict(obs=f"dpt_{name}") for name in DptOut._fields)  # type: ignore[arg-type]
+DPT_BASES: DptResult = DptResult(
+    *(dict(obs=f"dpt_{name}") for name in DptResult._fields)  # type: ignore[arg-type]
 )
 
 
@@ -61,7 +70,7 @@ DPT_BASES: DptOut = DptOut(
             order_indices="By default written to `A.obs['dpt_order_indices']`.",
         ),
         example="{'pseudotime': A.obs['pt']}",
-        returns=":class:`~scanpy.tl.DptOut`",
+        returns=":class:`~scanpy.tl.DptResult`",
         uns=True,
         primary=False,
     )
@@ -83,11 +92,11 @@ def dpt(
     min_group_size: float = 0.01,
     allow_kendall_tau_shift: bool = True,
     use: MultiAcc | str | None = None,
-    out: Mapping[str, VecRef | str] | bool = False,
+    out: DptOut | bool = False,
     # deprecated
     neighbors_key: str | None = None,
     copy: bool = False,
-) -> AnnData | DptOut | None:
+) -> AnnData | DptResult | None:
     """Infer progression of cells through geodesic distance along the graph :cite:p:`Haghverdi2016,Wolf2019`.
 
     Reconstruct the progression of a biological process from snapshot
@@ -154,7 +163,7 @@ def dpt(
 
     Returns
     -------
-    Returns the outputs as a :class:`~scanpy.tl.DptOut` if `out=True`
+    Returns the outputs as a :class:`~scanpy.tl.DptResult` if `out=True`
     (without the `.uns` entries), else `None`.
     By default sets the following fields (see `out` for others;
     if `n_branchings==0`, only `adata.obs['dpt_pseudotime']` and `adata.uns['iroot']` are written):
@@ -245,7 +254,7 @@ def dpt(
         for count, idx in enumerate(dpt.indices):
             order[idx] = count
         order_indices = dpt.indices
-    vals = DptOut(pseudotime, groups, order, order_indices)
+    vals = DptResult(pseudotime, groups, order, order_indices)
     if dests is not True:
         uns_key, dests = dests
         for val, dest in zip(vals, dests, strict=True):

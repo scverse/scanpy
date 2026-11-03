@@ -47,7 +47,7 @@ from ._common import (
 )
 from ._connectivity import umap
 from ._doc import doc_n_pcs, doc_out_key_added, doc_use_rep
-from ._types import KwdsForTransformer, NeighborsOut, _Method
+from ._types import KwdsForTransformer, NeighborsResult, _Method
 
 if TYPE_CHECKING:
     from collections.abc import Callable, MutableMapping
@@ -58,9 +58,10 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._utils.random import RNGLike, SeedLike
-    from ..get._types import ArrAcc, GraphAcc, MultiAcc, RepAcc
+    from ..get._types import GraphAcc, MultiAcc, RepAcc
     from ._types import (
         KnnTransformerLike,
+        NeighborsOut,
         RPForestDict,
         _KnownTransformer,
         _Metric,
@@ -90,11 +91,11 @@ def neighbors(  # noqa: PLR0913
     metric: _Metric | _MetricFn | None = None,
     metric_kwds: Mapping[str, Any] = frozendict({}),
     rng: SeedLike | RNGLike | None = None,
-    out: ArrAcc | str | Mapping[str, ArrAcc | str] | bool = False,
+    out: GraphAcc | str | NeighborsOut | bool = False,
     # deprecated
     key_added: str | None = None,
     copy: bool = False,
-) -> AnnData | NeighborsOut | None:
+) -> AnnData | NeighborsResult | None:
     """Compute the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
 
     The computation proceeds in two independent stages.
@@ -267,7 +268,7 @@ def neighbors(  # noqa: PLR0913
         neighbors_._distances = distances
         neighbors_._connectivities = neighbors_._compute_connectivites(method)
 
-    vals = NeighborsOut(neighbors_.connectivities, neighbors_.distances)
+    vals = NeighborsResult(neighbors_.connectivities, neighbors_.distances)
     if dests is True:
         logg.info("    finished", time=start)
         return vals

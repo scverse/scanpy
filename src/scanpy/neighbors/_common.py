@@ -13,7 +13,7 @@ from .._utils.random import _rng_kwds
 from ..get._out import _dest_key
 from ..get._types import GraphAcc
 from ..get._use import _resolve_obs
-from ._types import NeighborsDict, NeighborsOut, _KnownTransformer
+from ._types import NeighborsDict, NeighborsResult, _KnownTransformer
 
 if TYPE_CHECKING:
     from typing import Unpack
@@ -86,14 +86,16 @@ def _make_transformer(
     return transformer  # `transformer` is probably an instance
 
 
-NEIGHBORS_KINDS: NeighborsOut[set[OutKind]] = NeighborsOut({"obsp"}, {"obsp"})
+NEIGHBORS_KINDS: NeighborsResult[set[OutKind]] = NeighborsResult({"obsp"}, {"obsp"})
 """Where `out` can write the outputs of `pp.neighbors` and `pp.bbknn`."""
 
 
-def _neighbors_dests(key_added: str | Default | None) -> NeighborsOut[_SetRep | None]:
+def _neighbors_dests(
+    key_added: str | Default | None,
+) -> NeighborsResult[_SetRep | None]:
     """Where `key_added` put the outputs of `pp.neighbors` and `pp.bbknn`."""
     prefix = "" if key_added is None else f"{key_added}_"
-    return NeighborsOut(
+    return NeighborsResult(
         connectivities=dict(obsp=f"{prefix}connectivities"),
         distances=dict(obsp=f"{prefix}distances"),
     )
@@ -101,7 +103,7 @@ def _neighbors_dests(key_added: str | Default | None) -> NeighborsOut[_SetRep | 
 
 def _get_metadata(
     key: str | None,
-    dests: NeighborsOut[_SetRep | None],
+    dests: NeighborsResult[_SetRep | None],
     /,
     **params: Unpack[NeighborsParams],
 ) -> tuple[str, NeighborsDict[NeighborsParams]]:
@@ -110,7 +112,7 @@ def _get_metadata(
 
 def _get_bbknn_metadata(
     key: str | None,
-    dests: NeighborsOut[_SetRep | None],
+    dests: NeighborsResult[_SetRep | None],
     /,
     **params: Unpack[BbknnParams],
 ) -> tuple[str, NeighborsDict[BbknnParams]]:
@@ -118,11 +120,11 @@ def _get_bbknn_metadata(
 
 
 def _metadata[P: NeighborsParams](
-    key: str | None, dests: NeighborsOut[_SetRep | None], params: P
+    key: str | None, dests: NeighborsResult[_SetRep | None], params: P
 ) -> tuple[str, NeighborsDict[P]]:
     """Get the `.uns` key and entry, which names where the matrices were written."""
     neighbors_dict = NeighborsDict(params=params)
-    for name, dest in zip(NeighborsOut._fields, dests, strict=True):
+    for name, dest in zip(NeighborsResult._fields, dests, strict=True):
         if (dest_key := _dest_key(dest)) is not None:
             neighbors_dict[f"{name}_key"] = dest_key
     return key or "neighbors", neighbors_dict
