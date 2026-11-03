@@ -498,6 +498,60 @@ def test_compare_to_seurat_v3():
     assert len(gene_intersection_impl) / 2000 < 0.95
 
 
+@pytest.mark.filterwarnings("ignore:Variable names are not unique:UserWarning")
+@pytest.mark.parametrize(
+    "flavor",
+    [
+        "seurat",
+        "cell_ranger",
+        pytest.param("seurat_v3", marks=needs.skmisc),
+        pytest.param("seurat_v3_paper", marks=needs.skmisc),
+    ],
+)
+@pytest.mark.parametrize("batch_key", [None, "batch"])
+@pytest.mark.parametrize("inplace", [False, True])
+@pytest.mark.parametrize("subset", [False, True])
+def test_duplicate_var_names(
+    flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"],
+    batch_key: Literal["batch"] | None,
+    *,
+    inplace: bool,
+    subset: bool,
+) -> None:
+    """Genes sharing a name are still separate genes (#4432)."""
+    rng = np.random.default_rng(0)
+    x = rng.negative_binomial(3, 0.3, (300, 120)).astype(np.float32)
+    x[:150, 0] = 0  # unexpressed in batch "a", so filtered out there
+    adata = AnnData(x)
+    adata.obs["batch"] = pd.Categorical(np.repeat(["a", "b"], 150))
+    if flavor == "seurat":
+        sc.pp.log1p(adata)
+    adata_dup = adata.copy()
+    duplicate_names = pd.Index([f"g{i % 100}" for i in range(adata.n_vars)])
+    adata_dup.var_names = duplicate_names
+
+    results = [
+        sc.pp.highly_variable_genes(
+            a,
+            flavor=flavor,
+            n_top_genes=30,
+            batch_key=batch_key,
+            inplace=inplace,
+            subset=subset,
+        )
+        for a in [adata, adata_dup]
+    ]
+    expected, result = (adata.var, adata_dup.var) if inplace else results
+    assert isinstance(expected, pd.DataFrame)
+    assert isinstance(result, pd.DataFrame)
+    assert result["highly_variable"].sum() == 30
+
+    expected.index = duplicate_names[expected.index.astype(int)]
+    if "gene_name" in expected.columns:
+        expected["gene_name"] = expected.index
+    assert_frame_equal(result, expected)
+
+
 @needs.skmisc
 def test_seurat_v3_warning():
     pbmc = pbmc3k()[:200].copy()
@@ -615,6 +669,21 @@ def test_cellranger_n_top_genes_warning():
         match="`n_top_genes`.*> number of normalized dispersions.*returning all genes with normalized dispersions.",
     ):
         sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
+
+
+def test_cellranger_n_top_genes_inf_dispersion():
+    """Genes with infinite normalized dispersion rank highest (#4415)."""
+    rng = np.random.default_rng(0)
+    x = rng.poisson(rng.lognormal(-1, 1.2, 2000), (300, 2000)).astype(np.float32)
+    x[:, rng.random(2000) < 0.09] = 0
+    adata = AnnData(x)
+    sc.pp.normalize_total(adata, target_sum=1e4)
+
+    sc.pp.highly_variable_genes(adata, flavor="cell_ranger", n_top_genes=5)
+
+    is_inf = np.isposinf(adata.var["dispersions_norm"])
+    assert is_inf.sum() > 5
+    assert (adata.var["highly_variable"] == is_inf).all()
 
 
 def test_cutoff_info():

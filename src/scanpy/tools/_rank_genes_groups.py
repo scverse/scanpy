@@ -1090,6 +1090,12 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
 
 
 @_doc_params(
+    use=doc_use(
+        "Which matrix to compute fractions and fold changes from. "
+        "Defaults to `A.X` (or `adata.raw`, see `use_raw`).",
+        legacy=(),
+        layers_only=True,
+    ),
     out=doc_out_key(
         "the filtered results",
         default="`.uns['rank_genes_groups_filtered']`",
@@ -1097,7 +1103,7 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
             "Name of the :attr:`~anndata.AnnData.uns` entry to write to instead "
             "(until there are `.uns` accessors)."
         ),
-    )
+    ),
 )
 @deprecated_arg("use_raw", DEPR_RAW)
 def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
@@ -1127,16 +1133,41 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     To preserve the original structure of adata.uns['rank_genes_groups'],
     filtered genes are set to `NaN`.
 
+    The log2 fold changes and fractions of expressing cells are taken from
+    the :func:`~scanpy.tl.rank_genes_groups` results if they are stored there
+    (`'logfoldchanges'`, and `'pts'` and `'pts_rest'` if `pts=True` was passed),
+    `groupby` and `use_raw` are the same as for that call,
+    and it compared each group to `reference='rest'`.
+    Otherwise, they are computed from the expression values,
+    comparing each group to all other cells.
+
     Parameters
     ----------
     adata
+        Annotated data matrix containing the results of
+        :func:`~scanpy.tl.rank_genes_groups`.
     key
+        The key in `adata.uns` where the results of
+        :func:`~scanpy.tl.rank_genes_groups` are stored (its `key_added`).
+        Defaults to `'rank_genes_groups'`.
     groupby
-    use
+        The key of the observations grouping to consider.
+        Defaults to the one used for :func:`~scanpy.tl.rank_genes_groups`.
+    {use}
+        Unlike `use_raw`, it is not taken from the results.
     use_raw
+        Use `raw` attribute of `adata` when fractions or fold changes are computed.
+        Defaults to the value used for :func:`~scanpy.tl.rank_genes_groups`,
+        or to `False` if `use` is specified.
     min_in_group_fraction
+        Only keep genes expressed (i.e. with a non-zero value) in more than
+        this fraction of the cells in the group.
     min_fold_change
+        Only keep genes whose log2 fold change between the group and
+        all other cells is greater than this. See `compare_abs`.
     max_out_group_fraction
+        Only keep genes expressed in less than this fraction of the cells
+        outside the group.
     compare_abs
         If `True`, compare absolute values of log fold change with `min_fold_change`.
     {out}
