@@ -439,7 +439,6 @@ def _highly_variable_genes_single_batch(
     df.index = adata[:, filt].var_names
 
     if n_removed > 0:
-        # df.reset_index(drop=False, inplace=True, names=["gene"])
         # Add 0 values for genes that were filtered out
         missing_hvg = pd.DataFrame(
             np.zeros((n_removed, len(df.columns))),
@@ -447,7 +446,9 @@ def _highly_variable_genes_single_batch(
         )
         missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(bool)
         missing_hvg.index = adata.var_names[~filt]
-        df = pd.concat([df, missing_hvg]).loc[adata.var_names]
+        # restore the original gene order by position: var_names may be duplicated
+        order = np.argsort(np.r_[np.flatnonzero(filt), np.flatnonzero(~filt)])
+        df = pd.concat([df, missing_hvg]).iloc[order]
 
     return df
 
@@ -596,10 +597,11 @@ def _highly_variable_genes_batched(
 
         dfs = (compute(df)[0] for df in dfs)
 
-    df = pd.concat(dfs, axis=0)
+    # group by gene position, not name: var_names may be duplicated
+    df = pd.concat((batch_df.reset_index(drop=True) for batch_df in dfs), axis=0)
 
     df["highly_variable"] = df["highly_variable"].astype(int)
-    df = df.groupby(df.index, observed=True).agg(
+    df = df.groupby(level=0).agg(
         dict(
             means="mean",
             dispersions="mean",
@@ -614,18 +616,18 @@ def _highly_variable_genes_batched(
         # sort genes by how often they selected as hvg within each batch and
         # break ties with normalized dispersion across batches
 
-        df_orig_ind = adata.var.index.copy()
         df = df.sort_values(
             ["highly_variable_nbatches", "dispersions_norm"],
             ascending=False,
             na_position="last",
         )
         df["highly_variable"] = np.arange(df.shape[0]) < cutoff
-        df = df.loc[df_orig_ind]
+        df = df.sort_index()
     else:
         df["dispersions_norm"] = df["dispersions_norm"].fillna(0)  # similar to Seurat
         df["highly_variable"] = cutoff.in_bounds(df["means"], df["dispersions_norm"])
 
+    df.index = adata.var_names
     return df
 
 
