@@ -110,6 +110,10 @@ def test_toggleswitch():
 def test_pbmc68k_reduced():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
+        # anndata≤0.13.4 accesses options deprecated in pandas 3.1 when reading h5ad
+        warnings.filterwarnings(
+            "ignore", r"The '(future\.infer_string|mode\.chained_assignment)' option"
+        )
         sc.datasets.pbmc68k_reduced()
 
 
