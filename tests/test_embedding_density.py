@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
+import pytest
 from anndata import AnnData
 
 import scanpy as sc
@@ -21,6 +23,27 @@ def test_embedding_density():
     assert max_idx == "4"
     assert max_dens == 1
     assert min_dens == 0
+
+
+@pytest.mark.parametrize(
+    ("basis", "components"), [("umap", [0, 1]), ("diffmap", [1, 2])]
+)
+def test_embedding_density_groupby(basis: str, components: list[int]) -> None:
+    """Density is estimated per group, on the default components of `basis`."""
+    rng = np.random.default_rng(0)
+    adata = AnnData(np.ones((60, 1)))
+    adata.obs["group"] = pd.Categorical(np.repeat(["a", "b"], 30))
+    adata.obsm[f"X_{basis}"] = rng.normal(size=(60, 3))
+
+    sc.tl.embedding_density(adata, basis, groupby="group")
+
+    for idx in adata.obs.groupby("group", observed=True).indices.values():
+        subset = AnnData(np.ones((len(idx), 1)))
+        subset.obsm["X_test"] = adata.obsm[f"X_{basis}"][idx][:, components]
+        sc.tl.embedding_density(subset, "test")
+        np.testing.assert_allclose(
+            adata.obs[f"{basis}_density_group"].iloc[idx], subset.obs["test_density"]
+        )
 
 
 def test_embedding_density_plot():
