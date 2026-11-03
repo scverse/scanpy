@@ -335,6 +335,8 @@ def test_pca_reproducible(
     subtests: pytest.Subtests, array_type, rng_arg: Literal["rng", "random_state"]
 ):
     pbmc = pbmc3k_normalized()
+    # PCA only uses HVGs anyway, and densified copies of all genes take GBs
+    pbmc = pbmc[:, pbmc.var["highly_variable"]].copy()
     pbmc.X = array_type(pbmc.X)
 
     a, b, c = (
