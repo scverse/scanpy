@@ -56,25 +56,47 @@ Working with millions of cells and have a GPU available?
 * Check out our {ref}`contribution guide <contribution-guide>` for development practices.
 * Consider citing [Genome Biology (2018)] along with original {doc}`references <references>`.
 
-% put references first so all references are resolved
-
-% NO! there is a particular meaning to this sequence
-
 ```{toctree}
+:caption: Getting started
 :hidden: true
 :maxdepth: 1
 
 installation
+quickstart
+```
+
+```{toctree}
+:caption: Guides
+:hidden: true
+:maxdepth: 1
+
 tutorials/index
-usage-principles
 how-to/index
+```
+
+```{toctree}
+:caption: Reference
+:hidden: true
+:maxdepth: 1
+
 api/index
 external/index
+usage-principles
+```
+
+```{toctree}
+:caption: Project
+:hidden: true
+:maxdepth: 1
+
 release-notes/index
-community
 dev/index
-contributors
+citation
 references
+community
+contributors
+GitHub <https://github.com/scverse/scanpy>
+Discourse <https://discourse.scverse.org/c/help/scanpy/37>
 ```
 
 [contribution guide]: dev/index.md
