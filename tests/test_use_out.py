@@ -354,6 +354,7 @@ def test_out_multi_mapping(adata: AnnData) -> None:
             sc.pp.scrublet,
             dict(doublet_score="obs.x", predicted_doublet="obs.x"),
             id="scrublet",
+            marks=needs.skimage,
         ),
     ],
 )
