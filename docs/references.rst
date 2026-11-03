@@ -1,4 +1,4 @@
-References
-----------
+Bibliography
+------------
 
 .. bibliography::
