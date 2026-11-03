@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 import sys
 from datetime import datetime
 from functools import partial
@@ -15,7 +14,6 @@ import matplotlib  # noqa
 from docutils import nodes
 from packaging.version import Version
 from scverse_doc.config import DEFAULTS
-from sphinxcontrib.katex import NODEJS_BINARY
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
@@ -61,7 +59,6 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx_exec_jupyter",
     "sphinxcontrib.bibtex",
-    "sphinxcontrib.katex",
     "sphinx_autodoc_typehints",
     "scverse_misc.sphinx_ext",
     "sphinx.ext.linkcode",
@@ -106,8 +103,6 @@ ogp_image = f"{ogp_site_url}_static/Scanpy_Logo_BrightFG.svg"
 
 typehints_defaults = "braces"
 always_use_bars_union = True  # Don’t use `Union` even when building with Python ≤3.14
-
-katex_prerender = shutil.which(NODEJS_BINARY) is not None
 
 intersphinx_mapping = dict(
     anndata=("https://anndata.scverse.org/en/stable/", None),
