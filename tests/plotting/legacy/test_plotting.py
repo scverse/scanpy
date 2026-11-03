@@ -1089,6 +1089,21 @@ def test_genes_symbols(plot_cmp, id, fn):
     plot_cmp(f"{id}_gene_symbols")
 
 
+@pytest.mark.parametrize(
+    "fn",
+    [
+        sc.pl.heatmap,
+        sc.pl.tracksplot,
+        sc.pl.dotplot,
+        sc.pl.matrixplot,
+        sc.pl.stacked_violin,
+    ],
+)
+def test_var_names_gene_symbols_documented(fn):
+    """Docs must state that `gene_symbols` changes where `var_names` are looked up."""
+    assert "adata.var[gene_symbols]" in fn.__doc__
+
+
 @pytest.fixture(scope="session")
 def pbmc_scatterplots_session() -> AnnData:
     # Wrapped in another fixture to avoid mutation
