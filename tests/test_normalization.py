@@ -250,27 +250,33 @@ def test_pearson_residuals_zero_counts(sparsity_func, dtype, theta, clip, empty)
 
     with np.errstate(divide="raise", invalid="raise"):
         result = sc.experimental.pp.normalize_pearson_residuals(
-            adata, theta=theta, clip=clip, inplace=False
-        )["X"]
+            adata, theta=theta, clip=clip, out=True
+        )
 
     assert np.isfinite(result).all()
     np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-7)
     np.testing.assert_array_equal(to_ndarray(adata.X), counts)
 
 
-@pytest.mark.parametrize("mode", ["inplace", "copy", "layer"])
+@pytest.mark.parametrize(
+    "mode", ["inplace", "out", pytest.param("layer", marks=needs.anndata_acc)]
+)
 def test_pearson_residuals_zero_counts_storage(mode):
     counts = np.array([[1, 0, 6], [1, 0, 4], [0, 0, 0]], dtype=float)
     adata = AnnData(counts.copy())
+    kw = {}
     if mode == "layer":
+        from anndata.acc import A
+
         adata.layers["counts"] = counts.copy()
+        kw = dict(use=A.layers["counts"])
     with np.errstate(divide="raise", invalid="raise"):
         result = sc.experimental.pp.normalize_pearson_residuals(
-            adata, copy=mode == "copy", layer="counts" if mode == "layer" else None
+            adata, out=mode == "out", **kw
         )
     output = (
-        result.X
-        if mode == "copy"
+        result
+        if mode == "out"
         else (adata.layers["counts"] if mode == "layer" else adata.X)
     )
     assert np.isfinite(output).all()
