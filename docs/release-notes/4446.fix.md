@@ -1,0 +1,1 @@
+Fix {func}`~scanpy.pp.highly_variable_genes` (`flavor='seurat_v3'`), {func}`~scanpy.pp.calculate_qc_metrics`, and {func}`~scanpy.tl.rank_genes_groups` loading entire row-chunked {class}`dask.array.Array`s into memory when checking for count data or counting nonzero cells per gene {smaller}`Y Su`
