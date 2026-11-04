@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from collections.abc import MutableMapping
+from inspect import signature
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -245,7 +246,14 @@ class Ingest:
         from umap import UMAP
 
         rng = self._get_rng(adata.uns[keys.uns]["params"])
+        # we replicate the legacy (0.5.x) transform pipeline below
+        compat = (
+            dict(compatibility_layout=True)
+            if "compatibility_layout" in signature(UMAP).parameters
+            else {}
+        )
         self._umap = UMAP(
+            **compat,
             metric=self._metric,
             random_state=_legacy_random_state(rng),
             # umap can’t be run in parallel with `random_state is not None`

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from inspect import signature
 from typing import TYPE_CHECKING
 
 import anndata
@@ -217,7 +218,13 @@ def test_ingest_map_embedding_umap() -> None:
     ing.fit(adata_new)
     ing.map_embedding(method="umap")
 
-    reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4, n_jobs=1)
+    # ingest replicates the legacy (0.5.x) pipeline
+    compat = (
+        dict(compatibility_layout=True)
+        if "compatibility_layout" in signature(UMAP).parameters
+        else {}
+    )
+    reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4, n_jobs=1, **compat)
     reducer.fit(X)
     umap_transformed_t = reducer.transform(T)
 
