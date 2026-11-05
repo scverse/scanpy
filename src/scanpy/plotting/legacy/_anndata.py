@@ -873,8 +873,26 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
         msg = f"Expected number of y-labels to be `{len(keys)}`, found `{len(ylabel)}`."
         raise ValueError(msg)
 
-    if groupby is not None:
-        obs_df = get.obs_df(adata, keys=[groupby, *keys], layer=layer, use_raw=use_raw)
+    user_hue = kwds.get("hue")
+    obs_df = get.obs_df(
+        adata,
+        keys=list(
+            dict.fromkeys(k for k in [groupby, *keys, user_hue] if k is not None)
+        ),
+        layer=layer,
+        use_raw=use_raw,
+    )
+    if groupby is None:
+        obs_tidy = pd.melt(
+            obs_df, value_vars=keys, id_vars=[user_hue] if user_hue else None
+        )
+        x = "variable"
+        ys = ["value"]
+    else:
+        obs_tidy = obs_df
+        x = groupby
+        ys = keys
+        hue_key = kwds["hue"] = user_hue or groupby
         if kwds.get("palette") is None:
             if not isinstance(adata.obs[groupby].dtype, CategoricalDtype):
                 msg = (
@@ -882,27 +900,36 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
                     f"but is of dtype {adata.obs[groupby].dtype}."
                 )
                 raise ValueError(msg)
-            _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
-            kwds["hue"] = groupby
-            # hue == x, seaborn wrongly detects need for dodging with pandas 3
-            kwds.setdefault("dodge", False)
-            kwds["palette"] = dict(
-                zip(
-                    obs_df[groupby].cat.categories,
-                    adata.uns[f"{groupby}_colors"],
-                    strict=True,
+            # A user-supplied non-categorical hue is left to seaborn's own
+            # palette handling (e.g. a continuous colormap).
+            if isinstance(adata.obs[hue_key].dtype, CategoricalDtype):
+                _utils.add_colors_for_categorical_sample_annotation(adata, hue_key)
+                kwds["palette"] = dict(
+                    zip(
+                        obs_df[hue_key].cat.categories,
+                        adata.uns[f"{hue_key}_colors"],
+                        strict=True,
+                    )
                 )
-            )
+
+    # When the user colors violins by a second grouping, dodge the
+    # strip points the same way so they land on their violins.
+    if user_hue is not None and user_hue != groupby:
+        hue_col = obs_tidy[user_hue]
+        levels = (
+            hue_col.cat.categories
+            if isinstance(hue_col.dtype, CategoricalDtype)
+            else hue_col.unique()
+        )
+        # `color` + `hue` would make a gradient, so map every level to black
+        strip_kw = dict(
+            hue=user_hue,
+            dodge=True,
+            legend=False,
+            palette=dict.fromkeys(levels, "black"),
+        )
     else:
-        obs_df = get.obs_df(adata, keys=keys, layer=layer, use_raw=use_raw)
-    if groupby is None:
-        obs_tidy = pd.melt(obs_df, value_vars=keys)
-        x = "variable"
-        ys = ["value"]
-    else:
-        obs_tidy = obs_df
-        x = groupby
-        ys = keys
+        strip_kw = dict(color="black")
 
     if multi_panel and groupby is None and len(ys) == 1:
         # This is a quick and dirty way for adapting scales across several
@@ -931,8 +958,8 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
                     data=grouped_df.get_group(key),
                     jitter=jitter,
                     size=size,
-                    color="black",
                     ax=g.axes_dict[key],
+                    **strip_kw,
                 )
         if log:
             g.set(yscale="log")
@@ -988,9 +1015,9 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
                     data=obs_tidy,
                     order=order,
                     jitter=jitter,
-                    color="black",
                     size=size,
                     ax=ax_base,
+                    **strip_kw,
                 )
             if xlabel == "" and groupby is not None and rotation is None:
                 xlabel = groupby.replace("_", " ")

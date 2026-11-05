@@ -625,6 +625,81 @@ def test_violin(subtests: pytest.Subtests, exit_stack: ExitStack, plot_cmp) -> N
             sc.pl.violin(pbmc, "n_genes", ax=ax, ncols=2, show=False)
         plt.close(fig)
 
+    with subtests.test("hue"):
+        # Regression test for https://github.com/scverse/scanpy/issues/1174:
+        # a user-supplied `hue` column was overwritten by `groupby` (silently
+        # ignored) or raised because it was never loaded into the plotting frame.
+        fig, ax = plt.subplots()
+        n_groups = pbmc.obs["bulk_labels"].nunique()
+        sc.pl.violin(
+            pbmc,
+            "n_genes",
+            groupby="bulk_labels",
+            hue="phase",
+            stripplot=False,
+            ax=ax,
+            show=False,
+        )
+        # More drawn collections than one-per-group proves the hue split the
+        # violins; some group x hue cells are empty, so don't assert exact count.
+        assert len(ax.collections) > n_groups
+        plt.close(fig)
+
+    with subtests.test("hue_with_palette"):
+        # Same fix: previously raised "Could not interpret value `hue`" because
+        # the column was missing from the plotting frame.
+        fig, ax = plt.subplots()
+        sc.pl.violin(
+            pbmc,
+            "n_genes",
+            groupby="bulk_labels",
+            hue="phase",
+            palette="Set1",
+            stripplot=False,
+            ax=ax,
+            show=False,
+        )
+        plt.close(fig)
+
+    with subtests.test("hue_no_groupby"):
+        fig, ax = plt.subplots()
+        sc.pl.violin(
+            pbmc,
+            "n_genes",
+            hue="phase",
+            stripplot=False,
+            ax=ax,
+            show=False,
+        )
+        plt.close(fig)
+
+
+@pytest.mark.parametrize(
+    "kw",
+    [
+        pytest.param(dict(groupby="bulk_labels"), id="groupby"),
+        pytest.param(dict(multi_panel=True), id="multi_panel"),
+    ],
+)
+def test_violin_hue_stripplot(kw: dict[str, object]) -> None:
+    sc.pl.violin(pbmc68k_reduced(), "n_genes", hue="phase", show=False, **kw)
+    for ax in plt.gcf().axes:
+        strips = [
+            c
+            for c in ax.collections
+            if isinstance(c, mpl.collections.PathCollection) and len(c.get_offsets())
+        ]
+        # points are split like the violins (one strip per hue level) …
+        assert len(strips) > 1
+        centers = {
+            round(float(np.asarray(c.get_offsets())[:, 0].mean()), 1) for c in strips
+        }
+        assert len(centers) == len(strips)
+        # … and stay black
+        for c in strips:
+            np.testing.assert_array_equal(c.get_facecolor()[:, :3], 0)
+    plt.close("all")
+
 
 # TODO: Generalize test to more plotting types
 def test_violin_without_raw(tmp_path):
