@@ -132,6 +132,7 @@ def test_results(
 
 @pytest.mark.parametrize("method", ["t-test", "wilcoxon"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_results_layers(
     subtests: pytest.Subtests,
     data_dir: Path,
@@ -147,14 +148,16 @@ def test_results_layers(
     scores = get_true_scores(data_dir, method)["scores"]
 
     with subtests.test("layer"):
-        rank_genes_groups(
-            adata,
-            "true_groups",
-            method=method,
-            layer="to_test",
-            use_raw=None if method == "wilcoxon" else False,
-            n_genes=20,
-        )
+        # the deprecated spelling, so this also runs without `anndata.acc`
+        with pytest.warns(FutureWarning, match=r"argument layer is deprecated"):
+            rank_genes_groups(
+                adata,
+                "true_groups",
+                method=method,
+                layer="to_test",
+                use_raw=None if method == "wilcoxon" else False,
+                n_genes=20,
+            )
         assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
         for g in range(scores.shape[0]):
             np.testing.assert_allclose(
@@ -171,6 +174,7 @@ def test_results_layers(
             )
 
 
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_rank_genes_groups_use_raw():
     # https://github.com/scverse/scanpy/issues/1929
     pbmc = pbmc68k_reduced()
@@ -205,6 +209,7 @@ def test_emptycat():
         rank_genes_groups(pbmc, groupby="louvain")
 
 
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_log1p_save_restore(tmp_path):
     """Tests the sequence log1p→save→load→rank_genes_groups."""
     from anndata import read_h5ad
@@ -437,11 +442,13 @@ def test_illico(
     pbmc.raw.X.sort_indices()
     pbmc_illico = pbmc.copy()
 
+    from anndata.acc import A
+
     reference = pbmc.obs["bulk_labels"].iloc[0] if test == "ovo" else "rest"
     with sc.settings.override(preset=sc.Preset.ScanpyV2Preview):
         sc.tl.rank_genes_groups(
             pbmc_illico,
-            groupby="bulk_labels",
+            groupby=A.obs["bulk_labels"],
             method="wilcoxon",
             reference=reference if test == "ovo" else "rest",
             n_genes=pbmc.n_vars,
@@ -562,14 +569,19 @@ def test_mean_in_log_space(
         obs={"bulk_labels": ["a"] * 10 + ["b"] * 10},
         uns={} if base is None else {"log1p": {"base": base}},
     )
-    with (
-        sc.settings.override(preset=sc.Preset.ScanpyV2Preview)
-        if method == "wilcoxon_illico"
-        else nullcontext()
-    ):
+    if method == "wilcoxon_illico":
+        from anndata.acc import A
+
+        groupby, ctx = (
+            A.obs["bulk_labels"],
+            sc.settings.override(preset=sc.Preset.ScanpyV2Preview),
+        )
+    else:
+        groupby, ctx = "bulk_labels", nullcontext()
+    with ctx:
         rank_genes_groups(
             adata,
-            groupby="bulk_labels",
+            groupby=groupby,
             groups=["a"],
             reference="b",
             method="wilcoxon" if "illico" in method else method,
@@ -577,3 +589,33 @@ def test_mean_in_log_space(
         )
     logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
     np.testing.assert_equal(logfcs, expected_logfc)
+
+
+def test_rank_genes_groups_out() -> None:
+    """`out=True` returns what would be stored, `key_added` renames it."""
+    pbmc = pbmc68k_reduced()
+    before = set(pbmc.uns)
+    res = rank_genes_groups(pbmc, "bulk_labels", n_genes=3, out=True)
+    assert set(pbmc.uns) == before
+    assert {"params", "names", "scores"} <= res.keys()
+
+    rank_genes_groups(pbmc, "bulk_labels", n_genes=3)
+    np.testing.assert_array_equal(pbmc.uns["rank_genes_groups"]["names"], res["names"])
+    # not deprecated until there are `.uns` accessors
+    rank_genes_groups(pbmc, "bulk_labels", n_genes=3, key_added="k")
+    np.testing.assert_array_equal(pbmc.uns["k"]["names"], res["names"])
+
+    with pytest.raises(TypeError, match=r"`out` must be a `bool`"):
+        rank_genes_groups(pbmc, "bulk_labels", out="obs.x")
+
+
+@needs.anndata_acc
+def test_rank_genes_groups_groupby_ref() -> None:
+    """`groupby` takes a reference like `A.obs['bulk_labels']`."""
+    from anndata.acc import A
+
+    pbmc = pbmc68k_reduced()
+    expected = rank_genes_groups(pbmc, "bulk_labels", n_genes=3, out=True)
+    res = rank_genes_groups(pbmc, A.obs["bulk_labels"], n_genes=3, out=True)
+    np.testing.assert_array_equal(res["names"], expected["names"])
+    assert res["params"]["groupby"] == "bulk_labels"

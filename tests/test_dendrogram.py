@@ -7,24 +7,41 @@ from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 n_neighbors = 5
 key = "test"
 
 
 @pytest.mark.parametrize("groupby", ["bulk_labels", ["bulk_labels", "phase"]])
-@pytest.mark.parametrize("key_added", [None, "custom_key"])
+@pytest.mark.parametrize("key_added", [None, "custom"])
 def test_dendrogram_key_added(groupby, key_added):
     adata = pbmc68k_reduced()
-    sc.tl.dendrogram(adata, groupby=groupby, key_added=key_added, use_rep="X_pca")
-    if isinstance(groupby, list):
-        dendrogram_key = f"dendrogram_{'_'.join(groupby)}"
+    sc.tl.dendrogram(adata, groupby=groupby, key_added=key_added)
+    if key_added is not None:
+        key = key_added
+    elif isinstance(groupby, list):
+        key = f"dendrogram_{'_'.join(groupby)}"
     else:
-        dendrogram_key = f"dendrogram_{groupby}"
+        key = f"dendrogram_{groupby}"
+    assert key in adata.uns
 
-    if key_added is None:
-        key_added = dendrogram_key
-    assert key_added in adata.uns
+
+def test_dendrogram_out_true():
+    """`out=True` returns the info and writes nothing."""
+    adata = pbmc68k_reduced()
+    before = set(adata.uns)
+    dat = sc.tl.dendrogram(adata, groupby="bulk_labels", out=True)
+    assert "dendrogram_info" in dat
+    assert set(adata.uns) == before
+
+
+def test_dendrogram_deprecated_args():
+    adata = pbmc68k_reduced()
+    with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
+        dat = sc.tl.dendrogram(adata, groupby="bulk_labels", inplace=False)
+    assert "dendrogram_info" in dat
+    assert "dendrogram_bulk_labels" not in adata.uns
 
 
 REP_PCA_0 = [
@@ -74,3 +91,13 @@ def test_dendrogram_cor():
         obsm=dict(X_pca=REP_PCA),
     )
     sc.tl.dendrogram(rep, groupby="leiden")
+
+
+@needs.anndata_acc
+def test_dendrogram_groupby_ref():
+    """`groupby` takes references like `A.obs['bulk_labels']`."""
+    from anndata.acc import A
+
+    adata = pbmc68k_reduced()
+    sc.tl.dendrogram(adata, groupby=[A.obs["bulk_labels"], "phase"])
+    assert "dendrogram_bulk_labels_phase" in adata.uns
