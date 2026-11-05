@@ -1,7 +1,11 @@
 {
     "$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
     "formatter": { "useEditorconfig": true },
-    "markdown": { "parser": { "frontmatter": true } },
+    "markdown": {
+        "parser": { "frontmatter": true },
+        // strips continuation indentation of definition lists (not CommonMark)
+        "formatter": { "enabled": false },
+    },
     "overrides": [
         {
             "includes": ["./.vscode/*.json", "**/*.jsonc", "**/asv.conf.json"],
