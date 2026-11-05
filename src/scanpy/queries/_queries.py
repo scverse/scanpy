@@ -13,7 +13,7 @@ from scverse_misc import Deprecation, deprecated
 
 from .._utils import _doc_params
 from .._utils._doctests import doctest_needs
-from ..get import rank_genes_groups_df
+from ..get.get import _rank_genes_groups_df
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -283,7 +283,8 @@ def enrich(
     Using `sc.queries.enrich` on an :class:`anndata.AnnData` object:
 
     >>> pbmcs = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(pbmcs, "bulk_labels")
+    >>> sc.tl.rank_genes_groups(pbmcs, "bulk_labels")  # doctest: +ELLIPSIS
+    FutureWarning: The function rank_genes_groups is deprecated...
     >>> sc.queries.enrich(pbmcs, "CD34+")
 
     """
@@ -317,7 +318,7 @@ def _enrich_anndata(
     gene_symbols: str | None = None,
     gprofiler_kwargs: Mapping[str, Any] = frozendict({}),
 ) -> pd.DataFrame:
-    de = rank_genes_groups_df(
+    de = _rank_genes_groups_df(
         adata,
         group=group,
         key=key,

@@ -24,6 +24,8 @@ api_module_names = [
     "sc",
     "sc.pp",
     "sc.tl",
+    "sc.tl.markers",
+    "sc.tl.de",
     "sc.pl",
     "sc.experimental.pp",
     "sc.external.pp",

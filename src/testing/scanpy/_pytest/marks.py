@@ -78,6 +78,7 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
     skmisc = "scikit-misc"
     zarr = auto()
     illico = auto()
+    pydeseq2 = auto()
     # external
     bbknn = auto()
     harmony = "harmonyTS"
