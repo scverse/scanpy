@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from collections.abc import MutableMapping
+from inspect import signature
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -238,7 +239,14 @@ class Ingest:
         from umap import UMAP
 
         rng = self._get_rng(adata.uns[keys.uns]["params"])
+        # we replicate the legacy (0.5.x) transform pipeline below
+        compat = (
+            dict(compatibility_layout=True)
+            if "compatibility_layout" in signature(UMAP).parameters
+            else {}
+        )
         self._umap = UMAP(
+            **compat,
             metric=self._metric,
             random_state=_legacy_random_state(rng),
             # umap can’t be run in parallel with `random_state is not None`
@@ -283,21 +291,6 @@ class Ingest:
             random_state=_legacy_random_state(rng),
         )
 
-        # temporary hack for the broken forest storage
-        from pynndescent.rp_trees import make_forest
-
-        current_random_state = check_random_state(self._nnd_idx.random_state)
-        self._nnd_idx._rp_forest = make_forest(
-            self._nnd_idx._raw_data,
-            self._nnd_idx.n_neighbors,
-            self._nnd_idx.n_search_trees,
-            self._nnd_idx.leaf_size,
-            self._nnd_idx.rng_state,
-            current_random_state,
-            self._nnd_idx.n_jobs,
-            self._nnd_idx._angular_trees,
-        )
-
     def _init_neighbors(self, adata: AnnData, neighbors_key: str | None) -> None:
         neighbors = NeighborsView(adata, neighbors_key)
 
@@ -313,8 +306,15 @@ class Ingest:
             self._n_pcs = neighbors["params"]["n_pcs"]
             self._rep = adata.obsm["X_pca"][:, : self._n_pcs]
         elif adata.n_vars > settings.N_PCS and "X_pca" in adata.obsm:
+            # Neither `use_rep` nor `n_pcs` was recorded, meaning `pp.neighbors`
+            # ran with its own `n_pcs=None` default, which uses the full stored
+            # PCA representation unsliced (see `_get_pca_or_small_x`). Slicing
+            # to `settings.N_PCS` here would silently use a different, smaller
+            # representation than the one that actually produced this
+            # neighbor graph whenever more than `settings.N_PCS` components
+            # were computed.
             self._use_rep = "X_pca"
-            self._rep = adata.obsm["X_pca"][:, : settings.N_PCS]
+            self._rep = adata.obsm["X_pca"]
             self._n_pcs = self._rep.shape[1]
 
         self._metric_kwds = neighbors["params"].get("metric_kwds", {})

@@ -274,11 +274,13 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         raise ValueError(msg)
     sorted_index = (
         df[sort_cols]
+        .reset_index(drop=True)
         .sort_values(sort_cols, ascending=sort_ascending, na_position="last")
         .index
     )
-    df["highly_variable"] = False
-    df.loc[sorted_index[: int(n_top_genes)], "highly_variable"] = True
+    highly_variable = np.zeros(len(df), dtype=bool)
+    highly_variable[sorted_index[: int(n_top_genes)]] = True
+    df["highly_variable"] = highly_variable
 
     if inplace:
         adata.uns["hvg"] = {"flavor": flavor}
@@ -439,7 +441,6 @@ def _highly_variable_genes_single_batch(
     df.index = adata[:, filt].var_names
 
     if n_removed > 0:
-        # df.reset_index(drop=False, inplace=True, names=["gene"])
         # Add 0 values for genes that were filtered out
         missing_hvg = pd.DataFrame(
             np.zeros((n_removed, len(df.columns))),
@@ -447,7 +448,9 @@ def _highly_variable_genes_single_batch(
         )
         missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(bool)
         missing_hvg.index = adata.var_names[~filt]
-        df = pd.concat([df, missing_hvg]).loc[adata.var_names]
+        # restore the original gene order by position: var_names may be duplicated
+        order = np.argsort(np.r_[np.flatnonzero(filt), np.flatnonzero(~filt)])
+        df = pd.concat([df, missing_hvg]).iloc[order]
 
     return df
 
@@ -536,7 +539,7 @@ def _subset_genes(
         f"the {n_top_genes} top genes correspond to a "
         f"normalized dispersion cutoff of {disp_cut_off}"
     )
-    return np.nan_to_num(dispersion_norm, nan=-np.inf) >= disp_cut_off
+    return np.nan_to_num(dispersion_norm, nan=-np.inf, posinf=np.inf) >= disp_cut_off
 
 
 def _nth_highest(x: NDArray[np.float64] | DaskArray, n: int) -> float | DaskArray:
@@ -596,10 +599,11 @@ def _highly_variable_genes_batched(
 
         dfs = (compute(df)[0] for df in dfs)
 
-    df = pd.concat(dfs, axis=0)
+    # group by gene position, not name: var_names may be duplicated
+    df = pd.concat((batch_df.reset_index(drop=True) for batch_df in dfs), axis=0)
 
     df["highly_variable"] = df["highly_variable"].astype(int)
-    df = df.groupby(df.index, observed=True).agg(
+    df = df.groupby(level=0).agg(
         dict(
             means="mean",
             dispersions="mean",
@@ -614,18 +618,18 @@ def _highly_variable_genes_batched(
         # sort genes by how often they selected as hvg within each batch and
         # break ties with normalized dispersion across batches
 
-        df_orig_ind = adata.var.index.copy()
         df = df.sort_values(
             ["highly_variable_nbatches", "dispersions_norm"],
             ascending=False,
             na_position="last",
         )
         df["highly_variable"] = np.arange(df.shape[0]) < cutoff
-        df = df.loc[df_orig_ind]
+        df = df.sort_index()
     else:
         df["dispersions_norm"] = df["dispersions_norm"].fillna(0)  # similar to Seurat
         df["highly_variable"] = cutoff.in_bounds(df["means"], df["dispersions_norm"])
 
+    df.index = adata.var_names
     return df
 
 
@@ -759,6 +763,10 @@ def highly_variable_genes(  # noqa: PLR0913
         If `batch_key` is given, this denotes in how many batches genes are detected as HVG
     `adata.var['highly_variable_intersection']` : :class:`pandas.Series` (dtype `bool`)
         If `batch_key` is given, this denotes the genes that are highly variable in all batches
+    `adata.uns['hvg']` : :class:`dict`
+        Dictionary with a `'flavor'` entry recording the `flavor` used.
+        :func:`scanpy.pl.highly_variable_genes` reads it to decide whether to plot
+        dispersions or variances
 
     """
     if isinstance(flavor, Default):

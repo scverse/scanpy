@@ -34,7 +34,8 @@ jobs:
       - name: Check if milestone or “no milestone” label is present
         uses: flying-sheep/check@e10bb11109d1434ab16729bd988d78d65d47e163 # v1.0.5
         with:
-          success: ${{ github.event.pull_request.user.login == 'pre-commit-ci[bot]' || github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
+          # bots add the label right after opening, so the `opened` run would fail
+          success: ${{ contains(fromJSON('["pre-commit-ci[bot]","dependabot[bot]"]'), github.event.pull_request.user.login) || github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
       - name: Check if the “Release notes” checkbox is checked and filled
         uses: kaisugi/action-regex-match@d67cd689755dc47c5362609e0a6e2e1c93fa721b # v1.0.2
         id: checked-relnotes
