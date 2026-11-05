@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import MutableMapping
+from inspect import signature
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -219,7 +220,14 @@ class Ingest:
     def _init_umap(self, adata):
         from umap import UMAP
 
+        # we replicate the legacy (0.5.x) transform pipeline below
+        compat = (
+            dict(compatibility_layout=True)
+            if "compatibility_layout" in signature(UMAP).parameters
+            else {}
+        )
         self._umap = UMAP(
+            **compat,
             metric=self._metric,
             random_state=adata.uns["umap"]["params"].get("random_state", 0),
             n_jobs=1,  # umap can’t be run in parallel with random_state != None
