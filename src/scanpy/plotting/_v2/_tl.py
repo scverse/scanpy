@@ -5,10 +5,13 @@ from typing import TYPE_CHECKING, cast
 import holoviews as hv
 import numpy as np
 import pandas as pd
-from anndata.acc import GraphAcc, MultiAcc
+from anndata.acc import GraphAcc, LayerAcc, MultiAcc
 from hv_anndata import A
 
+from ..._utils._acc import _resolve, _resolve_all, _resolve_some
+
 if TYPE_CHECKING:
+    from collections.abc import Collection
     from typing import Literal
 
     from anndata import AnnData
@@ -18,9 +21,9 @@ if TYPE_CHECKING:
 
 def draw_graph(
     adata: AnnData,
-    kdims: list[AdDim] | MultiAcc,
+    kdims: str | Collection[str | AdDim] | MultiAcc,
     edge_vdim: Literal["distances", "connectivities"] | GraphAcc = "connectivities",
-    node_vdims: AdDim | list[AdDim] | None = None,
+    node_vdims: str | AdDim | Collection[str | AdDim] | None = None,
     *,
     neighbors_key: str = "neighbors",
 ) -> hv.Graph:
@@ -77,8 +80,9 @@ def draw_graph(
     """
     adata = adata.copy()
     adata.obs["cell index"] = range(adata.n_obs)
-    if isinstance(kdims, MultiAcc):
-        kdims = [kdims[0], kdims[1]]
+    kdims = _resolve_kdims(kdims)
+    if node_vdims is not None:
+        node_vdims = _resolve_some(node_vdims)
     if isinstance(edge_vdim, str):
         edge_vdim = A.obsp[adata.uns[neighbors_key][f"{edge_vdim}_key"]]
     elif not isinstance(edge_vdim, GraphAcc):
@@ -92,14 +96,28 @@ def draw_graph(
     )
 
 
+def _resolve_kdims(kdims: str | Collection[str | AdDim] | MultiAcc, /) -> list[AdDim]:
+    """Resolve `draw_graph`’s key dims: a multi-accessor selects its first two components."""
+    match _resolve(kdims, vec=False) if isinstance(kdims, str) else kdims:
+        case MultiAcc() as multi:
+            return [multi[0], multi[1]]
+        case LayerAcc() | GraphAcc() as acc:
+            msg = (
+                f"kdims must be `A.obsm[k]`/`A.varm[k]` or a pair of dims, got {acc!r}."
+            )
+            raise TypeError(msg)
+        case specs:
+            return _resolve_all(specs)
+
+
 def ranking(
     adata: AnnData,
-    ref: AdDim,
+    ref: str | AdDim,
     /,
     n_points: int = 10,
     *,
     include_lowest: bool = True,
-    label_dim: AdDim | None = None,
+    label_dim: str | AdDim | None = None,
 ) -> hv.Labels:
     """Plot (e.g. PCA) score ranking.
 
@@ -150,9 +168,9 @@ def ranking(
         sc.pl.ranking(pca_adata, A.var["variance_ratio"], include_lowest=False)
 
     """
+    ref = _resolve(ref)
     [dim] = ref.dims
-    if label_dim is None:
-        label_dim = getattr(A, dim).index
+    label_dim = getattr(A, dim).index if label_dim is None else _resolve(label_dim)
     # full arrays
     scores = adata[ref]
     labels = adata[label_dim]
@@ -188,7 +206,7 @@ def ranking(
 
 def embedding_density(
     adata: AnnData,
-    basis: MultiAcc,
+    basis: str | MultiAcc,
     *,
     groupby: str | None = None,
     key: str | None = None,
@@ -225,12 +243,16 @@ def embedding_density(
         sc.pl.embedding_density(adata, A.obsm["umap"], groupby="phase")
 
     """
-    basis_name = basis.k.removeprefix("X_")
+    acc = _resolve(basis, vec=False)
+    if not isinstance(acc, MultiAcc):
+        msg = f"basis must be `A.obsm[k]`/`A.varm[k]`, got {acc!r}."
+        raise TypeError(msg)
+    basis_name = acc.k.removeprefix("X_")
     if key is None:
         key = f"{basis_name}_density{'' if groupby is None else f'_{groupby}'}"
 
     groupby_vdims = [] if groupby is None else [A.obs[groupby]]
-    scatter = hv.Scatter(adata, basis[0], [basis[1], *groupby_vdims, A.obs[key]]).opts(
+    scatter = hv.Scatter(adata, acc[0], [acc[1], *groupby_vdims, A.obs[key]]).opts(
         color=A.obs[key],
         aspect="square",
         xlabel=f"{basis_name} 1",
