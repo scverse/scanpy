@@ -17,7 +17,7 @@ Next, if problems persist, clear the sphinx cache (`hatch run docs:clean`) and t
 ## Adding to the docs
 
 For any user-visible changes, please make sure a note has been added to the release notes using `hatch run towncrier:create` (see towncrier’s {doc}`towncrier:tutorial`).
-When asked for “Issue number (`+` if none)”, enter the *PR number* instead.
+When asked for “Issue number (`+` if none)”, enter the _PR number_ instead.
 
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
 This should be added to `docs/api.md` under a relevant heading.
@@ -74,8 +74,8 @@ If your parameter only accepts an enumeration of strings, specify them like so: 
 There are three types of return sections – prose, tuple, and a mix of both.
 
 1. Prose is for simple cases.
-2. Tuple return sections are formatted like parameters. Other than in numpydoc, each tuple is first characterized by the identifier and *not* by its type. Provide type annotation in the function header.
-3. Mix of prose and tuple is relevant in complicated cases, e.g. when you want to describe that you *added something as annotation to an \`AnnData\` object*.
+2. Tuple return sections are formatted like parameters. Other than in numpydoc, each tuple is first characterized by the identifier and _not_ by its type. Provide type annotation in the function header.
+3. Mix of prose and tuple is relevant in complicated cases, e.g. when you want to describe that you _added something as annotation to an \`AnnData\` object_.
 
 #### Examples
 

@@ -9,7 +9,7 @@
 :link: installation
 :link-type: doc
 
-New to *scanpy*? Check out the installation guide.
+New to _scanpy_? Check out the installation guide.
 :::
 
 :::{grid-item-card} Tutorials {octicon}`play;1em;`
@@ -51,10 +51,10 @@ Working with millions of cells and have a GPU available?
 
 **Other resources**
 
-* Follow changes in the {ref}`release notes <release-notes>`.
-* Discover tools that build on or complement scanpy in the [scverse ecosystem](https://scverse.org/packages/#ecosystem), and follow scverse-wide news at [scverse.org/blog](https://scverse.org/blog/).
-* Check out our {ref}`contribution guide <contribution-guide>` for development practices.
-* Consider citing [Genome Biology (2018)] along with original {doc}`references <references>`.
+- Follow changes in the {ref}`release notes <release-notes>`.
+- Discover tools that build on or complement scanpy in the [scverse ecosystem](https://scverse.org/packages/#ecosystem), and follow scverse-wide news at [scverse.org/blog](https://scverse.org/blog/).
+- Check out our {ref}`contribution guide <contribution-guide>` for development practices.
+- Consider citing [Genome Biology (2018)] along with original {doc}`references <references>`.
 
 ```{toctree}
 :caption: Getting started
