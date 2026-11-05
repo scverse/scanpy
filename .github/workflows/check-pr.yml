@@ -59,7 +59,8 @@ jobs:
     if: github.event.pull_request.user.login != 'pre-commit-ci[bot]' && needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(fromJSON('["style","refactor","test","build","docs","ci"]'), needs.check-milestone.outputs.type)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: { filter: 'blob:none', fetch-depth: 0, persist-credentials: false }
+        with:
+          { filter: "blob:none", fetch-depth: 0, persist-credentials: false }
       - name: Find out if a relevant release fragment is added
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: changes

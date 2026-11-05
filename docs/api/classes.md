@@ -1,6 +1,5 @@
 # Classes
 
-
 ```{eval-rst}
 .. currentmodule:: scanpy
 ```

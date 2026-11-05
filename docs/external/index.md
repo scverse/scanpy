@@ -1,6 +1,5 @@
 # External API
 
-
 ```{eval-rst}
 .. module:: scanpy.external
 ```
