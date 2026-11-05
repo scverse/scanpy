@@ -56,7 +56,7 @@ jobs:
       matrix:
         env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
     permissions:
-      id-token: write  # for codecov OIDC
+      id-token: write # for codecov OIDC
     env:
       UV_PYTHON: ${{ matrix.env.python }}
     steps:

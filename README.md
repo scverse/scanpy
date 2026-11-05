@@ -24,8 +24,7 @@ If you'd like to contribute by opening an issue or creating a pull request, plea
 [discourse]: https://discourse.scverse.org/
 [documentation]: https://scanpy.scverse.org/
 [many scanpy functions]: https://github.com/scverse/scanpy/issues/2578
-
-[//]: # (numfocus-fiscal-sponsor-attribution)
+[//]: # "numfocus-fiscal-sponsor-attribution"
 
 scanpy is part of the scverse® project ([website](https://scverse.org), [governance](https://scverse.org/about/roles)) and is fiscally sponsored by [NumFOCUS](https://numfocus.org/).
 If you like scverse® and want to support our mission, please consider making a tax-deductible [donation](https://numfocus.org/donate-to-scverse) to help the project pay for developer time, professional services, travel, workshops, and a variety of other needs.
