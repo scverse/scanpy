@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, NamedTuple, cast
 
 import numpy as np
 import pandas as pd
@@ -39,6 +39,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from igraph import Graph
+    from numpy.typing import NDArray
 
     from .._compat import CSBase
     from .._settings.presets import LeidenFlavor
@@ -80,7 +81,7 @@ if TYPE_CHECKING:
 @deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
 @deprecated_arg("obsp", DEPR_OBSP_GRAPH)
 @deprecated_copy
-def leiden(  # noqa: PLR0913
+def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     resolution: float = 1,
     *,
@@ -125,6 +126,7 @@ def leiden(  # noqa: PLR0913
     directed
         Whether to treat the graph as directed or undirected.
         `None` means directed for `flavor='leidenalg'` and undirected for `flavor='igraph'`.
+        `flavor='graspologic'` only supports undirected graphs.
     use_weights
         If `True`, edge weights from the graph are used in the computation
         (placing more emphasis on stronger edges).
@@ -133,6 +135,7 @@ def leiden(  # noqa: PLR0913
         Positive values above 2 define the total number of iterations to perform,
         -1 has the algorithm run until it reaches its optimal clustering.
         2 is faster and the default for underlying packages.
+        `flavor='graspologic'` can’t run until convergence, so negative values mean 2.
     partition_type
         Type of partition to use.
         Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`.
@@ -140,6 +143,8 @@ def leiden(  # noqa: PLR0913
         :func:`~leidenalg.find_partition`.
     flavor
         Which package's implementation to use.
+        `'graspologic'` uses `graspologic-native <https://github.com/graspologic-org/graspologic-native>`_,
+        which does not need `igraph` and is reproducible for a given `rng`.
     {use}
     {out}
     {adjacency}
@@ -149,7 +154,8 @@ def leiden(  # noqa: PLR0913
         Whether to copy `adata` or modify it inplace.
     **clustering_args
         Any further arguments to pass to :func:`~leidenalg.find_partition` (which in turn passes arguments to the `partition_type`)
-        or :meth:`igraph.Graph.community_leiden` from `igraph`.
+        or :meth:`igraph.Graph.community_leiden` from `igraph`,
+        or ``graspologic_native.leiden_csr``.
 
     Returns
     -------
@@ -174,7 +180,8 @@ def leiden(  # noqa: PLR0913
     flavor, directed = _validate_flavor(
         flavor, partition_type=partition_type, directed=directed
     )
-    _utils.ensure_igraph()
+    if flavor != "graspologic":
+        _utils.ensure_igraph()
     clustering_args = dict(clustering_args)
     rng = np.random.default_rng(rng)
     meta_random_state = (
@@ -223,6 +230,14 @@ def leiden(  # noqa: PLR0913
         part = cast(
             "MutableVertexPartition",
             leidenalg.find_partition(g, partition_type, seed=seed, **clustering_args),
+        )
+    elif flavor == "graspologic":
+        part = _leiden_graspologic(
+            adjacency,
+            resolution=resolution,
+            use_weights=use_weights,
+            rng=rng,
+            **clustering_args,
         )
     else:
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
@@ -286,7 +301,47 @@ def _directed_node_weights(
     )
 
 
-def _validate_flavor(
+class _Partition(NamedTuple):
+    membership: NDArray[np.int64]
+    modularity: float
+
+
+def _leiden_graspologic(
+    adjacency: CSBase | np.ndarray,
+    *,
+    resolution: float,
+    n_iterations: int,
+    use_weights: bool,
+    rng: np.random.Generator,
+    **kwargs,
+) -> _Partition:
+    from graspologic_native import leiden_csr
+    from scipy import sparse
+
+    a = sparse.csr_array(adjacency)  # noqa: TID251
+    # a sorted copy without explicit zeros: graspologic’s result depends on the storage order
+    a = a.maximum(a.T).tocoo().tocsr()
+    a.eliminate_zeros()
+    n = a.shape[0]
+    if a.nnz == 0:  # graspologic panics without edges
+        return _Partition(np.arange(n), 0.0)
+    modularity, membership = leiden_csr(
+        a.indptr.astype(np.int64),
+        a.indices.astype(np.int32),
+        a.data.astype(np.float64) if use_weights else np.ones(a.nnz),
+        n,
+        resolution=resolution,
+        # graspologic can’t iterate until convergence; 2 is igraph’s default
+        iterations=2 if n_iterations < 0 else n_iterations,
+        seed=int(rng.integers(2**63)),
+        **kwargs,
+    )
+    return _Partition(
+        np.fromiter(map(membership.__getitem__, range(n)), np.int64, n), modularity
+    )
+
+
+def _validate_flavor(  # noqa: PLR0912
     flavor: str | None,
     *,
     partition_type: object | None,
@@ -296,13 +351,28 @@ def _validate_flavor(
 
     if was_default := (flavor is None or isinstance(flavor, Default)):
         flavor = settings.preset.leiden.flavor
-    if isinstance(directed, Default):
+    if directed_was_default := isinstance(directed, Default):
         directed = settings.preset.leiden.directed
     match flavor:
         case "igraph":
             if partition_type is not None:
                 msg = "Do not pass in partition_type argument when using igraph."
                 raise ValueError(msg)
+        case "graspologic":
+            if partition_type is not None:
+                msg = "Do not pass in partition_type argument when using graspologic."
+                raise ValueError(msg)
+            if directed and not directed_was_default:
+                msg = "graspologic’s leiden implementation only supports undirected graphs."
+                raise ValueError(msg)
+            directed = False
+            try:
+                import graspologic_native  # noqa: F401
+            except ImportError as e:
+                e.add_note(
+                    "Please install `scanpy[graspologic]` (or `graspologic-native` directly) and try again."
+                )
+                raise
         case "leidenalg":
             msg = (
                 "The `igraph` implementation of leiden clustering is *orders of magnitude faster*. "
@@ -322,7 +392,7 @@ def _validate_flavor(
                 )
                 raise
         case _:
-            msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed."
+            msg = f"flavor must be 'igraph', 'leidenalg' or 'graspologic', but {flavor!r} was passed."
             raise ValueError(msg)
     if directed is None:
         directed = flavor == "leidenalg"
