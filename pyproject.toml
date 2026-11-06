@@ -87,7 +87,7 @@ bbknn = [ "bbknn" ]
 dask = [ "anndata[dask]", "dask[array]>=2024.10" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
-leiden = [ "igraph>=0.10.8", "leidenalg>=0.10.1" ]
+leiden = [ "igraph>=1", "leidenalg>=0.11" ]
 louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ]
 magic = [ "magic-impute>=2.0.4" ]
 paga = [ "igraph" ]
@@ -101,7 +101,7 @@ scanpy2 = [
     "anndata>=0.13.3",
     "holoviews>=1.23.2",
     "hv-anndata>=0.0.3a5",
-    "igraph>=0.10.8",
+    "igraph>=1",
     "matplotlib>=3.11",
     "scanpy[illico]",
     "scikit-misc>=0.5.1",

@@ -4,8 +4,10 @@ from contextlib import nullcontext
 from functools import partial
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 import pytest
+from anndata import AnnData
 from sklearn.metrics.cluster import normalized_mutual_info_score
 
 import scanpy as sc
@@ -14,8 +16,6 @@ from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from typing import Literal
-
-    from anndata import AnnData
 
 
 @pytest.fixture
@@ -105,10 +105,27 @@ def test_leiden_random_state(
         )
 
 
+@needs.anndata_acc
 @needs.igraph
-def test_leiden_igraph_directed(adata_neighbors):
-    with pytest.raises(ValueError, match=r"Cannot use igraph’s leiden.*directed"):
-        sc.tl.leiden(adata_neighbors, flavor="igraph", directed=True)
+@needs.leidenalg
+def test_leiden_igraph_directed():
+    from anndata.acc import A
+
+    graph = np.array([
+        [0, 0, 0, 3, 0, 0, 0, 2],
+        [0, 0, 1, 0, 0, 0, 3, 0],
+        [2, 0, 0, 1, 2, 0, 1, 2],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 1, 1, 0, 1, 0, 0],
+        [1, 0, 0, 0, 0, 0, 1, 0],
+    ])
+    adata = AnnData(np.zeros((8, 1)), obsp=dict(graph=graph))
+    kw = dict(use=A.obsp["graph"], directed=True, out=True)
+    igraph = sc.tl.leiden(adata, flavor="igraph", **kw)
+    leidenalg = sc.tl.leiden(adata, flavor="leidenalg", **kw)
+    assert normalized_mutual_info_score(igraph, leidenalg) == 1
 
 
 @needs.igraph

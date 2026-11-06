@@ -19,6 +19,7 @@ from .._docs import (
     doc_rng,
 )
 from .._settings import Default
+from .._settings.presets import LeidenPreset
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng, _set_igraph_rng
 from ..get._out import _out_key, deprecated_copy
@@ -35,9 +36,9 @@ from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Literal
 
     from anndata import AnnData
+    from igraph import Graph
 
     from .._compat import CSBase
     from .._settings.presets import LeidenFlavor
@@ -85,7 +86,7 @@ def leiden(  # noqa: PLR0913
     *,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     rng: SeedLike | RNGLike | None = None,
-    directed: bool | None = None,
+    directed: bool | Default | None = Default(preset=("leiden", "directed")),
     use_weights: bool = True,
     n_iterations: int = -1,
     partition_type: type[MutableVertexPartition] | None = None,
@@ -123,6 +124,7 @@ def leiden(  # noqa: PLR0913
     {restrict_to}
     directed
         Whether to treat the graph as directed or undirected.
+        `None` means directed for `flavor='leidenalg'` and undirected for `flavor='igraph'`.
     use_weights
         If `True`, edge weights from the graph are used in the computation
         (placing more emphasis on stronger edges).
@@ -169,7 +171,9 @@ def leiden(  # noqa: PLR0913
         to calculate a score independent of `flavor`.
 
     """
-    flavor = _validate_flavor(flavor, partition_type=partition_type, directed=directed)
+    flavor, directed = _validate_flavor(
+        flavor, partition_type=partition_type, directed=directed
+    )
     _utils.ensure_igraph()
     clustering_args = dict(clustering_args)
     rng = np.random.default_rng(rng)
@@ -205,7 +209,6 @@ def leiden(  # noqa: PLR0913
 
         if resolution is not None:
             clustering_args["resolution_parameter"] = resolution
-        directed = True if directed is None else directed
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if partition_type is None:
             partition_type = leidenalg.RBConfigurationVertexPartition
@@ -222,12 +225,18 @@ def leiden(  # noqa: PLR0913
             leidenalg.find_partition(g, partition_type, seed=seed, **clustering_args),
         )
     else:
-        g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if use_weights:
             clustering_args["weights"] = "weight"
         if resolution is not None:
             clustering_args["resolution"] = resolution
         clustering_args.setdefault("objective_function", "modularity")
+        if (
+            directed
+            and clustering_args["objective_function"] == "modularity"
+            and clustering_args.keys().isdisjoint({"node_weights", "node_in_weights"})
+        ):
+            clustering_args |= _directed_node_weights(g, use_weights=use_weights)
         with _set_igraph_rng(rng):
             part = g.community_leiden(**clustering_args)
     # store output into adata.obs
@@ -265,18 +274,29 @@ def leiden(  # noqa: PLR0913
     return None
 
 
-def _validate_flavor(
-    flavor: str | None, *, partition_type: object | None, directed: bool | None
-) -> Literal["igraph", "leidenalg"]:
-    if was_default := (flavor is None or isinstance(flavor, Default)):
-        from scanpy import settings
+def _directed_node_weights(g: Graph, *, use_weights: bool) -> dict[str, list[float]]:
+    """Get in- and out-degrees as node weights; python-igraph otherwise only counts out-degrees."""
+    weights = g.es["weight"] if use_weights else None
+    return dict(
+        node_weights=g.strength(mode="out", weights=weights),
+        node_in_weights=g.strength(mode="in", weights=weights),
+    )
 
+
+def _validate_flavor(
+    flavor: str | None,
+    *,
+    partition_type: object | None,
+    directed: bool | Default | None,
+) -> LeidenPreset:
+    from scanpy import settings
+
+    if was_default := (flavor is None or isinstance(flavor, Default)):
         flavor = settings.preset.leiden.flavor
+    if isinstance(directed, Default):
+        directed = settings.preset.leiden.directed
     match flavor:
         case "igraph":
-            if directed:
-                msg = "Cannot use igraph’s leiden implementation with a directed graph."
-                raise ValueError(msg)
             if partition_type is not None:
                 msg = "Do not pass in partition_type argument when using igraph."
                 raise ValueError(msg)
@@ -288,8 +308,7 @@ def _validate_flavor(
             if was_default:
                 msg += (
                     "\nIn the future, the default backend for leiden will be igraph instead of leidenalg. "
-                    "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`. "
-                    "`directed` must also be `False` to work with igraph’s implementation."
+                    "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`."
                 )
             warn(msg, FutureWarning if was_default else UserWarning)
             try:
@@ -302,4 +321,6 @@ def _validate_flavor(
         case _:
             msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed."
             raise ValueError(msg)
-    return flavor
+    if directed is None:
+        directed = flavor == "leidenalg"
+    return LeidenPreset(flavor, directed)
