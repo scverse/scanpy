@@ -87,7 +87,7 @@ bbknn = [ "bbknn" ]
 dask = [ "anndata[dask]", "dask[array]>=2024.10" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
-leiden = [ "igraph>=1.0", "leidenalg>=0.11" ]
+leiden = [ "igraph>=1", "leidenalg>=0.11" ]
 louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ]
 magic = [ "magic-impute>=2.0.4" ]
 paga = [ "igraph" ]
@@ -97,7 +97,7 @@ scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
 illico = [ "illico>=0.6" ]
-scanpy2 = [ "anndata>=0.13.3", "hv-anndata>=0.0.3a5", "igraph>=1.0", "scanpy[illico]", "scikit-misc>=0.5.1" ]
+scanpy2 = [ "anndata>=0.13.3", "hv-anndata>=0.0.3a5", "igraph>=1", "scanpy[illico]", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
 dev = [
