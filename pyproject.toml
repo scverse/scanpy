@@ -113,6 +113,7 @@ dev = [
     "towncrier",   # release note management
 ]
 test = [
+    "ln-ttest>=0.3",
     "scanpy[dask-ml]",
     "scanpy[dask]",
     "scanpy[illico]",

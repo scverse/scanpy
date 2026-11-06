@@ -37,7 +37,12 @@ __all__ = [
 
 
 type DETest = Literal[
-    "logreg", "t-test", "wilcoxon", "wilcoxon_illico", "t-test_overestim_var"
+    "logreg",
+    "t-test",
+    "wilcoxon",
+    "wilcoxon_illico",
+    "t-test_overestim_var",
+    "t-test_ln",
 ]
 type HVGFlavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
 type LeidenFlavor = Literal["leidenalg", "igraph"]
