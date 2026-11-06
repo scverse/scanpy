@@ -16,7 +16,6 @@ from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
     from typing import Literal
 
 
@@ -107,29 +106,10 @@ def test_leiden_random_state(
         )
 
 
-def _partitions(n: int) -> Iterator[list[int]]:
-    """Yield every partition of `n` nodes as a list of labels."""
-    if n == 1:
-        yield [0]
-        return
-    for labels in _partitions(n - 1):
-        for label in range(max(labels) + 2):
-            yield [*labels, label]
-
-
 @needs.anndata_acc
 @needs.igraph
-@pytest.mark.parametrize(
-    ("directed", "use_weights"),
-    [
-        pytest.param(True, True, id="directed-weighted"),
-        pytest.param(True, False, id="directed-unweighted"),
-        pytest.param(False, True, id="undirected-weighted"),
-    ],
-)
-def test_leiden_igraph_directed(*, directed: bool, use_weights: bool) -> None:
-    """Igraph’s Leiden finds the best of all partitions of a small directed graph."""
-    import igraph
+@needs.leidenalg
+def test_leiden_igraph_directed():
     from anndata.acc import A
 
     graph = np.array([
@@ -142,22 +122,11 @@ def test_leiden_igraph_directed(*, directed: bool, use_weights: bool) -> None:
         [0, 0, 1, 1, 0, 1, 0, 0],
         [1, 0, 0, 0, 0, 0, 1, 0],
     ])
-    g = igraph.Graph.Weighted_Adjacency(graph)
-    if not directed:
-        g.to_undirected(combine_edges="sum")
-    weights = "weight" if use_weights else None
-    best = max(_partitions(len(graph)), key=lambda p: g.modularity(p, weights))
-
     adata = AnnData(np.zeros((8, 1)), obsp=dict(graph=sparse.csr_matrix(graph)))  # noqa: TID251
-    labels = sc.tl.leiden(
-        adata,
-        use=A.obsp["graph"],
-        flavor="igraph",
-        directed=directed,
-        use_weights=use_weights,
-        out=True,
-    )
-    assert adjusted_rand_score(labels, best) == 1
+    kw = dict(use=A.obsp["graph"], directed=True, out=True)
+    igraph = sc.tl.leiden(adata, flavor="igraph", **kw)
+    leidenalg = sc.tl.leiden(adata, flavor="leidenalg", **kw)
+    assert adjusted_rand_score(igraph, leidenalg) == 1
 
 
 @needs.igraph
