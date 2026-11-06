@@ -1,1 +1,0 @@
-Allow `directed=True` with `flavor='igraph'` in {func}`~scanpy.tl.leiden`, which clusters by directed modularity. The `leiden` extra now requires `igraph>=1.0` and `leidenalg>=0.11` {smaller}`M Kuehl`
