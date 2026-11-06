@@ -7,10 +7,10 @@ This section of the docs covers our practices for working with `git` on our code
 For a more complete git tutorials we recommend checking out:
 
 [Atlassian's git tutorial](https://www.atlassian.com/git/tutorials)
-: Beginner friendly introductions to the git command line interface
+:   Beginner friendly introductions to the git command line interface
 
 [Setting up git for GitHub](https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/set-up-git)
-: Configuring git to work with your GitHub user account
+:   Configuring git to work with your GitHub user account
 
 (forking-and-cloning)=
 

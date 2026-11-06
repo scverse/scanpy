@@ -34,7 +34,7 @@ If you like scverse® and want to support our mission, please consider making a 
   <img
     src="https://raw.githubusercontent.com/numfocus/templates/master/images/numfocus-logo.png"
     width="200"
-  >
+>
 </a>
 </div>
 
@@ -50,8 +50,6 @@ That is, if something is missing from our public API as documented, for example 
 [leading underscore]: https://peps.python.org/pep-0008/#public-and-internal-interfaces
 [open an issue]: https://github.com/scverse/scanpy/issues/new/choose
 
-
-
 ## Citation
 
 If you use `scanpy` in your work, please cite the `scanpy` publication as follows:
@@ -60,7 +58,7 @@ If you use `scanpy` in your work, please cite the `scanpy` publication as follow
 >
 > F. Alexander Wolf, Philipp Angerer, Fabian J. Theis
 >
-> _Genome Biology_ 2018 Feb 06. doi: [10.1186/s13059-017-1382-0](https://doi.org/10.1186/s13059-017-1382-0).
+> *Genome Biology* 2018 Feb 06. doi: [10.1186/s13059-017-1382-0](https://doi.org/10.1186/s13059-017-1382-0).
 
 You can cite the scverse publication as follows:
 
@@ -68,7 +66,6 @@ You can cite the scverse publication as follows:
 >
 > Isaac Virshup, Danila Bredikhin, Lukas Heumos, Giovanni Palla, Gregor Sturm, Adam Gayoso, Ilia Kats, Mikaela Koutrouli, Scverse Community, Bonnie Berger, Dana Pe’er, Aviv Regev, Sarah A. Teichmann, Francesca Finotello, F. Alexander Wolf, Nir Yosef, Oliver Stegle & Fabian J. Theis
 >
-> _Nat Biotechnol._ 2023 Apr 10. doi: [10.1038/s41587-023-01733-8](https://doi.org/10.1038/s41587-023-01733-8).
-
+> *Nat Biotechnol.* 2023 Apr 10. doi: [10.1038/s41587-023-01733-8](https://doi.org/10.1038/s41587-023-01733-8).
 
 [contribution guide]: CONTRIBUTING.md

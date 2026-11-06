@@ -9,7 +9,7 @@
 :link: installation
 :link-type: doc
 
-New to _scanpy_? Check out the installation guide.
+New to *scanpy*? Check out the installation guide.
 :::
 
 :::{grid-item-card} Tutorials {octicon}`play;1em;`

@@ -3,7 +3,6 @@
 To use `scanpy` from another project, install it using your favourite environment manager:
 
 ::::{tab-set}
-
 :::{tab-item} Hatch (recommended)
 :sync: hatch
 
@@ -39,7 +38,6 @@ $ pip install scanpy
 [miniconda]: https://docs.anaconda.com/miniconda/miniconda-install/
 [from pypi]: https://pypi.org/project/scanpy
 :::
-
 ::::
 
 If you use Hatch or pip, the extra `[leiden]` installs two packages that are needed for popular
@@ -60,7 +58,6 @@ $ cd scanpy
 ```
 
 ::::{tab-set}
-
 :::{tab-item} Hatch (recommended)
 :sync: hatch
 
@@ -103,7 +100,6 @@ $ pip install --group=dev --group=test --group=doc -e .
 
 For instructions on how to work with the code, see the {ref}`contribution guide <contribution-guide>`.
 :::
-
 ::::
 
 [on github]: https://github.com/scverse/scanpy

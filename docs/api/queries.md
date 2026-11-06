@@ -18,5 +18,4 @@ This module provides useful queries for annotation and enrichment.
    queries.biomart_annotations
    queries.mitochondrial_genes
    queries.enrich
-
 ```

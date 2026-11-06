@@ -15,7 +15,6 @@ Import Scanpy's wrappers to external tools as:
 import scanpy.external as sce
 ```
 
-
 ```{toctree}
 :maxdepth: 2
 

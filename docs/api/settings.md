@@ -63,7 +63,6 @@ you'd usually want to set {attr}`settings.autoshow` to `False`.
 
 IO related settings for saving figures, caching files and storing datasets.
 
-
 ```{eval-rst}
 .. autosummary::
 
