@@ -37,7 +37,11 @@ from .._utils import (
     sanitize_anndata,
     view_to_actual,
 )
-from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
+from .._utils.random import (
+    _accepts_legacy_random_state,
+    _if_legacy_apply_global,
+    _LegacyRng,
+)
 from ..get._out import (
     _dest,
     _legacy_out,
@@ -994,6 +998,16 @@ def downsample_counts(
     -------
     Returns `None` if the result was written, else the downsampled count matrix.
 
+    Notes
+    -----
+    For sparse ``int64`` counts, sampling without replacement with ``rng``
+    (an integer seed or a :class:`numpy.random.Generator`)
+    samples discarded counts when `total_counts` exceeds half the input total.
+    This preserves the sampling distribution, but changes seeded results and
+    subsequent random draws compared with sampling retained counts directly.
+    Calls using the legacy ``random_state`` argument, or neither argument,
+    retain their previous behavior.
+
     """
     use = _resolve_obs(use)
     x = _get_arr(adata, use)
@@ -1065,7 +1079,20 @@ def _downsample_total_counts[T: (np.ndarray, CSBase)](
     with sparse_as_csr(x) as spc:
         x = spc.x  # we only mutate x, so spc.x receives the changes
         v = x.data if isinstance(x, CSBase) else x.reshape(-1)
-        _downsample_array(v, total_counts, rng=rng, replace=replace, inplace=True)
+        if (
+            isinstance(x, CSBase)
+            and x.dtype == np.int64
+            and not replace
+            and not isinstance(rng, _LegacyRng)
+            and total_counts > total // 2
+        ):
+            # Complementing a uniform sample without replacement preserves its law.
+            discarded = _downsample_array(
+                v, int(total) - total_counts, rng=rng, replace=False, inplace=False
+            )
+            v -= discarded
+        else:
+            _downsample_array(v, total_counts, rng=rng, replace=replace, inplace=True)
         if isinstance(x, np.ndarray) and not np.shares_memory(v, x):
             x[...] = v.reshape(x.shape)
     return spc.x  # use x that was converted back
