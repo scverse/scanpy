@@ -4,9 +4,12 @@ from contextlib import nullcontext
 from functools import partial
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 import pytest
-from sklearn.metrics.cluster import normalized_mutual_info_score
+from anndata import AnnData
+from scipy import sparse
+from sklearn.metrics.cluster import adjusted_rand_score, normalized_mutual_info_score
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
@@ -14,8 +17,6 @@ from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from typing import Literal
-
-    from anndata import AnnData
 
 
 @pytest.fixture
@@ -105,10 +106,46 @@ def test_leiden_random_state(
         )
 
 
+@needs.anndata_acc
 @needs.igraph
-def test_leiden_igraph_directed(adata_neighbors):
-    with pytest.raises(ValueError, match=r"Cannot use igraph’s leiden.*directed"):
-        sc.tl.leiden(adata_neighbors, flavor="igraph", directed=True)
+@pytest.mark.parametrize(
+    ("directed", "use_weights", "expected"),
+    [
+        pytest.param(True, True, [0, 1, 2, 0, 2, 1, 1, 0], id="directed-weighted"),
+        pytest.param(True, False, [0, 1, 1, 2, 2, 2, 1, 0], id="directed-unweighted"),
+        pytest.param(False, True, [0, 1, 0, 0, 0, 1, 1, 0], id="undirected-weighted"),
+    ],
+)
+def test_leiden_igraph_directed(
+    *, directed: bool, use_weights: bool, expected: list[int]
+) -> None:
+    """Igraph’s directed Leiden finds the directed modularity optimum.
+
+    The expected partitions are the unique optima found by exhaustive search,
+    and leidenalg’s directed modularity finds the same ones.
+    """
+    from anndata.acc import A
+
+    graph = np.array([
+        [0, 0, 0, 3, 0, 0, 0, 2],
+        [0, 0, 1, 0, 0, 0, 3, 0],
+        [2, 0, 0, 1, 2, 0, 1, 2],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 1, 1, 0, 1, 0, 0],
+        [1, 0, 0, 0, 0, 0, 1, 0],
+    ])
+    adata = AnnData(np.zeros((8, 1)), obsp=dict(graph=sparse.csr_matrix(graph)))  # noqa: TID251
+    labels = sc.tl.leiden(
+        adata,
+        use=A.obsp["graph"],
+        flavor="igraph",
+        directed=directed,
+        use_weights=use_weights,
+        out=True,
+    )
+    assert adjusted_rand_score(labels, expected) == 1
 
 
 @needs.igraph
