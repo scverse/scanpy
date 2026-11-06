@@ -274,13 +274,7 @@ def leiden(  # noqa: PLR0913
 
 
 def _directed_node_weights(g: Graph, *, use_weights: bool) -> dict[str, list[float]]:
-    """Count each node’s outgoing and incoming edges (summed weights if `use_weights`).
-
-    Modularity compares a cluster’s edges with those expected by chance. For an edge
-    from a to b, that depends on the edges leaving a and arriving at b. python-igraph
-    only counts the leaving edges unless given both, which misjudges kNN graphs:
-    every cell has k outgoing edges, but some are the neighbour of many others.
-    """
+    """Get in- and out-degrees as node weights; python-igraph otherwise only counts out-degrees."""
     weights = g.es["weight"] if use_weights else None
     return dict(
         node_weights=g.strength(mode="out", weights=weights),
