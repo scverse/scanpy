@@ -19,6 +19,7 @@ from .._docs import (
     doc_rng,
 )
 from .._settings import Default
+from .._settings.presets import LeidenPreset
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng, _set_igraph_rng
 from ..get._out import _out_key, deprecated_copy
@@ -35,7 +36,6 @@ from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Literal
 
     from anndata import AnnData
     from igraph import Graph
@@ -86,7 +86,7 @@ def leiden(  # noqa: PLR0913
     *,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     rng: SeedLike | RNGLike | None = None,
-    directed: bool | None = None,
+    directed: bool | Default | None = Default(preset=("leiden", "directed")),
     use_weights: bool = True,
     n_iterations: int = -1,
     partition_type: type[MutableVertexPartition] | None = None,
@@ -124,6 +124,7 @@ def leiden(  # noqa: PLR0913
     {restrict_to}
     directed
         Whether to treat the graph as directed or undirected.
+        `None` means directed for `flavor='leidenalg'` and undirected for `flavor='igraph'`.
     use_weights
         If `True`, edge weights from the graph are used in the computation
         (placing more emphasis on stronger edges).
@@ -283,12 +284,17 @@ def _directed_node_weights(g: Graph, *, use_weights: bool) -> dict[str, list[flo
 
 
 def _validate_flavor(
-    flavor: str | None, *, partition_type: object | None, directed: bool | None
-) -> tuple[Literal["igraph", "leidenalg"], bool]:
-    if was_default := (flavor is None or isinstance(flavor, Default)):
-        from scanpy import settings
+    flavor: str | None,
+    *,
+    partition_type: object | None,
+    directed: bool | Default | None,
+) -> LeidenPreset:
+    from scanpy import settings
 
+    if was_default := (flavor is None or isinstance(flavor, Default)):
         flavor = settings.preset.leiden.flavor
+    if isinstance(directed, Default):
+        directed = settings.preset.leiden.directed
     match flavor:
         case "igraph":
             if partition_type is not None:
@@ -315,5 +321,6 @@ def _validate_flavor(
         case _:
             msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed."
             raise ValueError(msg)
-    directed = True if directed is None else directed
-    return flavor, directed
+    if directed is None:
+        directed = flavor == "leidenalg"
+    return LeidenPreset(flavor, directed)
