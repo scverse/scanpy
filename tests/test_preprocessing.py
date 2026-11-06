@@ -376,14 +376,15 @@ def test_scale_array(*, count_matrix_format: _MatrixFormat, zero_center: bool) -
 
 # https://github.com/pandas-dev/pandas/issues/61928
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
-def test_recipe_plotting() -> None:
-    rng = np.random.default_rng()
+@pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
+def test_highly_variable_genes_plotting(flavor: str) -> None:
+    rng = np.random.default_rng(0)
     sc.settings.autoshow = False
     adata = AnnData(rng.integers(0, 1000, (1000, 1000)))
-
-    # These shouldn't throw an error
-    sc.pp.recipe_seurat(adata.copy(), plot=True)
-    sc.pp.recipe_zheng17(adata.copy(), plot=True)
+    sc.pp.normalize_total(adata)
+    sc.pp.log1p(adata)
+    hvg = sc.pp.highly_variable_genes(adata, flavor=flavor, n_top_genes=100, out=True)
+    sc.pl.highly_variable_genes(hvg, log=flavor == "cell_ranger")
 
 
 def test_regress_out_ordinal():
@@ -649,17 +650,6 @@ def test_downsample_total_counts_fortran_order() -> None:
     assert adata_f.X.sum() == 1000
     np.testing.assert_array_equal(adata_c.X, adata_f.X)
     assert adata_f.X.flags.f_contiguous
-
-
-def test_recipe_weinreb():
-    # Just tests for failure for now
-    adata = pbmc68k_reduced().raw.to_adata()
-    adata.X = adata.X.toarray()
-
-    orig = adata.copy()
-    with pytest.warns(FutureWarning, match=r"recipe_weinreb17 is deprecated"):
-        sc.pp.recipe_weinreb17(adata, log=False, copy=True)
-    assert_equal(orig, adata)
 
 
 @pytest.mark.parametrize("chunked", [False, True], ids=["full", "chunked"])

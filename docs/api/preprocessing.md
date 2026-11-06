@@ -8,7 +8,7 @@
 .. currentmodule:: scanpy
 ```
 
-Filtering of highly-variable genes, batch-effect correction, per-cell normalization, preprocessing recipes.
+Filtering of highly-variable genes, batch-effect correction, per-cell normalization.
 
 Any transformation of the data matrix that is not a _tool_. Other than _tools_, preprocessing steps usually don't return an easily interpretable annotation, but perform a basic transformation on the data matrix.
 
@@ -36,16 +36,7 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
    pp.downsample_counts
 ```
 
-## Recipes
-
-```{eval-rst}
-.. autosummary::
-   :nosignatures:
-   :toctree: generated/
-
-   pp.recipe_zheng17
-   pp.recipe_seurat
-```
+For workflows using the removed legacy recipes, see {doc}`../how-to/legacy-recipes`.
 
 (pp-data-integration)=
 
