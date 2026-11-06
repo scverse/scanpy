@@ -315,7 +315,7 @@ def tracksplot(
             xlabel="",
             ylabel=vdim.label,
             title="",
-            show_legend=False,  # TODO: switch to below impl once https://github.com/holoviz/holoviews/pull/7003 is released
+            show_legend=False,  # TODO: switch to below impl once it works, see its docstring
             aspect=2 * len(vdims),
         )
         for vdim in vdims
@@ -336,7 +336,12 @@ def _tracksplot2(
 ) -> hv.GridSpace:
     """Tracksplot variant. Faster but Gridspace is generally buggy.
 
-    We can switch once <https://github.com/holoviz/holoviews/pull/7003> is released.
+    Needs holoviews>=1.24 (<https://github.com/holoviz/holoviews/pull/7003> aligns axes),
+    but still blocked on:
+
+    - <https://github.com/holoviz/holoviews/issues/7142>: the bokeh legend is clipped to the top-right plot
+    - <https://github.com/holoviz/holoviews/issues/7143>: the outer-axis figures become visible
+      when ``panel_material_ui``'s ``MaterialDesign`` is active, which hv-anndata enables
     """
     if kdim is None:
         [dim] = {dim for vdim in vdims for dim in vdim.dims}
