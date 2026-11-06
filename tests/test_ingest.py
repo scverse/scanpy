@@ -205,30 +205,124 @@ def test_ingest_function(adatas: tuple[sc.AnnData, sc.AnnData]) -> None:
 # https://github.com/lmcinnes/umap/issues/1174
 @pytest.mark.filterwarnings("ignore:.*renamed to.*ensure_all_finite:FutureWarning")
 @pytest.mark.filterwarnings("ignore:.*argument use_rep is deprecated:FutureWarning")
-def test_ingest_map_embedding_umap() -> None:
-    adata_ref = sc.AnnData(X)
-    adata_new = sc.AnnData(T)
+@pytest.mark.parametrize("n_components", [2, 3])
+@pytest.mark.parametrize("as_sparse", [False, True])
+@pytest.mark.parametrize("metric_kwds", [{}, {"p": 3}])
+def test_ingest_map_embedding_umap(
+    n_components, as_sparse, metric_kwds, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sc.settings, "n_jobs", 1)
+    metric = "minkowski" if metric_kwds else "euclidean"
+    ref_x = sparse.csr_matrix(X) if as_sparse else X  # noqa: TID251
+    query_x = sparse.csr_matrix(T) if as_sparse else T  # noqa: TID251
+    adata_ref = sc.AnnData(ref_x)
+    adata_new = sc.AnnData(query_x)
 
     sc.pp.neighbors(
-        adata_ref, method="umap", use_rep="X", n_neighbors=4, random_state=0
+        adata_ref,
+        method="umap",
+        use_rep="X",
+        n_neighbors=4,
+        metric=metric,
+        metric_kwds=metric_kwds,
+        transformer="pynndescent",
+        random_state=0,
     )
-    sc.tl.umap(adata_ref, random_state=0)
+    sc.tl.umap(adata_ref, n_components=n_components, a=1.2, b=0.8, random_state=0)
+    reference_embedding = adata_ref.obsm["X_umap"].copy()
 
+    # Use the modern transform when available, retaining support for UMAP 0.5.
+    compat = (
+        dict(compatibility_layout=False)
+        if "compatibility_layout" in signature(UMAP).parameters
+        else {}
+    )
+    reducer = UMAP(
+        n_components=n_components,
+        metric=metric,
+        metric_kwds=metric_kwds,
+        a=1.2,
+        b=0.8,
+        random_state=0,
+        n_neighbors=4,
+        n_jobs=1,
+        **compat,
+    ).fit(ref_x)
+    # Compare transforms into the same stored layout, independent of how it was fit.
+    reducer.embedding_ = reference_embedding.copy()
+    umap_transformed_t = reducer.transform(query_x)
+
+    def fail_fit(*args, **kwargs):
+        pytest.fail("Ingest must reuse the reference embedding without fitting UMAP")
+
+    monkeypatch.setattr(UMAP, "fit", fail_fit)
     ing = sc.tl.Ingest(adata_ref)
     ing.fit(adata_new)
     ing.map_embedding(method="umap")
 
-    # ingest replicates the legacy (0.5.x) pipeline
-    compat = (
-        dict(compatibility_layout=True)
-        if "compatibility_layout" in signature(UMAP).parameters
-        else {}
-    )
-    reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4, n_jobs=1, **compat)
-    reducer.fit(X)
-    umap_transformed_t = reducer.transform(T)
-
+    assert ing._obsm["X_umap"].shape == (adata_new.n_obs, n_components)
+    assert np.isfinite(ing._obsm["X_umap"]).all()
     assert np.allclose(ing._obsm["X_umap"], umap_transformed_t)
+    np.testing.assert_array_equal(adata_ref.obsm["X_umap"], reference_embedding)
+
+
+@pytest.mark.parametrize(
+    ("n_ref", "as_sparse", "use_rep"),
+    [
+        (48, False, "X"),
+        (48, True, "X"),
+        (4096, False, "X"),
+        (4096, True, "X"),
+        (48, False, "X_pca"),
+        (48, False, "custom"),
+    ],
+)
+def test_ingest_umap_reference(
+    n_ref, as_sparse, use_rep, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sc.settings, "n_jobs", 1)
+    rng = np.random.default_rng(42)
+    n_vars = 60 if use_rep == "X_pca" else 8
+    x = rng.normal(scale=0.1, size=(n_ref, n_vars)).astype(np.float32)
+    x[n_ref // 2 :] += 10
+    query = x[[0, -1]] + 0.01
+    adata_ref = sc.AnnData(sparse.csr_matrix(x) if as_sparse else x)  # noqa: TID251
+    adata_new = sc.AnnData(sparse.csr_matrix(query) if as_sparse else query)  # noqa: TID251
+    adata_ref.obs["label"] = np.repeat(["a", "b"], n_ref // 2)
+    adata_ref.obs["label"] = adata_ref.obs["label"].astype("category")
+    expected_rep = query
+    if use_rep == "X_pca":
+        sc.pp.pca(adata_ref, n_comps=3)
+        expected_rep = (query - x.mean(axis=0)) @ adata_ref.varm["PCs"]
+    elif use_rep == "custom":
+        adata_ref.obsm["custom"] = x * 2
+        adata_new.obsm["custom"] = expected_rep = query * 2
+    rep_args = dict(n_pcs=3) if use_rep == "X_pca" else dict(use_rep=use_rep)
+    with pytest.warns(
+        FutureWarning, match=r"argument (use_rep|key_added) is deprecated"
+    ):
+        sc.pp.neighbors(adata_ref, **rep_args, n_neighbors=4, key_added="reference")
+    with pytest.warns(FutureWarning, match=r"argument neighbors_key is deprecated"):
+        sc.tl.umap(adata_ref, neighbors_key="reference", n_components=3, maxiter=20)
+    reference_embedding = adata_ref.obsm["X_umap"].copy()
+
+    sc.tl.ingest(
+        adata_new,
+        adata_ref,
+        obs="label",
+        embedding_method="umap",
+        neighbors_key="reference",
+    )
+
+    assert adata_new.obsm["X_umap"].shape == (2, 3)
+    assert np.isfinite(adata_new.obsm["X_umap"]).all()
+    actual_rep = adata_new.obsm["rep"]
+    if as_sparse:
+        actual_rep = actual_rep.toarray()
+    np.testing.assert_allclose(actual_rep, expected_rep, atol=1e-5)
+    assert adata_new.obs["label"].tolist() == ["a", "b"]
+    assert adata_new.obs["label"].dtype == adata_ref.obs["label"].dtype
+    np.testing.assert_array_equal(adata_ref.obsm["X_umap"], reference_embedding)
 
 
 def test_ingest_backed(adatas, tmp_path):
