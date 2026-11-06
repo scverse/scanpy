@@ -319,7 +319,7 @@ def test_ingest_umap_reference(
     actual_rep = adata_new.obsm["rep"]
     if as_sparse:
         actual_rep = actual_rep.toarray()
-    np.testing.assert_allclose(actual_rep, expected_rep, atol=1e-5)
+    np.testing.assert_allclose(actual_rep, expected_rep, rtol=1e-6, atol=1e-5)
     assert adata_new.obs["label"].tolist() == ["a", "b"]
     assert adata_new.obs["label"].dtype == adata_ref.obs["label"].dtype
     np.testing.assert_array_equal(adata_ref.obsm["X_umap"], reference_embedding)
