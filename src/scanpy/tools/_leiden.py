@@ -321,4 +321,5 @@ def _validate_flavor(
         case _:
             msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed."
             raise ValueError(msg)
-    return flavor, True if directed is None else directed
+    directed = True if directed is None else directed
+    return flavor, directed
