@@ -124,9 +124,6 @@ def leiden(  # noqa: PLR0913
     {restrict_to}
     directed
         Whether to treat the graph as directed or undirected.
-        `None` means directed for `flavor='leidenalg'` and undirected for `flavor='igraph'`.
-        On a directed graph, modularity’s null model uses the out-degree of an edge’s source
-        and the in-degree of its target.
     use_weights
         If `True`, edge weights from the graph are used in the computation
         (placing more emphasis on stronger edges).
@@ -176,6 +173,7 @@ def leiden(  # noqa: PLR0913
     flavor = _validate_flavor(flavor, partition_type=partition_type)
     _utils.ensure_igraph()
     clustering_args = dict(clustering_args)
+    directed = True if directed is None else directed
     rng = np.random.default_rng(rng)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
@@ -209,7 +207,6 @@ def leiden(  # noqa: PLR0913
 
         if resolution is not None:
             clustering_args["resolution_parameter"] = resolution
-        directed = True if directed is None else directed
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if partition_type is None:
             partition_type = leidenalg.RBConfigurationVertexPartition
@@ -226,7 +223,6 @@ def leiden(  # noqa: PLR0913
             leidenalg.find_partition(g, partition_type, seed=seed, **clustering_args),
         )
     else:
-        directed = False if directed is None else directed
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if use_weights:
             clustering_args["weights"] = "weight"
@@ -309,8 +305,7 @@ def _validate_flavor(
             if was_default:
                 msg += (
                     "\nIn the future, the default backend for leiden will be igraph instead of leidenalg. "
-                    "To achieve the future defaults please pass: "
-                    "`flavor='igraph'`, `n_iterations=2` and `directed=False`."
+                    "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`."
                 )
             warn(msg, FutureWarning if was_default else UserWarning)
             try:
