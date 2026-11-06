@@ -170,10 +170,11 @@ def leiden(  # noqa: PLR0913
         to calculate a score independent of `flavor`.
 
     """
-    flavor = _validate_flavor(flavor, partition_type=partition_type)
+    flavor, directed = _validate_flavor(
+        flavor, partition_type=partition_type, directed=directed
+    )
     _utils.ensure_igraph()
     clustering_args = dict(clustering_args)
-    directed = True if directed is None else directed
     rng = np.random.default_rng(rng)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
@@ -288,8 +289,8 @@ def _directed_node_weights(g: Graph, *, use_weights: bool) -> dict[str, list[flo
 
 
 def _validate_flavor(
-    flavor: str | None, *, partition_type: object | None
-) -> Literal["igraph", "leidenalg"]:
+    flavor: str | None, *, partition_type: object | None, directed: bool | None
+) -> tuple[Literal["igraph", "leidenalg"], bool]:
     if was_default := (flavor is None or isinstance(flavor, Default)):
         from scanpy import settings
 
@@ -320,4 +321,4 @@ def _validate_flavor(
         case _:
             msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed."
             raise ValueError(msg)
-    return flavor
+    return flavor, True if directed is None else directed
