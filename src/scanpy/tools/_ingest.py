@@ -246,17 +246,20 @@ class Ingest:
         from umap import UMAP
 
         rng = self._get_rng(adata.uns[keys.uns]["params"])
-        # we replicate the legacy (0.5.x) transform pipeline below
+        # Opt in to the new transform pipeline while supporting UMAP 0.5.
         compat = (
-            dict(compatibility_layout=True)
+            dict(compatibility_layout=False)
             if "compatibility_layout" in signature(UMAP).parameters
             else {}
         )
         self._umap = UMAP(
             **compat,
             metric=self._metric,
+            metric_kwds=self._metric_kwds,
+            n_neighbors=self._n_neighbors,
+            n_components=adata.obsm[keys.obsm].shape[1],
             random_state=_legacy_random_state(rng),
-            # umap can’t be run in parallel with `random_state is not None`
+            # Preserve single-threaded execution for seeded transforms.
             n_jobs=-1 if rng is None else 1,
         )
 
@@ -269,10 +272,8 @@ class Ingest:
         self._umap.embedding_ = adata.obsm[keys.obsm]
         self._umap._sparse_data = isinstance(self._rep, CSBase)
         self._umap._small_data = self._rep.shape[0] < 4096
-        self._umap._metric_kwds = self._metric_kwds
 
         self._umap._n_neighbors = self._n_neighbors
-        self._umap.n_neighbors = self._n_neighbors
 
         self._umap._knn_search_index = self._nnd_idx
 
