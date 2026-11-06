@@ -87,7 +87,7 @@ def _draw_graph_keys(
     key_added: str | None, *, layout: str, key_added_ext: str | None
 ) -> _EmbeddingKeys:
     if key_added_ext is not None:
-        msg = "Passing `key_added_ext` is deprecated, use `key_added`'s template functionality instead."
+        msg = "Passing `key_added_ext` is deprecated, use `out` instead, e.g. `out=A.obsm['k']`."
         warn(msg, category=FutureWarning)
         suffix = key_added_ext
     else:

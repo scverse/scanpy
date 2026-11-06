@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import singledispatch, wraps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numba
 import numpy as np
@@ -9,11 +9,15 @@ import pandas as pd
 from fast_array_utils import stats
 from fast_array_utils.numba import njit
 from scipy import sparse
+from scverse_misc import Deprecation, deprecated_arg
 
-from scanpy.get import _get_arr
+from scanpy.get._out import _out_dests, _write_dests
+from scanpy.get._use import _get_arr, _resolve_layer
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 
 from .._compat import CSBase, CSRBase, DaskArray, warn
+from .._docs import DEPR_RAW
+from .._settings import Default, settings
 from .._utils import _doc_params, axis_nnz
 from ._docs import (
     doc_adata_basic,
@@ -30,6 +34,9 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy._typing._array_like import NDArray
 
+    from ..get._out import OutKind
+    from ..get._types import LayerAcc, MultiAcc
+
 
 @_doc_params(
     doc_adata_basic=doc_adata_basic,
@@ -45,6 +52,7 @@ def describe_obs(  # noqa: PLR0913
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
     percent_top: Collection[int] | None = (50, 100, 200, 500),
+    use: LayerAcc | str | None = None,
     layer: str | None = None,
     use_raw: bool = False,
     log1p: bool | None = True,
@@ -86,7 +94,7 @@ def describe_obs(  # noqa: PLR0913
         warn(msg, FutureWarning)
     # Handle whether X is passed
     if x is None:
-        x = _get_arr(adata, use_raw=use_raw, layer=layer)
+        x = _get_arr(adata, _resolve_layer(use), use_raw=use_raw, layer=layer)
         if isinstance(x, CSBase):
             x.eliminate_zeros()
     obs_metrics = pd.DataFrame(index=adata.obs_names)
@@ -140,6 +148,7 @@ def describe_var(
     *,
     expr_type: str = "counts",
     var_type: str = "genes",
+    use: LayerAcc | str | None = None,
     layer: str | None = None,
     use_raw: bool = False,
     inplace: bool = False,
@@ -171,7 +180,7 @@ def describe_var(
     """
     # Handle whether X is passed
     if x is None:
-        x = _get_arr(adata, use_raw=use_raw, layer=layer)
+        x = _get_arr(adata, _resolve_layer(use), use_raw=use_raw, layer=layer)
         if isinstance(x, CSBase):
             x.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
@@ -196,6 +205,28 @@ def describe_var(
     return var_metrics
 
 
+class QcMetricsResult(NamedTuple):
+    """Outputs of :func:`~scanpy.pp.calculate_qc_metrics`."""
+
+    obs: pd.DataFrame
+    """Per-observation metrics, see :func:`~scanpy.pp.calculate_qc_metrics`."""
+    var: pd.DataFrame
+    """Per-variable metrics, see :func:`~scanpy.pp.calculate_qc_metrics`."""
+
+
+class QcMetricsOut(TypedDict, total=False):
+    """Where a mapping `out` of :func:`~scanpy.pp.calculate_qc_metrics` writes each output, see :class:`~scanpy.pp.QcMetricsResult`."""
+
+    obs: MultiAcc | str
+    var: MultiAcc | str
+
+
+QC_METRICS_KINDS: QcMetricsResult[set[OutKind], set[OutKind]] = QcMetricsResult(
+    {"obsm"}, {"varm"}
+)
+"""Where a mapping `out` can write the outputs of `pp.calculate_qc_metrics`."""
+
+
 @_doc_params(
     doc_adata_basic=doc_adata_basic,
     doc_expr_reps=doc_expr_reps,
@@ -204,20 +235,30 @@ def describe_var(
     doc_obs_qc_returns=doc_obs_qc_returns,
     doc_var_qc_returns=doc_var_qc_returns,
 )
-def calculate_qc_metrics(
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=False` instead of `inplace=True`.")
+)
+def calculate_qc_metrics(  # noqa: PLR0913
     adata: AnnData,
     *,
     expr_type: str = "counts",
     var_type: str = "genes",
     qc_vars: Collection[str] | str = (),
     percent_top: Collection[int] | None = (50, 100, 200, 500),
-    layer: str | None = None,
-    use_raw: bool = False,
-    inplace: bool = False,
+    use: LayerAcc | str | None = None,
+    out: MultiAcc | str | QcMetricsOut | bool | Default = Default(
+        preset=("calculate_qc_metrics", "out")
+    ),
     log1p: bool = True,
     parallel: bool | None = None,
-) -> tuple[pd.DataFrame, pd.DataFrame] | None:
-    """Calculate quality control metrics.
+    # deprecated
+    layer: str | None = None,
+    use_raw: bool = False,
+    inplace: bool | None = None,
+) -> QcMetricsResult | None:
+    r"""Calculate quality control metrics.
 
     Calculates a number of qc metrics for an AnnData object, see section
     `Returns` for specifics. Largely based on `calculateQCMetrics` from scater
@@ -234,15 +275,26 @@ def calculate_qc_metrics(
     {doc_qc_metric_naming}
     {doc_obs_qc_args}
     {doc_expr_reps}
-    inplace
-        Whether to place calculated metrics in `adata`'s `.obs` and `.var`.
+    out
+        Where to write the metrics.
+        If :data:`False`, they are written as columns of `.obs` and `.var` (see below).
+        An accessor like `A.obsm['qc']` writes the metrics tables as whole :class:`~pandas.DataFrame`\ s
+        to `.obsm['qc']` and `.varm['qc']` instead.
+        A mapping writes only the tables it names, e.g. `{{'obs': A.obsm['qc']}}`.
+        :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d.
+        If :data:`True`, they are returned as a :class:`~scanpy.pp.QcMetricsResult` instead of written.
+        The default depends on :attr:`scanpy.settings.preset`:
+        :data:`True` for :attr:`~scanpy.Preset.ScanpyV1`, :data:`False` for :attr:`~scanpy.Preset.ScanpyV2Preview`.
     log1p
         Set to `False` to skip computing `log1p` transformed annotations.
+    inplace
+        Whether to place calculated metrics in `adata`'s `.obs` and `.var`.
 
     Returns
     -------
-    Depending on `inplace` returns calculated metrics
-    (as :class:`~pandas.DataFrame`) or updates `adata`'s `obs` and `var`.
+    Returns the calculated metrics (as :class:`~scanpy.pp.QcMetricsResult`) if `out=True`, else `None`.
+    With `out=False`, sets the following columns of `adata.obs` and `adata.var`
+    (an accessor or mapping writes them as tables instead, see `out`):
 
     {doc_obs_qc_returns}
 
@@ -259,7 +311,7 @@ def calculate_qc_metrics(
 
         pbmc = sc.datasets.pbmc3k()
         pbmc.var["mito"] = pbmc.var_names.str.startswith("MT-")
-        sc.pp.calculate_qc_metrics(pbmc, qc_vars=["mito"], inplace=True)
+        sc.pp.calculate_qc_metrics(pbmc, qc_vars=["mito"], out=False)
         sns.jointplot(
             data=pbmc.obs,
             x="log1p_total_counts",
@@ -275,8 +327,15 @@ def calculate_qc_metrics(
     if parallel is not None:
         msg = "Argument `parallel` is deprecated, and currently has no effect."
         warn(msg, FutureWarning)
+    if isinstance(out, Default):
+        out = (
+            settings.preset.calculate_qc_metrics.out if inplace is None else not inplace
+        )
+    elif inplace is not None:
+        msg = "Pass either `out` or `inplace`, not both."
+        raise TypeError(msg)
     # Pass X so I only have to do it once
-    x = _get_arr(adata, use_raw=use_raw, layer=layer)
+    x = _get_arr(adata, _resolve_layer(use), use_raw=use_raw, layer=layer)
     if isinstance(x, CSBase):
         x.eliminate_zeros()
 
@@ -290,7 +349,7 @@ def calculate_qc_metrics(
         var_type=var_type,
         qc_vars=qc_vars,
         percent_top=percent_top,
-        inplace=inplace,
+        inplace=False,
         x=x,
         log1p=log1p,
     )
@@ -298,13 +357,28 @@ def calculate_qc_metrics(
         adata,
         expr_type=expr_type,
         var_type=var_type,
-        inplace=inplace,
+        inplace=False,
         x=x,
         log1p=log1p,
     )
 
-    if not inplace:
-        return obs_metrics, var_metrics
+    vals = QcMetricsResult(obs_metrics, var_metrics)
+    match out:
+        case True:
+            return vals
+        case False:
+            for df, annot in zip(vals, [adata.obs, adata.var], strict=True):
+                annot[df.columns] = df
+        case _:
+            _, dests = _out_dests(
+                out,
+                None,
+                # what a single accessor names after itself (`out=False` writes columns instead)
+                dests=lambda _: QcMetricsResult(dict(obsm="qc"), dict(varm="qc")),
+                kinds=QC_METRICS_KINDS,
+            )
+            _write_dests(adata, vals, dests)
+    return None
 
 
 def top_proportions(

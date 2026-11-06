@@ -66,7 +66,7 @@ dependencies = [
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
     "scipy>=1.15",
-    "scverse-misc[datasets,settings]>=0.1.4",
+    "scverse-misc[datasets,settings]>=0.1.6",
     "seaborn>=0.13.2",
     "session-info2",
     "statsmodels>=0.14.5",
@@ -97,7 +97,15 @@ scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
 illico = [ "illico>=0.6" ]
-scanpy2 = [ "anndata>=0.13.3", "hv-anndata>=0.0.3a5", "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
+scanpy2 = [
+    "anndata>=0.13.3",
+    "holoviews>=1.23.2",
+    "hv-anndata>=0.0.3a5",
+    "igraph>=0.10.8",
+    "matplotlib>=3.11",
+    "scanpy[illico]",
+    "scikit-misc>=0.5.1",
+]
 
 [dependency-groups]
 dev = [

@@ -7,17 +7,20 @@ For more tutorials featuring scanpy and other [scverse](https://scverse.org) eco
 ## Basic workflows
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
-basics/index
+basics/clustering
+basics/clustering-2017
+basics/integrating-data-using-ingest
 ```
 
 ## Visualization
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
-plotting/index
+plotting/core
+plotting/advanced
 ```
 
 ## Trajectory inference
@@ -30,17 +33,18 @@ For more powerful tools for analysing single cell dynamics, check out the scvers
 ```
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
-trajectories/index
+trajectories/paga-paul15
 ```
 
 ## Experimental
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
-experimental/index
+experimental/pearson_residuals
+experimental/dask
 ```
 
 ```{seealso}
