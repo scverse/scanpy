@@ -31,9 +31,7 @@ sc.pp.scale(adata, zero_center=True, max_value=10)
 import scanpy as sc
 
 sc.pp.filter_genes(adata, min_counts=1)
-sc.pp.normalize_total(
-    adata, out={"normalized": "X", "norm_factor": "obs.n_counts_all"}
-)
+sc.pp.normalize_total(adata, out={"normalized": "X", "norm_factor": "obs.n_counts_all"})
 sc.pp.log1p(adata)
 hvg = sc.pp.highly_variable_genes(
     adata, flavor="cell_ranger", n_top_genes=1000, out=True
