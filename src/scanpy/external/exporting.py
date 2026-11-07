@@ -581,7 +581,8 @@ def cellbrowser(  # noqa: PLR0913
         e.add_note("Please install `cellbrowser` and try again.")
         raise
 
-    data_dir = str(data_dir)
+    # CellBrowser resolves exported color-file paths relative to this directory.
+    data_dir = str(Path(data_dir).absolute())
 
     cb.setDebug(do_debug)
     cb.scanpyToCellbrowser(
