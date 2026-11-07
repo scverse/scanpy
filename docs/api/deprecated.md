@@ -10,7 +10,6 @@
    :toctree: generated/
 
    pp.subsample
-   pp.recipe_weinreb17
    tl.louvain
    tl.sim
    pl.sim

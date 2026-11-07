@@ -18,7 +18,6 @@ from ._normalization import (
 )
 from ._pca import PcaOut, PcaResult, pca
 from ._qc import QcMetricsOut, QcMetricsResult, calculate_qc_metrics
-from ._recipes import recipe_seurat, recipe_weinreb17, recipe_zheng17
 from ._scale import ScaleOut, ScaleResult, scale
 from ._scrublet import ScrubletOut, ScrubletResult, scrublet, scrublet_simulate_doublets
 from ._simple import (
@@ -60,9 +59,6 @@ __all__ = [
     "normalize_shifted_clr",
     "normalize_total",
     "pca",
-    "recipe_seurat",
-    "recipe_weinreb17",
-    "recipe_zheng17",
     "regress_out",
     "sample",
     "scale",
