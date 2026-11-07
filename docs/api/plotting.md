@@ -37,7 +37,6 @@ Functions with both backends:
    pl.stacked_violin
    pl.matrixplot
    pl.ranking
-
 ```
 
 Helper for computing dot areas, e.g. for {func}`~scanpy.pl.dotplot`:
@@ -48,7 +47,6 @@ Helper for computing dot areas, e.g. for {func}`~scanpy.pl.dotplot`:
    :toctree: generated/
 
    pl.dot_area
-
 ```
 
 Legacy (matplotlib) only:
@@ -60,7 +58,6 @@ Legacy (matplotlib) only:
 
    pl.clustermap
    pl.dendrogram
-
 ```
 
 ## Classes
@@ -75,7 +72,6 @@ These classes allow fine tuning of visual parameters.
    pl.DotPlot
    pl.MatrixPlot
    pl.StackedViolin
-
 ```
 
 ## Preprocessing
@@ -91,7 +87,6 @@ Methods for visualizing quality control and results of preprocessing functions.
    pl.highest_expr_genes
    pl.highly_variable_genes
    pl.scrublet_score_distribution
-
 ```
 
 ## Tools
