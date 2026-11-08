@@ -1,5 +1,5 @@
 {
-    "[python][json][jsonc]": {
+    "[python][json][jsonc][markdown]": {
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
             "source.organizeImports": "explicit",
@@ -11,6 +11,9 @@
     },
     "[json][jsonc]": {
         "editor.defaultFormatter": "biomejs.biome",
+    },
+    "[markdown]": {
+        "editor.defaultFormatter": "jolars.panache",
     },
     "python.analysis.typeCheckingMode": "basic",
     "python.testing.pytestArgs": ["-vv", "--color=yes", "--internet-tests"],
