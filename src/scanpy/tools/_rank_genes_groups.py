@@ -1115,6 +1115,19 @@ def _get_var_idx(
     raise KeyError(msg)
 
 
+def _get_cached_frac(
+    pts: pd.DataFrame, group: str, var_names: pd.api.extensions.ExtensionArray
+) -> NDArray[np.floating]:
+    """Look up cached `pts`/`pts_rest` fractions for ranked genes.
+
+    NaN names (from an already filtered result) get NaN, so they stay filtered out.
+    """
+    frac = np.full(len(var_names), np.nan)
+    present = pd.notna(var_names)
+    frac[present] = pts[group].loc[var_names[present]].to_numpy()
+    return frac
+
+
 @_doc_params(
     use=doc_use(
         "Which matrix to compute fractions and fold changes from. "
@@ -1292,11 +1305,11 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
             x_out = sub_x[~in_group]
 
         if use_fraction:
-            fraction_in_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts"][cluster].loc[var_names].array
+            fraction_in_cluster_matrix.loc[:, cluster] = _get_cached_frac(
+                adata.uns[key]["pts"], cluster, var_names
             )
-            fraction_out_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts_rest"][cluster].loc[var_names].array
+            fraction_out_cluster_matrix.loc[:, cluster] = _get_cached_frac(
+                adata.uns[key]["pts_rest"], cluster, var_names
             )
         else:
             fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac(x_in)

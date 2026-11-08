@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from scanpy.tools import filter_rank_genes_groups, rank_genes_groups
@@ -147,15 +148,21 @@ def test_filter_rank_genes_groups_missing_genes() -> None:
         filter_rank_genes_groups(adata)
 
 
-def test_filter_rank_genes_groups_refilter() -> None:
-    """Filtering an already filtered result (with NaN names) still works."""
+@pytest.mark.parametrize("pts", [False, True], ids=["computed", "cached_pts"])
+def test_filter_rank_genes_groups_refilter(*, pts: bool) -> None:
+    """Filtering an already filtered result (with NaN names) still works.
+
+    With ``pts=True`` the fractions come from the cached ``pts``/``pts_rest``.
+    """
     adata = pbmc68k_reduced()
-    rank_genes_groups(adata, "bulk_labels", method="wilcoxon", n_genes=5)
+    rank_genes_groups(adata, "bulk_labels", method="wilcoxon", n_genes=5, pts=pts)
     filter_rank_genes_groups(adata)
     filter_rank_genes_groups(
         adata, key="rank_genes_groups_filtered", key_added="refiltered"
     )
-    first = np.array(adata.uns["rank_genes_groups_filtered"]["names"].tolist())
-    second = np.array(adata.uns["refiltered"]["names"].tolist())
+    first = pd.DataFrame(adata.uns["rank_genes_groups_filtered"]["names"])
+    second = pd.DataFrame(adata.uns["refiltered"]["names"])
+    # the first filter must leave NaN names, or this test checks nothing
+    assert first.isna().to_numpy().any()
     # re-applying the same thresholds keeps the same genes
-    np.testing.assert_array_equal(first, second)
+    pd.testing.assert_frame_equal(first, second)
