@@ -67,8 +67,7 @@ if TYPE_CHECKING:
         extra=(
             "\n    A list of graphs is clustered jointly :cite:p:`MuellerBoetticher2025`, "
             "e.g. `[A.obsp['connectivities'], A.obsp['spatial_connectivities']]` "
-            "for spatial domains (needs `flavor='leidenalg'`). "
-            "Use connectivities, not distances, as larger weights mean closer cells."
+            "for spatial domains (needs `flavor='leidenalg'`)."
         )
     ),
     rng=doc_rng,
@@ -154,10 +153,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         Which package's implementation to use.
     {use}
     layer_weights
-        With several graphs in `use`, how much each graph counts (default: 1 each).
-        A graph’s quality scales with its total edge weight,
-        so graphs with very different weights may need adjusting,
-        or `partition_type=`\ :class:`~leidenalg.ModularityVertexPartition` and `resolution=None` to normalise them.
+        With several graphs in `use`, the weight of each graph (default: 1 each).
     {out}
     {adjacency}
     {neighbors_key}
@@ -186,7 +182,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     `adata.uns['leiden']['modularity']` : :class:`float`
         The modularity score of the final clustering,
         as calculated by the `flavor`.
-        With several graphs in `use`, a list of their (unweighted) modularities.
+        With several graphs in `use`, a list with one modularity per graph.
         Use :func:`scanpy.metrics.modularity`\ `(adata, mode='calculate' | 'update')`
         to calculate a score independent of `flavor`.
 
@@ -446,7 +442,6 @@ def _validate_flavor(  # noqa: PLR0912
     from scanpy import settings
 
     if was_default := (flavor is None or isinstance(flavor, Default)):
-        # only leidenalg can cluster several graphs at once
         flavor = "leidenalg" if multiplex else settings.preset.leiden.flavor
     if multiplex and flavor != "leidenalg":
         msg = "Clustering several graphs at once needs `flavor='leidenalg'`."
@@ -483,7 +478,7 @@ def _validate_flavor(  # noqa: PLR0912
                     "\nIn the future, the default backend for leiden will be igraph instead of leidenalg. "
                     "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`."
                 )
-            if not multiplex:  # igraph can’t cluster several graphs
+            if not multiplex:
                 warn(msg, FutureWarning if was_default else UserWarning)
             try:
                 import leidenalg  # noqa: F401
