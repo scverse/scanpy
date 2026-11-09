@@ -63,7 +63,14 @@ if TYPE_CHECKING:
     adjacency=doc_adjacency,
     neighbors_key=doc_neighbors_key.format(method="leiden"),
     obsp=doc_obsp,
-    use=doc_use_neighbors(),
+    use=doc_use_neighbors(
+        extra=(
+            "\n    A list of graphs is clustered jointly :cite:p:`MuellerBoetticher2025`, "
+            "e.g. `[A.obsp['connectivities'], A.obsp['spatial_connectivities']]` "
+            "for spatial domains (needs `flavor='leidenalg'`). "
+            "Use connectivities, not distances, as larger weights mean closer cells."
+        )
+    ),
     rng=doc_rng,
     out=doc_out_key(
         "the cluster labels",
@@ -83,7 +90,7 @@ if TYPE_CHECKING:
 @deprecated_copy
 def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
-    resolution: float = 1,
+    resolution: float | Sequence[float] | None = 1,
     *,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     rng: SeedLike | RNGLike | None = None,
@@ -92,7 +99,8 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     n_iterations: int = -1,
     partition_type: type[MutableVertexPartition] | None = None,
     flavor: LeidenFlavor | Default = Default(preset=("leiden", "flavor")),
-    use: GraphAcc | str | None = None,
+    use: GraphAcc | str | Sequence[GraphAcc | str] | None = None,
+    layer_weights: Sequence[float] | None = None,
     out: VecRef | bool = False,
     # deprecated
     adjacency: CSBase | None = None,
@@ -121,6 +129,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         Higher values lead to more clusters.
         Set to `None` if overriding `partition_type`
         to one that doesn’t accept a `resolution_parameter`.
+        With several graphs in `use`, either one value per graph or one for all.
     {rng}
     {restrict_to}
     directed
@@ -144,6 +153,11 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     flavor
         Which package's implementation to use.
     {use}
+    layer_weights
+        With several graphs in `use`, how much each graph counts (default: 1 each).
+        A graph’s quality scales with its total edge weight,
+        so graphs with very different weights may need adjusting,
+        or `partition_type=`\ :class:`~leidenalg.ModularityVertexPartition` and `resolution=None` to normalise them.
     {out}
     {adjacency}
     {neighbors_key}
@@ -152,6 +166,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         Whether to copy `adata` or modify it inplace.
     **clustering_args
         Any further arguments to pass to :func:`~leidenalg.find_partition` (which in turn passes arguments to the `partition_type`)
+        or :func:`~leidenalg.find_partition_multiplex`
         or :meth:`igraph.Graph.community_leiden` from `igraph`,
         or ``graspologic_native.leiden_csr``.
 
@@ -171,12 +186,26 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     `adata.uns['leiden']['modularity']` : :class:`float`
         The modularity score of the final clustering,
         as calculated by the `flavor`.
+        With several graphs in `use`, a list of their (unweighted) modularities.
         Use :func:`scanpy.metrics.modularity`\ `(adata, mode='calculate' | 'update')`
         to calculate a score independent of `flavor`.
 
     """
+    graphs = list(use) if isinstance(use, list | tuple) else [use]
+    if not graphs:
+        msg = "`use` must contain at least one graph."
+        raise ValueError(msg)
+    multiplex = len(graphs) > 1
+    if not multiplex and (layer_weights is not None or np.ndim(resolution) > 0):
+        msg = (
+            "`layer_weights` and a `resolution` per graph need several graphs in `use`."
+        )
+        raise ValueError(msg)
+    resolutions = _per_graph(resolution, len(graphs), "resolution")
+    if layer_weights is not None:
+        layer_weights = _per_graph(layer_weights, len(graphs), "layer_weights")
     flavor, directed = _validate_flavor(
-        flavor, partition_type=partition_type, directed=directed
+        flavor, partition_type=partition_type, directed=directed, multiplex=multiplex
     )
     if flavor != "graspologic":
         _utils.ensure_igraph()
@@ -193,17 +222,26 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
 
     start = logg.info("running Leiden clustering")
     # are we clustering a user-provided graph or the default AnnData one?
-    adjacency = _use_graph(
-        adata, use, adjacency=adjacency, obsp=obsp, neighbors_key=neighbors_key
-    )
+    adjacencies = [
+        _use_graph(
+            adata, u, adjacency=adjacency, obsp=obsp, neighbors_key=neighbors_key
+        )
+        for u in graphs
+    ]
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
-        adjacency, restrict_indices = restrict_adjacency(
-            adata,
-            restrict_key,
-            restrict_categories=restrict_categories,
-            adjacency=adjacency,
-        )
+        restricted = [
+            restrict_adjacency(
+                adata,
+                restrict_key,
+                restrict_categories=restrict_categories,
+                adjacency=a,
+            )
+            for a in adjacencies
+        ]
+        adjacencies = [a for a, _ in restricted]
+        restrict_indices = restricted[0][1]
+    adjacency = adjacencies[0]
     # Prepare find_partition arguments as a dictionary,
     # appending to whatever the user provided. It needs to be this way
     # as this allows for the accounting of a None resolution
@@ -212,19 +250,33 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     if flavor == "leidenalg":
         import leidenalg
 
-        if resolution is not None:
-            clustering_args["resolution_parameter"] = resolution
-        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if partition_type is None:
             partition_type = leidenalg.RBConfigurationVertexPartition
-        if use_weights:
-            clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
         seed = (
             rng.arg
             if isinstance(rng, _LegacyRng) and isinstance(rng.arg, int | np.integer)
             # for some reason leidenalg only accepts int32 (signed) seeds …
             else rng.integers((i := np.iinfo(np.int32)).min, i.max, dtype=np.int32)
         )
+    if multiplex:
+        part = _leidenalg_multiplex(
+            [
+                _utils.get_igraph_from_adjacency(a, directed=directed)
+                for a in adjacencies
+            ],
+            partition_type,
+            resolutions=resolutions,
+            layer_weights=layer_weights,
+            use_weights=use_weights,
+            seed=seed,
+            **clustering_args,
+        )
+    elif flavor == "leidenalg":
+        if resolution is not None:
+            clustering_args["resolution_parameter"] = resolution
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
+        if use_weights:
+            clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
         part = cast(
             "MutableVertexPartition",
             leidenalg.find_partition(g, partition_type, seed=seed, **clustering_args),
@@ -275,7 +327,10 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     # store information on the clustering parameters
     adata.uns[key] = {}
     adata.uns[key]["params"] = dict(
-        resolution=resolution, n_iterations=n_iterations, **meta_random_state
+        resolution=resolutions if multiplex else resolution,
+        n_iterations=n_iterations,
+        **({} if layer_weights is None else dict(layer_weights=layer_weights)),
+        **meta_random_state,
     )
     adata.uns[key]["modularity"] = part.modularity
     logg.info(
@@ -289,6 +344,48 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     return None
 
 
+def _per_graph(value: object, n: int, name: str) -> list:
+    """Broadcast a parameter to one value per graph in `use`."""
+    if np.ndim(value) == 0:
+        return [value] * n
+    if len(value) != n:
+        msg = f"Pass one `{name}` per graph in `use` ({n}), not {len(value)}."
+        raise ValueError(msg)
+    return [None if v is None else float(v) for v in value]
+
+
+def _leidenalg_multiplex(
+    graphs: list[Graph],
+    partition_type: type[MutableVertexPartition],
+    *,
+    resolutions: list[float | None],
+    layer_weights: list[float] | None,
+    use_weights: bool,
+    seed: int,
+    n_iterations: int,
+    max_comm_size: int = 0,
+    **kwargs,
+) -> _Partition:
+    """Like :func:`leidenalg.find_partition_multiplex`, but with a resolution per graph."""
+    import leidenalg
+
+    if use_weights:
+        kwargs["weights"] = "weight"
+    parts = [
+        partition_type(
+            g, **kwargs, **({} if r is None else dict(resolution_parameter=r))
+        )
+        for g, r in zip(graphs, resolutions, strict=True)
+    ]
+    optimiser = leidenalg.Optimiser()
+    optimiser.max_comm_size = max_comm_size
+    optimiser.set_rng_seed(seed)
+    optimiser.optimise_partition_multiplex(
+        parts, layer_weights=layer_weights, n_iterations=n_iterations
+    )
+    return _Partition(parts[0].membership, [p.modularity for p in parts])
+
+
 def _directed_node_weights(
     g: Graph, *, weights: str | Sequence[float] | None
 ) -> dict[str, list[float]]:
@@ -300,8 +397,8 @@ def _directed_node_weights(
 
 
 class _Partition(NamedTuple):
-    membership: NDArray[np.int64]
-    modularity: float
+    membership: Sequence[int] | NDArray[np.int64]
+    modularity: float | list[float]
 
 
 def _leiden_graspologic(
@@ -344,11 +441,16 @@ def _validate_flavor(  # noqa: PLR0912
     *,
     partition_type: object | None,
     directed: bool | Default | None,
+    multiplex: bool = False,
 ) -> LeidenPreset:
     from scanpy import settings
 
     if was_default := (flavor is None or isinstance(flavor, Default)):
-        flavor = settings.preset.leiden.flavor
+        # only leidenalg can cluster several graphs at once
+        flavor = "leidenalg" if multiplex else settings.preset.leiden.flavor
+    if multiplex and flavor != "leidenalg":
+        msg = "Clustering several graphs at once needs `flavor='leidenalg'`."
+        raise ValueError(msg)
     if directed_was_default := isinstance(directed, Default):
         directed = settings.preset.leiden.directed
     match flavor:
@@ -381,7 +483,8 @@ def _validate_flavor(  # noqa: PLR0912
                     "\nIn the future, the default backend for leiden will be igraph instead of leidenalg. "
                     "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`."
                 )
-            warn(msg, FutureWarning if was_default else UserWarning)
+            if not multiplex:  # igraph can’t cluster several graphs
+                warn(msg, FutureWarning if was_default else UserWarning)
             try:
                 import leidenalg  # noqa: F401
             except ImportError as e:

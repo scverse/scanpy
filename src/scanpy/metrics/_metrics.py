@@ -165,6 +165,7 @@ def modularity(
     Returns
     -------
     The modularity of the graph based on the provided clustering.
+    `mode='retrieve'` gives a list after :func:`~scanpy.tl.leiden` clustered several graphs.
     """
     if isinstance(adata_or_connectivities, AnnData):
         if is_directed:
