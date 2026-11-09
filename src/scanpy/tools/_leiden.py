@@ -236,7 +236,9 @@ def leiden(  # noqa: PLR0913
             and clustering_args["objective_function"] == "modularity"
             and clustering_args.keys().isdisjoint({"node_weights", "node_in_weights"})
         ):
-            clustering_args |= _directed_node_weights(g, use_weights=use_weights)
+            clustering_args |= _directed_node_weights(
+                g, weights=clustering_args.get("weights")
+            )
         with _set_igraph_rng(rng):
             part = g.community_leiden(**clustering_args)
     # store output into adata.obs
@@ -274,9 +276,10 @@ def leiden(  # noqa: PLR0913
     return None
 
 
-def _directed_node_weights(g: Graph, *, use_weights: bool) -> dict[str, list[float]]:
+def _directed_node_weights(
+    g: Graph, *, weights: str | Sequence[float] | None
+) -> dict[str, list[float]]:
     """Get in- and out-degrees as node weights; python-igraph otherwise only counts out-degrees."""
-    weights = g.es["weight"] if use_weights else None
     return dict(
         node_weights=g.strength(mode="out", weights=weights),
         node_in_weights=g.strength(mode="in", weights=weights),
