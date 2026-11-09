@@ -143,8 +143,6 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         :func:`~leidenalg.find_partition`.
     flavor
         Which package's implementation to use.
-        `'graspologic'` uses `graspologic-native <https://github.com/graspologic-org/graspologic-native>`_,
-        which does not need `igraph` and is reproducible for a given `rng`.
     {use}
     {out}
     {adjacency}
@@ -331,7 +329,6 @@ def _leiden_graspologic(
         a.data.astype(np.float64) if use_weights else np.ones(a.nnz),
         n,
         resolution=resolution,
-        # graspologic can’t iterate until convergence; 2 is igraph’s default
         iterations=2 if n_iterations < 0 else n_iterations,
         seed=int(rng.integers(2**63)),
         **kwargs,
