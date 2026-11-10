@@ -613,6 +613,7 @@ def test_mean_in_log_space_does_not_change_ttest(
         np.testing.assert_allclose(scores[True][group], scores[False][group], rtol=1e-6)
         np.testing.assert_allclose(pvals[True][group], pvals[False][group], rtol=1e-6)
 
+
 def test_rank_genes_groups_out() -> None:
     """`out=True` returns what would be stored, `key_added` renames it."""
     pbmc = pbmc68k_reduced()
