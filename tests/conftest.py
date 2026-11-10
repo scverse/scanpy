@@ -7,7 +7,6 @@ from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING, TypedDict, cast
 
-import anndata as ad
 import pytest
 
 # just import for the IMPORTED check
@@ -26,7 +25,7 @@ IMPORTED = frozenset(sys.modules.keys())
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _manage_log_handlers() -> Generator[None, None, None]:
+def _manage_log_handlers() -> Generator[None]:
     """Remove handlers from all loggers on session teardown.
 
     Fixes <https://github.com/scverse/scanpy/issues/1736>.
@@ -52,7 +51,7 @@ def _manage_log_handlers() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def _caplog_adapter(caplog: pytest.LogCaptureFixture) -> Generator[None, None, None]:
+def _caplog_adapter(caplog: pytest.LogCaptureFixture) -> Generator[None]:
     """Allow use of scanpy’s logger with caplog."""
     import scanpy as sc
 
@@ -145,9 +144,3 @@ def plt():
 def exit_stack() -> Generator[ExitStack]:
     with ExitStack() as stack:
         yield stack
-
-
-@pytest.fixture(autouse=True)
-def anndata_settings():
-    ad.settings.auto_shard_zarr_v3 = True
-    ad.settings.zarr_write_format = 3

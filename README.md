@@ -3,7 +3,7 @@
 [![PyPI Downloads](https://img.shields.io/pepy/dt/scanpy?logo=pypi)](https://pepy.tech/project/scanpy)
 [![Conda Forge](https://img.shields.io/conda/vn/conda-forge/scanpy)
 ![Conda Forge Downloads](https://img.shields.io/conda/dn/conda-forge/scanpy?logo=condaforge)](https://anaconda.org/conda-forge/scanpy)
-[![Docs](https://readthedocs.com/projects/icb-scanpy/badge/?version=latest)](https://scanpy.readthedocs.io)
+[![Docs](https://readthedocs.com/projects/icb-scanpy/badge/?version=latest)](https://scanpy.scverse.org/)
 [![CI](https://github.com/scverse/scanpy/actions/workflows/ci.yml/badge.svg)](https://github.com/scverse/scanpy/actions/workflows/ci.yml)
 [![Discourse topics](https://img.shields.io/discourse/posts?color=yellow&logo=discourse&server=https%3A%2F%2Fdiscourse.scverse.org)](https://discourse.scverse.org/)
 [![Chat](https://img.shields.io/badge/zulip-join_chat-%2367b08f.svg)](https://scverse.zulipchat.com)
@@ -19,13 +19,12 @@ For datasets too large to fit into memory, [many scanpy functions][] are now com
 Discuss usage on the scverse [Discourse][]. Read the [documentation][].
 If you'd like to contribute by opening an issue or creating a pull request, please take a look at our [contribution guide][].
 
-[anndata]: https://anndata.readthedocs.io
-[dask]: https://docs.dask.org/en/stable/
+[anndata]: https://anndata.scverse.org/
+[dask]: https://docs.dask.org/
 [discourse]: https://discourse.scverse.org/
-[documentation]: https://scanpy.readthedocs.io
+[documentation]: https://scanpy.scverse.org/
 [many scanpy functions]: https://github.com/scverse/scanpy/issues/2578
-
-[//]: # (numfocus-fiscal-sponsor-attribution)
+[//]: # "numfocus-fiscal-sponsor-attribution"
 
 scanpy is part of the scverse® project ([website](https://scverse.org), [governance](https://scverse.org/about/roles)) and is fiscally sponsored by [NumFOCUS](https://numfocus.org/).
 If you like scverse® and want to support our mission, please consider making a tax-deductible [donation](https://numfocus.org/donate-to-scverse) to help the project pay for developer time, professional services, travel, workshops, and a variety of other needs.
@@ -47,7 +46,7 @@ In other words, we do not officially support (or encourage users to do) somethin
 However, we are aware that many users do use these internal APIs and thus encourage them to [open an issue][] or migrate to the public API.
 That is, if something is missing from our public API as documented, for example a feature you wish to be exported publicly, please open an issue.
 
-[api section]: https://scanpy.readthedocs.io/en/stable/api.html
+[api section]: https://scanpy.scverse.org/page/api/
 [leading underscore]: https://peps.python.org/pep-0008/#public-and-internal-interfaces
 [open an issue]: https://github.com/scverse/scanpy/issues/new/choose
 

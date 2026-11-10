@@ -2,7 +2,6 @@
 
 # Settings
 
-
 ```{eval-rst}
 .. currentmodule:: scanpy
 ```

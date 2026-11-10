@@ -5,29 +5,50 @@ from typing import TYPE_CHECKING, NamedTuple
 import numpy as np
 import scipy as sp
 from scipy.sparse.csgraph import minimum_spanning_tree
+from scverse_misc import Deprecation, deprecated, deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
+from .._docs import DEPR_NEIGHBORS_KEY, doc_out_key
+from .._utils import _doc_params, own_deprecations
+from ..get._out import _out_key, deprecated_copy
+from ..get._use import _obs_col
 from ..neighbors import Neighbors
+from ..neighbors._common import _neighbors_view
+from ._docs import doc_use_neighbors
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Any, Literal
 
     from anndata import AnnData
+
+    from ..get._types import AdRef, GraphAcc
 
 _AVAIL_MODELS = {"v1.0", "v1.2"}
 
 
+@_doc_params(
+    use=doc_use_neighbors(meta=True),
+    out=doc_out_key(
+        "the abstracted graph",
+        default="`.uns['paga']` (and the group sizes to `.uns[f'{groups}_sizes']`)",
+    ),
+)
+@deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
+@deprecated_copy
 def paga(
     adata: AnnData,
-    groups: str | None = None,
+    groups: AdRef | str | None = None,
     *,
     use_rna_velocity: bool = False,
     model: Literal["v1.2", "v1.0"] = "v1.2",
+    use: GraphAcc | str | None = None,
+    out: bool = False,
+    # deprecated
     neighbors_key: str | None = None,
     copy: bool = False,
-) -> AnnData | None:
-    """Map out the coarse-grained connectivity structures of complex manifolds :cite:p:`Wolf2019`.
+) -> AnnData | dict[str, Any] | None:
+    r"""Map out the coarse-grained connectivity structures of complex manifolds :cite:p:`Wolf2019`.
 
     By quantifying the connectivity of partitions (groups, clusters) of the
     single-cell graph, partition-based graph abstraction (PAGA) generates a much
@@ -60,6 +81,8 @@ def paga(
         Key for categorical in `adata.obs`. You can pass your predefined groups
         by choosing any categorical annotation of observations. Default:
         The first present key of `'leiden'` or `'louvain'`.
+        Given by a reference like `A.obs['leiden']`, or by column name
+        (:class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d with :attr:`~scanpy.Preset.ScanpyV2Preview`).
     use_rna_velocity
         Use RNA velocity to orient edges in the abstracted graph and estimate
         transitions. Requires that `adata.uns` contains a directed single-cell
@@ -67,6 +90,8 @@ def paga(
         to change in the future.
     model
         The PAGA connectivity model.
+    {use}
+    {out}
     neighbors_key
         If not specified, paga looks `.uns['neighbors']` for neighbors settings
         and `.obsp['connectivities']`, `.obsp['distances']` for connectivities and
@@ -81,14 +106,24 @@ def paga(
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the following as a :class:`dict` if `out=True`
+    (plus `'sizes'`, the group sizes, unless `use_rna_velocity`), else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.uns['connectivities']` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.uns['paga']['connectivities']` : :class:`numpy.ndarray` (dtype `float`)
         The full adjacency matrix of the abstracted graph, weights correspond to
         confidence in the connectivities of partitions.
-    `adata.uns['connectivities_tree']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+        Unless `use_rna_velocity`.
+    `adata.uns['paga']['connectivities_tree']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         The adjacency matrix of the tree-like subgraph that best explains
         the topology.
+        Unless `use_rna_velocity`.
+    `adata.uns['paga']['transitions_confidence']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+        Confidence of transitions between groups, if `use_rna_velocity`.
+    `adata.uns['paga']['groups']` : :class:`str`
+        The `.obs` column `groups` refers to.
+    `adata.uns[f'{{groups}}_sizes']` : :class:`numpy.ndarray` (dtype `int`)
+        The group sizes, unless `use_rna_velocity`.
 
     Notes
     -----
@@ -105,10 +140,10 @@ def paga(
     pl.paga_compare
 
     """
-    check_neighbors = "neighbors" if neighbors_key is None else neighbors_key
-    if check_neighbors not in adata.uns:
+    if _neighbors_view(adata, use, neighbors_key) is None:
         msg = "You need to run `pp.neighbors` first to compute a neighborhood graph."
         raise ValueError(msg)
+    groups = _obs_col(groups, param="groups")
     if groups is None:
         for k in ("leiden", "louvain"):
             if k in adata.obs.columns:
@@ -124,24 +159,27 @@ def paga(
         msg = f"`groups` key {groups!r} not found in `adata.obs`."
         raise KeyError(msg)
 
-    adata = adata.copy() if copy else adata
+    key = _out_key(out, None, kind="uns", default="paga")
     _utils.sanitize_anndata(adata)
     start = logg.info("running PAGA")
-    paga = PAGA(adata, groups, model=model, neighbors_key=neighbors_key)
-    # only add if not present
-    if "paga" not in adata.uns:
-        adata.uns["paga"] = {}
+    paga = PAGA(adata, groups, model=model, use=use, neighbors_key=neighbors_key)
+    # connectivities and transitions are computed in separate calls, so merge them
+    res = {} if key is True else adata.uns.setdefault(key, {})
     if not use_rna_velocity:
         paga.compute_connectivities()
-        adata.uns["paga"]["connectivities"] = paga.connectivities
-        adata.uns["paga"]["connectivities_tree"] = paga.connectivities_tree
-        # adata.uns['paga']['expected_n_edges_random'] = paga.expected_n_edges_random
-        adata.uns[f"{groups}_sizes"] = np.array(paga.ns)
+        res["connectivities"] = paga.connectivities
+        res["connectivities_tree"] = paga.connectivities_tree
+        # res['expected_n_edges_random'] = paga.expected_n_edges_random
+        sizes = np.array(paga.ns)
+        if key is True:
+            res["sizes"] = sizes
+        else:
+            adata.uns[f"{groups}_sizes"] = sizes
     else:
         paga.compute_transitions()
-        adata.uns["paga"]["transitions_confidence"] = paga.transitions_confidence
-        # adata.uns['paga']['transitions_ttest'] = paga.transitions_ttest
-    adata.uns["paga"]["groups"] = groups
+        res["transitions_confidence"] = paga.transitions_confidence
+        # res['transitions_ttest'] = paga.transitions_ttest
+    res["groups"] = groups
     logg.info(
         "    finished",
         time=start,
@@ -154,14 +192,15 @@ def paga(
             "    'paga/connectivities_tree', connectivities subtree (adata.uns)"
         ),
     )
-    return adata if copy else None
+    return res if key is True else None
 
 
 class PAGA:
-    def __init__(self, adata, groups, model="v1.2", neighbors_key=None):
+    def __init__(self, adata, groups, model="v1.2", use=None, neighbors_key=None):
         assert groups in adata.obs.columns
         self._adata = adata
-        self._neighbors = Neighbors(adata, neighbors_key=neighbors_key)
+        with own_deprecations():  # `paga` handles `neighbors_key`’s deprecation
+            self._neighbors = Neighbors(adata, use=use, neighbors_key=neighbors_key)
         self._model = model
         self._groups_key = groups
 
@@ -321,73 +360,8 @@ class PAGA:
         # entry ij means transition from j to i
         self.transitions_confidence = transitions_conf.T
 
-    def compute_transitions_old(self):
-        import igraph
 
-        g = _utils.get_igraph_from_adjacency(
-            self._adata.uns["velocyto_transitions"],
-            directed=True,
-        )
-        vc = igraph.VertexClustering(
-            g, membership=self._adata.obs[self._groups_key].cat.codes.values
-        )
-        # this stores all single-cell edges in the cluster graph
-        cg_full = vc.cluster_graph(combine_edges=False)
-        # this is the boolean version that simply counts edges in the clustered graph
-        g_bool = _utils.get_igraph_from_adjacency(
-            self._adata.uns["velocyto_transitions"].astype("bool"),
-            directed=True,
-        )
-        vc_bool = igraph.VertexClustering(
-            g_bool, membership=self._adata.obs[self._groups_key].cat.codes.values
-        )
-        cg_bool = vc_bool.cluster_graph(combine_edges="sum")  # collapsed version
-        transitions = cg_bool.get_adjacency_sparse(attribute="weight")
-        total_n = self._neighbors.n_neighbors * np.array(vc_bool.sizes())
-        transitions_ttest = transitions.copy()
-        transitions_confidence = transitions.copy()
-        from scipy.stats import ttest_1samp
-
-        for i in range(transitions.shape[0]):
-            neighbors = transitions[i].nonzero()[1]
-            for j in neighbors:
-                forward = cg_full.es.select(_source=i, _target=j)["weight"]
-                backward = cg_full.es.select(_source=j, _target=i)["weight"]
-                # backward direction: add minus sign
-                values = np.array(list(forward) + list(-np.array(backward)))
-                # require some minimal number of observations
-                if len(values) < 5:
-                    transitions_ttest[i, j] = 0
-                    transitions_ttest[j, i] = 0
-                    transitions_confidence[i, j] = 0
-                    transitions_confidence[j, i] = 0
-                    continue
-                t, prob = ttest_1samp(values, 0.0)
-                if t > 0:
-                    # number of outgoing edges greater than number of ingoing edges
-                    # i.e., transition from i to j
-                    transitions_ttest[i, j] = -np.log10(max(prob, 1e-10))
-                    transitions_ttest[j, i] = 0
-                else:
-                    transitions_ttest[j, i] = -np.log10(max(prob, 1e-10))
-                    transitions_ttest[i, j] = 0
-                # geom_mean
-                geom_mean = np.sqrt(total_n[i] * total_n[j])
-                diff = (len(forward) - len(backward)) / geom_mean
-                if diff > 0:
-                    transitions_confidence[i, j] = diff
-                    transitions_confidence[j, i] = 0
-                else:
-                    transitions_confidence[j, i] = -diff
-                    transitions_confidence[i, j] = 0
-        transitions_ttest.eliminate_zeros()
-        transitions_confidence.eliminate_zeros()
-        # transpose in order to match convention of stochastic matrices
-        # entry ij means transition from j to i
-        self.transitions_ttest = transitions_ttest.T
-        self.transitions_confidence = transitions_confidence.T
-
-
+@deprecated(Deprecation("1.13.0"))
 def paga_degrees(adata: AnnData) -> list[int]:
     """Compute the degree of each node in the abstracted graph.
 
@@ -408,6 +382,7 @@ def paga_degrees(adata: AnnData) -> list[int]:
     return degrees
 
 
+@deprecated(Deprecation("1.13.0"))
 def paga_expression_entropies(adata: AnnData) -> list[float]:
     """Compute the median expression entropy for each node-group.
 
@@ -444,6 +419,7 @@ class PAGAComparePathsResult(NamedTuple):
     n_paths: int
 
 
+@deprecated(Deprecation("1.13.0"))
 def paga_compare_paths(  # noqa: PLR0912, PLR0915
     adata1: AnnData,
     adata2: AnnData,

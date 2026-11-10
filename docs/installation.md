@@ -43,11 +43,10 @@ $ pip install scanpy
 ::::
 
 If you use Hatch or pip, the extra `[leiden]` installs two packages that are needed for popular
-parts of scanpy but aren't requirements: [igraph][] {cite:p}`Csardi2006` and [leiden][] {cite:p}`Traag2019`.
+parts of scanpy but aren't requirements: [igraph][] {cite:p}`Csardi2006` and {doc}`leiden <leidenalg:index>` {cite:p}`Traag2019`.
 If you use conda, you should to add these dependencies to your environment individually.
 
-[igraph]: https://python.igraph.org/en/stable/
-[leiden]: https://leidenalg.readthedocs.io
+[igraph]: https://python.igraph.org/
 
 (dev-install-instructions)=
 
@@ -114,7 +113,7 @@ For instructions on how to work with the code, see the {ref}`contribution guide 
 If you have a GPU, consider [rapids-singlecell][], which mirrors the scanpy API with order-of-magnitude speedups.
 See its [documentation][rapids-singlecell] for installation and usage instructions.
 
-[rapids-singlecell]: https://rapids-singlecell.readthedocs.io
+[rapids-singlecell]: https://rapids-singlecell.scverse.org/
 
 ## Docker
 

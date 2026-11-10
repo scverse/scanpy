@@ -76,9 +76,12 @@ class Default:
         return getattr(params, param)
 
 
+class QcMetricsPreset(NamedTuple):
+    out: bool
+
+
 class HVGPreset(NamedTuple):
     flavor: HVGFlavor
-    return_df: bool
 
 
 class BasicEmbeddingPreset(NamedTuple):
@@ -93,7 +96,6 @@ PcaPreset = UmapPreset = TsnePreset = DiffmapPreset = DrawGraphPreset = (
 
 class RankGenesGroupsPreset(NamedTuple):
     method: DETest
-    mask_var: str | None
     mean_in_log_space: bool
 
 
@@ -114,7 +116,7 @@ preset_postprocessors: list[Callable[[], None]] = []
 
 def named_tuple_non_defaults(
     nt: NamedTuple,
-) -> Generator[tuple[str, object], None, None]:
+) -> Generator[tuple[str, object]]:
     cls = type(nt)
     for param in cls._fields:
         value = getattr(nt, param)
@@ -186,14 +188,25 @@ class Preset(enum.StrEnum):
 
     - change all functions using `igraph` to no longer create duplicate edges,
       slightly changing community detection and modularity scores.
+    - :meth:`~anndata.acc.AdAcc.resolve` strings passed to parameters that used to take
+      column or key names (e.g. `groupby`), so `'obs.x'` instead of `'x'`.
+      Deprecated parameters keep taking names.
     """
+
+    @preset_property
+    def calculate_qc_metrics() -> Mapping[Preset, QcMetricsPreset]:
+        """Whether :func:`~scanpy.pp.calculate_qc_metrics` returns its metrics (`out=True`) or writes them."""
+        return {
+            Preset.ScanpyV1: QcMetricsPreset(out=True),
+            Preset.ScanpyV2Preview: QcMetricsPreset(out=False),
+        }
 
     @preset_property
     def highly_variable_genes() -> Mapping[Preset, HVGPreset]:
         """Flavor for :func:`~scanpy.pp.highly_variable_genes`."""
         return {
-            Preset.ScanpyV1: HVGPreset(flavor="seurat", return_df=False),
-            Preset.ScanpyV2Preview: HVGPreset(flavor="seurat_v3_paper", return_df=True),
+            Preset.ScanpyV1: HVGPreset(flavor="seurat"),
+            Preset.ScanpyV2Preview: HVGPreset(flavor="seurat_v3_paper"),
         }
 
     @preset_property
@@ -245,10 +258,10 @@ class Preset(enum.StrEnum):
         """
         return {
             Preset.ScanpyV1: RankGenesGroupsPreset(
-                method="t-test", mask_var=None, mean_in_log_space=True
+                method="t-test", mean_in_log_space=True
             ),
             Preset.ScanpyV2Preview: RankGenesGroupsPreset(
-                method="wilcoxon", mask_var=None, mean_in_log_space=False
+                method="wilcoxon", mean_in_log_space=False
             ),
         }
 
@@ -279,7 +292,7 @@ class Preset(enum.StrEnum):
     @contextmanager
     @doctest_needs("igraph")
     @doctest_needs("scikit-misc")
-    def override(self, preset: Preset) -> Generator[Preset, None, None]:
+    def override(self, preset: Preset) -> Generator[Preset]:
         """Temporarily override :attr:`scanpy.settings.preset`.
 
         >>> import scanpy as sc

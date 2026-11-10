@@ -97,7 +97,7 @@ Methods for visualizing quality control and results of preprocessing functions.
 ## Tools
 
 Methods that extract and visualize tool-specific annotation in an
-{class}`~anndata.AnnData` object.  For any method in module `tl`, there is
+{class}`~anndata.AnnData` object. For any method in module `tl`, there is
 a method with the same name in `pl`.
 
 ### PCA
@@ -204,15 +204,4 @@ Visualize hierarchical clustering results as a heatmap.
    pl.rank_genes_groups_dotplot
    pl.rank_genes_groups_matrixplot
    pl.rank_genes_groups_tracksplot
-```
-
-### Simulations
-
-```{eval-rst}
-.. autosummary::
-   :nosignatures:
-   :toctree: generated/
-
-   pl.sim
-
 ```
