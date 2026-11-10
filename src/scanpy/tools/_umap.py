@@ -10,7 +10,7 @@ from .. import logging as logg
 from .._compat import pkg_version
 from .._docs import DEPR_KEY_ADDED, DEPR_NEIGHBORS_KEY, doc_out_key, doc_rng
 from .._keys import _embedding_keys
-from .._settings import Default, settings
+from .._settings import Default, Preset, settings
 from .._utils import _doc_params
 from .._utils.random import (
     _accepts_legacy_random_state,
@@ -283,23 +283,20 @@ def _init_coords(
         and not _umap_layout_kw(compatibility_layout=False)
     ):
         return "spectral"  # umap-learn <0.6 has no 'auto'
-    # method names have no dots
-    ref = (
-        _resolve_ref(init_pos, vec=False)
-        if isinstance(init_pos, str) and "." in init_pos
-        else init_pos
-    )
-    match ref:
+    v1 = settings.preset is Preset.ScanpyV1
+    match init_pos:
+        case str() if not v1 and "." in init_pos:  # method names have no dots
+            coords = adata[_resolve_ref(init_pos, vec=False)]
+        case str() if v1 and init_pos in adata.obsm:
+            coords = adata.obsm[init_pos]
         case MultiAcc():
-            coords = adata[ref]
-        case str() if ref in adata.obsm:
-            coords = adata.obsm[ref]
-        case "paga":
+            coords = adata[init_pos]
+        case str() if init_pos == "paga":
             coords = get_init_pos_from_paga(adata, rng=rng, adjacency=conns)
         case str() | None:
-            return ref  # let umap handle it
+            return init_pos  # let umap handle it
         case _:
-            coords = ref
+            coords = init_pos
     return check_array(coords, dtype=np.float32, accept_sparse=False)
 
 
