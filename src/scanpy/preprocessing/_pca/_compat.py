@@ -4,25 +4,20 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from fast_array_utils.stats import mean_var
-from packaging.version import Version
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array
 from sklearn.utils.extmath import svd_flip
 
-from ..._compat import pkg_version
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 
 if TYPE_CHECKING:
-    from typing import Any, Literal
+    from typing import Literal
 
     from numpy.typing import NDArray
     from sklearn.decomposition import PCA
 
     from ..._compat import CSBase
     from ..._utils.random import RNGLike, SeedLike
-
-
-SCIPY_1_15 = pkg_version("scipy") >= Version("1.15.0rc1")
 
 
 @_accepts_legacy_random_state(None)
@@ -61,12 +56,9 @@ def _pca_compat_sparse(
     )
 
     random_init = rng.uniform(size=np.min(x.shape))
-    kw: Any = (
-        dict(rng=rng) if SCIPY_1_15 else dict(random_state=_legacy_random_state(rng))
-    )
-    u, s, v = svds(linop, solver=solver, k=n_pcs, v0=random_init, **kw)
+    u, s, v = svds(linop, solver=solver, k=n_pcs, v0=random_init, rng=rng)
     # u_based_decision was changed in https://github.com/scikit-learn/scikit-learn/pull/27491
-    u, v = svd_flip(u, v, u_based_decision=not SCIPY_1_15)
+    u, v = svd_flip(u, v, u_based_decision=False)
     idx = np.argsort(-s)
     v = v[idx, :]
 

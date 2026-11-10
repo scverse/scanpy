@@ -4,18 +4,23 @@ from __future__ import annotations
 
 import os
 import sys
-from types import MappingProxyType
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
+
+from packaging.version import Version
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import pooch
 import pytest
-from packaging.version import Version
 
 from .fixtures import *  # noqa: F403
 from .marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
+    from pathlib import Path
 
 
 MARK_RETRY_DOWNLOAD = pytest.mark.flaky(
@@ -36,7 +41,7 @@ def original_settings(
     cache: pytest.Cache,
     tmp_path_factory: pytest.TempPathFactory,
     monkeypatch: pytest.MonkeyPatch,
-) -> Generator[Mapping[str, object], None, None]:
+) -> Generator[Mapping[str, object]]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
     # make sure seaborn is imported and did its thing
     import anndata as ad
@@ -50,7 +55,7 @@ def original_settings(
     global _original_settings  # noqa: PLW0603
     if _original_settings is None:
         # can’t use `model_dump` here because of https://github.com/pydantic/pydantic/issues/8907
-        _original_settings = MappingProxyType({
+        _original_settings = frozendict({
             s: getattr(sc.settings, s)
             for s in (
                 type(sc.settings).model_fields | type(sc.settings).model_computed_fields
@@ -58,8 +63,10 @@ def original_settings(
         })
 
     setup()
-    if pkg_version("anndata") >= Version("0.12"):
-        ad.settings.zarr_write_format = 3  # default in anndata 0.13, warns otherwise
+    sc.settings.preset = sc.Preset.ScanpyV1
+    if pkg_version("anndata") < Version("0.13"):
+        ad.settings.zarr_write_format = 3
+    ad.settings.auto_shard_zarr_v3 = True
     sc.settings.logfile = sys.stderr
     sc.settings.verbosity = sc.Verbosity.hint
     sc.settings.autoshow = True
@@ -79,10 +86,12 @@ def original_settings(
     yield _original_settings
 
     plt.close("all")
+    # also reset at teardown: module/session fixtures are set up before this fixture
+    sc.settings.preset = sc.Preset.ScanpyV1
 
 
 @pytest.fixture(autouse=True, scope="session")
-def max_threads() -> Generator[int, None, None]:
+def max_threads() -> Generator[int]:
     """Limit number of threads used per worker when using pytest-xdist.
 
     Prevents oversubscription of the CPU when multiple tests with parallel code are
@@ -110,6 +119,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "Run tests that retrieve stuff from the internet. This increases test time."
         ),
     )
+
+
+def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool:
+    return "_v2" in collection_path.parts and not bool(find_spec("holoviews"))
 
 
 def pytest_collection_modifyitems(

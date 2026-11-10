@@ -11,9 +11,14 @@ env:
   PYTEST_ADDOPTS: "-v --color=yes -n auto --internet-tests --junitxml=test-data/test-results.xml"
   FORCE_COLOR: "1"
   MPLBACKEND: agg
+  # ubuntu-26.04’s system Python is 3.14.4, whose incremental GC (reverted in 3.14.5) lets garbage pile up until the runner OOMs
+  UV_PYTHON_PREFERENCE: only-managed
   # It’s impossible to ignore SyntaxWarnings for a single module,
   # so because leidenalg 0.10.0 has them, we pre-compile things: https://github.com/vtraag/leidenalg/issues/173
   UV_COMPILE_BYTECODE: "1"
+
+permissions:
+  contents: read
 
 jobs:
   get-environments:
@@ -21,10 +26,16 @@ jobs:
     outputs:
       envs: ${{ steps.get-envs.outputs.envs }}
     steps:
-      - uses: actions/checkout@v6
-        with: { filter: 'blob:none', fetch-depth: 0 }
-      - uses: astral-sh/setup-uv@v7
-        with: { enable-cache: false }
+      - &clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - &setup-uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
       - id: get-envs
         run: |
           ENVS_JSON=$(NO_COLOR=1 uvx hatch env show --json | jq -c 'to_entries
@@ -45,17 +56,14 @@ jobs:
       matrix:
         env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
     permissions:
-      id-token: write  # for codecov OIDC
+      id-token: write # for codecov OIDC
+    env:
+      UV_PYTHON: ${{ matrix.env.python }}
     steps:
-      - uses: actions/checkout@v6
-        with: { filter: 'blob:none', fetch-depth: 0 }
-
-      - uses: astral-sh/setup-uv@v7
-        with:
-          python-version: ${{ matrix.env.python }}
-
+      - *clone
+      - *setup-uv
       - name: Cache downloaded data
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .pytest_cache/d/scanpy-data
           key: pytest
@@ -83,7 +91,7 @@ jobs:
 
       - name: Upload coverage data
         if: ${{ !cancelled() && matrix.env.test-type == 'coverage' }}
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           flags: ${{ matrix.env.name }}
           files: test-data/coverage.xml
@@ -92,7 +100,7 @@ jobs:
 
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           report_type: test_results
           flags: ${{ matrix.env.name }}
@@ -102,7 +110,7 @@ jobs:
 
       - name: Publish debug artifacts
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: debug-data-${{ matrix.env.name }}
           path: .pytest_cache/d/debug
@@ -110,14 +118,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-        with: { filter: 'blob:none', fetch-depth: 0 }
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.x"
-      - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
+      - *clone
+      - *setup-uv
       - run: uvx --from build pyproject-build --sdist --wheel .
       - run: uvx twine check dist/*
 
@@ -129,6 +131,6 @@ jobs:
       - build
     runs-on: ubuntu-latest
     steps:
-      - uses: re-actors/alls-green@release/v1
+      - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
         with:
           jobs: ${{ toJSON(needs) }}

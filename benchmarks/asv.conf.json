@@ -7,7 +7,7 @@
     "project": "scanpy",
 
     // The project's homepage
-    "project_url": "https://scanpy.readthedocs.io/",
+    "project_url": "https://scanpy.scverse.org/",
 
     // The URL or local path of the source code repository for the
     // project being benchmarked
@@ -54,11 +54,11 @@
 
     // The Pythons you'd like to test against.  If not provided, defaults
     // to the current version of Python used to run `asv`.
-    // "pythons": ["3.11", "3.13"],
+    "pythons": ["3.14"],
 
     // The list of conda channel names to be searched for benchmark
     // dependency packages in the specified order
-    "conda_channels": ["conda-forge", "defaults"],
+    "conda_channels": ["conda-forge"],
 
     // The matrix of dependencies to test.  Each key is the name of a
     // package (in PyPI) and the values are version numbers.  An empty
@@ -71,6 +71,8 @@
     // followed by the pip installed packages).
     //
     "matrix": {
+        // https://github.com/airspeed-velocity/asv_runner/issues/52
+        "pip+asv_runner": ["0.2.1"],
         "numpy": [""],
         "scipy": [""],
         "h5py": [""],
@@ -83,7 +85,9 @@
         // "psutil": [""]
         "pooch": [""],
         "scikit-image": [""], // https://github.com/conda-forge/scikit-misc-feedstock/pull/29
-        // "scikit-misc": [""],
+        "scikit-misc": [""],
+        "dask-core": [""],
+        "pip+illico": [""],
     },
 
     // Combinations of libraries/python versions can be excluded/included

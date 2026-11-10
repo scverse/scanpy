@@ -6,86 +6,125 @@ import numpy as np
 
 from .. import logging as logg
 from .._compat import warn
+from .._keys import _existing_preset_keys
 from .._settings import settings
-from .._utils import _choose_graph
+from ..get._types import LayerAcc, MultiAcc
+from ..get._use import _get_arr, _resolve_obs
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
     from .._compat import CSBase, CSRBase
+    from ..get._types import RepAcc
 
 
 def _choose_representation(
     adata: AnnData,
     *,
-    use_rep: str | None = None,
-    n_pcs: int | None = None,
+    use_rep: RepAcc | str | None,
+    n_pcs: int | None,
     silent: bool = False,
 ) -> np.ndarray | CSRBase:  # TODO: what else?
+    """Get the representation to compute on, resolving strings using `anndata.acc`."""
+    return _choose_representation_compat(
+        adata,
+        use_rep=None if use_rep is None else _resolve_obs(use_rep, rep=True),
+        n_pcs=n_pcs,
+        silent=silent,
+    )
+
+
+def _choose_representation_compat(
+    adata: AnnData,
+    *,
+    use: RepAcc | str | None = None,
+    use_rep: RepAcc | str | None = None,
+    n_pcs: int | None,
+    silent: bool = False,
+) -> np.ndarray | CSRBase:  # TODO: what else?
+    """Get the representation to compute on.
+
+    `use` always uses `anndata.acc` semantics; `use_rep` is its deprecated predecessor,
+    whose strings are always `.obsm` keys (or `'X'`).
+    `use_rep` can also be an accessor, as read back by `_use_from_uns`.
+    """
+    if use is not None:
+        if use_rep is not None:
+            msg = "Pass either `use` or `use_rep`, not both."
+            raise TypeError(msg)
+        use_rep = _resolve_obs(use, rep=True)
     verbosity = settings.verbosity
     if silent and settings.verbosity > 1:
         settings.verbosity = 1
     if use_rep is None and n_pcs == 0:  # backwards compat for specifying `.X`
         use_rep = "X"
-    if use_rep is None:
-        x = _get_pca_or_small_x(adata, n_pcs)
-    elif use_rep in adata.obsm and n_pcs is not None:
-        if n_pcs > adata.obsm[use_rep].shape[1]:
-            msg = (
-                f"{use_rep} does not have enough Dimensions. Provide a "
-                "Representation with equal or more dimensions than"
-                "`n_pcs` or lower `n_pcs` "
-            )
+    match use_rep:
+        case None:
+            x = _get_pca_or_small_x(adata, n_pcs)
+        case LayerAcc():
+            x = _get_arr(adata, use_rep)
+        case MultiAcc():
+            x = _slice_n_pcs(_get_arr(adata, use_rep), n_pcs, use_rep)
+        case str() if use_rep in adata.obsm:
+            x = _slice_n_pcs(adata.obsm[use_rep], n_pcs, use_rep)
+        case "X":
+            x = adata.X
+        case _:
+            msg = f"Did not find {use_rep} in `.obsm.keys()`. You need to compute it first."
             raise ValueError(msg)
-        x = adata.obsm[use_rep][:, :n_pcs]
-    elif use_rep in adata.obsm and n_pcs is None:
-        x = adata.obsm[use_rep]
-    elif use_rep == "X":
-        x = adata.X
-    else:
-        msg = f"Did not find {use_rep} in `.obsm.keys()`. You need to compute it first."
-        raise ValueError(msg)
     settings.verbosity = verbosity  # resetting verbosity
     return x
 
 
+def _slice_n_pcs[A: np.ndarray | CSBase](
+    x: A, n_pcs: int | None, use_rep: RepAcc | str
+) -> A:
+    if n_pcs is None:
+        return x
+    if n_pcs > x.shape[1]:
+        msg = (
+            f"{use_rep} does not have enough Dimensions. Provide a "
+            "Representation with equal or more dimensions than"
+            "`n_pcs` or lower `n_pcs` "
+        )
+        raise ValueError(msg)
+    return x[:, :n_pcs]
+
+
 def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBase:
+    from .._keys import _embedding_keys
+    from ..preprocessing._pca import pca
+
     if adata.n_vars <= settings.N_PCS:
         logg.info("    using data matrix X directly")
         return adata.X
 
-    if "X_pca" in adata.obsm:
-        if n_pcs is not None and n_pcs > adata.obsm["X_pca"].shape[1]:
-            msg = "`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
+    if keys := _existing_preset_keys(adata, "pca"):
+        if n_pcs is not None and n_pcs > adata.obsm[keys.obsm].shape[1]:
+            msg = f"`adata.obsm[{keys.obsm!r}]` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
             raise ValueError(msg)
-        x = adata.obsm["X_pca"][:, :n_pcs]
-        logg.info(f"    using 'X_pca' with n_pcs = {x.shape[1]}")
+        x = adata.obsm[keys.obsm][:, :n_pcs]
+        logg.info(f"    using {keys.obsm!r} with n_pcs = {x.shape[1]}")
         return x
-
-    from ..preprocessing import pca
 
     msg = (
         f"You’re trying to run this on {adata.n_vars} dimensions of `.X`, "
-        "if you really want this, set `use_rep='X'`.\n         "
+        "if you really want this, set `use_rep=’X’`.\n         "
         "Falling back to preprocessing with `sc.pp.pca` and default params."
     )
     warn(msg, UserWarning)
     n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
     pca(adata, n_comps=n_pcs_pca)
-    return adata.obsm["X_pca"]
+    return adata.obsm[_embedding_keys("pca").obsm]
 
 
 def get_init_pos_from_paga(
     adata: AnnData,
     *,
     rng: np.random.Generator,
-    adjacency: CSBase | None = None,
-    neighbors_key: str | None = None,
-    obsp: str | None = None,
+    adjacency: CSBase,
 ) -> NDArray[np.float64]:
-    if adjacency is None:
-        adjacency = _choose_graph(adata, obsp, neighbors_key)
     if "pos" not in adata.uns.get("paga", {}):
         msg = "Plot PAGA first, so that `adata.uns['paga']['pos']` exists."
         raise ValueError(msg)

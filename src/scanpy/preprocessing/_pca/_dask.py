@@ -10,7 +10,7 @@ from fast_array_utils import stats
 from scanpy._utils import raise_if_dask_feature_axis_chunked
 from scanpy._utils._doctests import doctest_needs
 
-from ..._compat import CSBase
+from ..._compat import CSBase, CSRBase
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -182,10 +182,13 @@ def _cov_sparse_dask(
     else:
         dtype = np.dtype(dtype)
 
-    def gram_block(x_part: CSBase | NDArray):
-        gram_matrix = x_part.T @ x_part
-        if isinstance(gram_matrix, CSBase):
-            gram_matrix = gram_matrix.toarray()
+    def gram_block(x_part: CSRBase | NDArray):
+        if isinstance(x_part, CSRBase):
+            from ._kernels import csr_gram_dense
+
+            gram_matrix = csr_gram_dense(x_part)
+        else:
+            gram_matrix = x_part.T @ x_part
         return gram_matrix[None, ...]  # need new axis for summing
 
     gram_matrix_dask: DaskArray = da.map_blocks(

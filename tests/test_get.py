@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import partial
 from itertools import chain, repeat
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,10 @@ from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 # Override so warning gets caught
@@ -55,6 +60,9 @@ def adata() -> AnnData:
 ########################
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|use_raw) is deprecated:FutureWarning"
+)
 def test_obs_df(adata: AnnData):
     adata.obsm["eye"] = np.eye(2, dtype=int)
     adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")  # noqa: TID251
@@ -173,15 +181,12 @@ def test_repeated_gene_symbols():
     pd.testing.assert_frame_equal(expected, result)
 
 
-def test_backed_vs_memory():
+def test_backed_vs_memory(tmp_path: Path) -> None:
     """Compares backed vs. memory."""
-    from pathlib import Path
-
-    # get location test h5ad file in datasets
-    pkg_dir = Path(sc.__file__).parent
-    adata_file = pkg_dir / "datasets/10x_pbmc68k_reduced.h5ad"
-    adata_backed = sc.read(adata_file, backed="r")
-    adata = sc.read_h5ad(adata_file)
+    adata = pbmc68k_reduced()
+    adata_file = tmp_path / "adata.h5ad"
+    adata.write_h5ad(adata_file)
+    adata_backed = sc.io.read(adata_file, backed="r")
 
     # use non-sequential list of genes
     genes = list(adata.var_names[20::-2])
@@ -226,6 +231,9 @@ def test_column_content():
         )
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|use_raw) is deprecated:FutureWarning"
+)
 def test_var_df(adata: AnnData):
     adata.varm["eye"] = np.eye(2, dtype=int)
     adata.varm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")  # noqa: TID251
@@ -462,6 +470,9 @@ def shared_key_adata(request):
         pytest.fail("add branch for new kind")
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|use_raw) is deprecated:FutureWarning"
+)
 def test_shared_key_errors(shared_key_adata):
     adata, func, regex = shared_key_adata
 
@@ -519,10 +530,10 @@ def test_rank_genes_groups_df_explicit_key(adata_rgg: AnnData):
         adata_rgg,
         groupby="celltype",
         method="wilcoxon",
-        key_added="different_key",
+        key_added="different",
         pts=True,
     )
-    dedf2 = sc.get.rank_genes_groups_df(adata_rgg, "a", key="different_key")
+    dedf2 = sc.get.rank_genes_groups_df(adata_rgg, "a", key="different")
 
     pd.testing.assert_frame_equal(dedf, dedf2)
     assert "pct_nz_group" in dedf2.columns
@@ -538,9 +549,9 @@ def test_rank_genes_groups_df_all_groups(adata_rgg: AnnData, index_name: str | N
     assert "b" in dedf["group"].unique()
 
 
-######################
-# _get_obs_rep tests #
-######################
+##################
+# _get_arr tests #
+##################
 
 
 @pytest.mark.parametrize(
@@ -555,11 +566,47 @@ def test_rank_genes_groups_df_all_groups(adata_rgg: AnnData, index_name: str | N
         pytest.param(dict(layer="b"), KeyError, r"'b'", id="missing_layer"),
     ],
 )
-def test_get_obs_rep_errors(kw: sc.get._ObsRep, cls: type[Exception], msg: str) -> None:
+def test_get_arr_errors(kw: sc.get._Rep, cls: type[Exception], msg: str) -> None:
     adata = AnnData(
         np.zeros((10, 10)),
         layers={"a": np.zeros((10, 10))},
         obsm={"b": np.zeros((10, 5))},
     )
     with pytest.raises(cls, match=msg):
-        sc.get._get_obs_rep(adata, **kw)
+        sc.get._get_arr(adata, **kw)
+
+
+@pytest.mark.parametrize(
+    "out",
+    [
+        pytest.param(None, id="default"),
+        pytest.param("obsm.p", marks=needs.anndata_acc, id="acc"),
+        pytest.param("obsm.X_pca", marks=needs.anndata_acc, id="acc-default"),
+    ],
+)
+def test_pca(out: str | None) -> None:
+    """`get.pca`’s `use` finds what `pp.pca` wrote with the same `out`."""
+    adata = pbmc68k_reduced()
+    sc.pp.pca(adata, n_comps=5, out=out or False)
+    pca_adata = sc.get.pca(adata, use=out)
+
+    assert pca_adata.shape == (adata.n_obs, 5)
+    assert list(pca_adata.var_names) == [f"PC{i}" for i in range(1, 6)]
+    assert np.all(np.diff(pca_adata.var["variance"]) <= 0)
+
+
+@needs.anndata_acc
+def test_obs_var_df_use(adata: AnnData) -> None:
+    """`use` picks the layer, like the deprecated `layer`."""
+    from anndata.acc import A
+
+    pd.testing.assert_frame_equal(
+        sc.get.obs_df(adata, keys=["gene2", "obs1"], use=A.layers["double"]),
+        pd.DataFrame({"gene2": [2, 2], "obs1": [0, 1]}, index=adata.obs_names),
+    )
+    pd.testing.assert_frame_equal(
+        sc.get.var_df(adata, keys=["cell1"], use="layers.double"),
+        pd.DataFrame({"cell1": [2, 2]}, index=adata.var_names),
+    )
+    with pytest.raises(TypeError, match=r"`use` must be a layer"):
+        sc.get.obs_df(adata, keys=["gene2"], use=A.obsm["eye"])

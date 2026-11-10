@@ -6,6 +6,7 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 from packaging.version import Version
+from scverse_misc import Deprecation, deprecated
 
 from ..._compat import pkg_version
 from ..._settings import settings
@@ -20,6 +21,12 @@ if TYPE_CHECKING:
     type Genes = Collection[str | int | bool]
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "For cell cycle scoring, use :func:`scanpy.tl.score_genes_cell_cycle` instead.",
+    )
+)
 @doctest_needs("pypairs")
 def sandbag(
     adata: AnnData,
@@ -65,6 +72,8 @@ def sandbag(
     >>> from pypairs import datasets
     >>> adata = datasets.leng15()
     >>> marker_pairs = sandbag(adata, fraction=0.5)
+    FutureWarning: The function sandbag is deprecated and will be removed in the future. For cell cycle scoring, use :func:`scanpy.tl.score_genes_cell_cycle` instead.
+        marker_pairs = sandbag(adata, fraction=0.5)
 
     """
     _check_available()
@@ -86,6 +95,12 @@ def sandbag(
     )
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "For cell cycle scoring, use :func:`scanpy.tl.score_genes_cell_cycle` instead.",
+    )
+)
 def cyclone(
     adata: AnnData,
     marker_pairs: Mapping[str, Collection[tuple[str, str]]] | None = None,

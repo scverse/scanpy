@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import TYPE_CHECKING
 
 import anndata as ad
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Literal
 
+    from anndata.acc import AdAcc
     from numpy.typing import NDArray
 
     from scanpy._compat import CSRBase
@@ -52,34 +54,66 @@ def xfail_dask_median(
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-def test_mask(axis: Literal[0, 1]) -> None:
+@pytest.mark.parametrize("typ", ["str", pytest.param("ref", marks=needs.anndata_acc)])
+def test_mask(axis: Literal[0, 1] | None, typ: Literal["str", "ref"]) -> None:
     blobs = sc.datasets.blobs()
     mask = blobs.obs["blobs"] == 0
     blobs.obs["mask_col"] = mask
     if axis == 1:
         blobs = blobs.T
-    by_name = sc.get.aggregate(blobs, "blobs", "sum", axis=axis, mask="mask_col")
+    if typ == "str":
+        ref = "mask_col"
+    elif typ == "ref":
+        from anndata.acc import A
+
+        ref = A.obs["mask_col"] if axis == 0 else A.var["mask_col"]
+
+    by_ref = sc.get.aggregate(blobs, "blobs", "sum", axis=axis, mask=ref)
     by_value = sc.get.aggregate(blobs, "blobs", "sum", axis=axis, mask=mask)
 
-    assert_equal(by_name, by_value)
-
-    assert np.all(by_name["0"].layers["sum"] == 0)
+    assert_equal(by_ref, by_value)
+    assert np.all(by_ref["0"].layers["sum"] == 0)
 
 
 @pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
+@pytest.mark.parametrize("use_mask", [True, False], ids=["masked", "unmasked"])
+@pytest.mark.parametrize("with_na", [True, False], ids=["na", "no_na"])
+@pytest.mark.parametrize(
+    "remove_unused_categories", [True, False], ids=["removed_unused", "all_categories"]
+)
 def test_aggregate_vs_pandas(
-    metric: AggType, array_type, request: pytest.FixtureRequest
+    metric: AggType,
+    array_type,
+    request: pytest.FixtureRequest,
+    *,
+    use_mask: bool,
+    with_na: bool,
+    remove_unused_categories: bool,
 ) -> None:
     adata = pbmc3k_processed().raw.to_adata()
-    adata = adata[
-        adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
-    ].copy()
+    cat_col = adata.obs["louvain"]
+    categories = cat_col.cat.categories
+    with ad.settings.override(remove_unused_categories=remove_unused_categories):
+        adata = adata[cat_col.isin(categories[:5]), :1_000].copy()
     adata.X = array_type(adata.X)
+    if with_na:
+        nas = list(range(0, adata.shape[0], 5))
+        adata.obs.iloc[nas, adata.obs.columns.get_loc("louvain")] = pd.NA
+    kwargs = {}
+    if use_mask:
+        mask = np.ones(adata.shape[0], dtype=bool)
+        for excluded in range(0, adata.shape[0], 4):
+            mask[excluded] = False
+        kwargs["mask"] = mask
     xfail_dask_median(adata, metric, request)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
-    result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
+    result = sc.get.aggregate(
+        adata, ["louvain", "percent_mito_binned"], metric, **kwargs
+    )
     if isinstance(adata.X, DaskArray):
         adata.X = adata.X.compute()
+    if use_mask:
+        adata = adata[mask]
     if metric == "count_nonzero":
         expected = (
             (adata.to_df() != 0)
@@ -105,7 +139,10 @@ def test_aggregate_vs_pandas(
     result_df = result.to_df(layer=metric)
     result_df.index.name = None
     result_df.columns.name = None
-
+    expected_counts = adata.obs.groupby(
+        ["louvain", "percent_mito_binned"], observed=True
+    ).size()
+    assert result.obs["n_obs_aggregated"].tolist() == expected_counts.tolist()
     pd.testing.assert_frame_equal(result_df, expected, check_dtype=False, atol=1e-5)
 
 
@@ -125,6 +162,9 @@ def test_aggregate_axis(
     assert_equal(expected, actual)
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
+)
 def test_aggregate_entry() -> None:
     args = ("blobs", ["mean", "var", "count_nonzero"])
 
@@ -158,13 +198,6 @@ def test_aggregate_entry() -> None:
     assert_equal(x_result_min, obsm_result)
     assert_equal(x_result.layers, obsm_result.layers)
     assert_equal(x_result.layers, varm_result.T.layers)
-
-
-def test_aggregate_incorrect_dim() -> None:
-    adata = pbmc3k_processed().raw.to_adata()
-
-    with pytest.raises(ValueError, match="was 'foo'"):
-        sc.get.aggregate(adata, ["louvain"], "sum", axis="foo")
 
 
 def to_bad_chunking(x: CSRBase) -> DaskArray:
@@ -203,6 +236,23 @@ def test_aggregate_bad_dask_array(
     adata.X = func(adata.X)
     with pytest.raises(ValueError, match=error_msg):
         sc.get.aggregate(adata, ["louvain"], "sum")
+
+
+@needs.dask
+@pytest.mark.parametrize("func", [["count_nonzero"], ["sum", "mean", "count_nonzero"]])
+def test_aggregate_dask_multiple_funcs(func: list[AggType]) -> None:
+    """A multi-func list incl. count_nonzero/sum must survive `.compute()` on dask."""
+    import dask.array as da
+
+    adata = sc.datasets.blobs()
+    dask_adata = adata.copy()
+    dask_adata.X = da.from_array(adata.X, chunks=(adata.shape[0] // 2, -1))
+    expected = sc.get.aggregate(adata, "blobs", func=func)
+    result = sc.get.aggregate(dask_adata, "blobs", func=func)
+    for f in func:
+        np.testing.assert_allclose(
+            np.asarray(expected.layers[f]), np.asarray(result.layers[f])
+        )
 
 
 @pytest.mark.parametrize("axis_name", ["obs", "var"])
@@ -348,56 +398,50 @@ def test_aggregate_examples(
 
 
 @pytest.mark.parametrize(
-    ("label_cols", "cols", "expected"),
+    ("label_cols", "expected"),
     [
         pytest.param(
             dict(
                 a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
-            ),
-            ["a", "b"],
-            pd.Categorical(["a_d", "b_d", "c_f"]),
-            id="two_of_two",
-        ),
-        pytest.param(
-            dict(
-                a=pd.Categorical(["a", "b", "c"]),
-                b=pd.Categorical(["d", "d", "f"]),
                 c=pd.Categorical(["g", "h", "h"]),
             ),
-            ["a", "b", "c"],
             pd.Categorical(["a_d_g", "b_d_h", "c_f_h"]),
-            id="three_of_three",
+            id="three",
         ),
         pytest.param(
             dict(
                 a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
+            ),
+            pd.Categorical(["a_d", "b_d", "c_f"]),
+            id="two-1",
+        ),
+        pytest.param(
+            dict(
+                a=pd.Categorical(["a", "b", "c"]),
                 c=pd.Categorical(["g", "h", "h"]),
             ),
-            ["a", "c"],
             pd.Categorical(["a_g", "b_h", "c_h"]),
-            id="two_of_three-1",
+            id="two-2",
         ),
         pytest.param(
             dict(
-                a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
                 c=pd.Categorical(["g", "h", "h"]),
             ),
-            ["b", "c"],
             pd.Categorical(["d_g", "d_h", "f_h"]),
-            id="two_of_three-2",
+            id="two-3",
         ),
     ],
 )
 def test_combine_categories(
-    label_cols: dict[str, pd.Categorical], cols: list[str], expected: pd.Categorical
+    label_cols: dict[str, pd.Categorical], expected: pd.Categorical
 ) -> None:
     from scanpy.get._aggregated import _combine_categories
 
     label_df = pd.DataFrame(label_cols)
-    result, result_label_df = _combine_categories(label_df, cols)
+    result, result_label_df = _combine_categories(label_df)
 
     assert isinstance(result, pd.Categorical)
 
@@ -408,7 +452,9 @@ def test_combine_categories(
     )
 
     reconstructed_df = pd.DataFrame(
-        [x.split("_") for x in result], columns=cols, index=result.astype(str)
+        [x.split("_") for x in result],
+        columns=list(label_cols),
+        index=result.astype(str),
     ).astype("category")
     pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
 
@@ -430,6 +476,9 @@ def test_aggregate_arraytype(
     )
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
+)
 def test_aggregate_obsm_varm() -> None:
     adata_obsm = sc.datasets.blobs()
     adata_obsm.obs["blobs"] = adata_obsm.obs["blobs"].astype(str)
@@ -458,11 +507,43 @@ def test_aggregate_obsm_varm() -> None:
     assert_equal(expected_mean.values, result_obsm.layers["mean"])
 
 
+@needs.anndata_acc
+def test_aggregate_obsp_varp() -> None:
+    from anndata.acc import A
+
+    adata_obsp = sc.datasets.blobs()
+    adata_obsp.obs["blobs"] = adata_obsp.obs["blobs"].astype(str)
+    rng = np.random.default_rng(0)
+    adata_obsp.obsp["test"] = rng.random((adata_obsp.n_obs, adata_obsp.n_obs))
+    adata_varp = adata_obsp.T.copy()
+
+    result_obsp = sc.get.aggregate(
+        adata_obsp, A.obs["blobs"], "sum", use=A.obsp["test"]
+    )
+    result_varp = sc.get.aggregate(
+        adata_varp, A.var["blobs"], "sum", use=A.varp["test"]
+    )
+
+    assert_equal(result_obsp, result_varp.T)
+
+    expected_sum = (
+        pd
+        .DataFrame(adata_obsp.obsp["test"], index=adata_obsp.obs_names)
+        .groupby(adata_obsp.obs["blobs"], observed=True)
+        .sum()
+    )
+    assert_equal(expected_sum.values, result_obsp.layers["sum"])
+    assert_equal(adata_obsp.obs_names, result_obsp.var_names)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
+)
 def test_aggregate_obsm_labels() -> None:
     from itertools import chain, repeat
 
     label_counts = [("a", 5), ("b", 3), ("c", 4)]
-    blocks = [np.ones((n, 1)) for _, n in label_counts]
+    blocks = [sparse.csr_array(np.ones((n, 1))) for _, n in label_counts]  # noqa: TID251
     obs_names = pd.Index([
         f"cell_{i:02d}" for i in range(sum(b.shape[0] for b in blocks))
     ])
@@ -502,10 +583,169 @@ def test_aggregate_obsm_labels() -> None:
     assert_equal(expected, result)
 
 
-def test_dispatch_not_implemented() -> None:
+@needs.anndata_acc
+@pytest.mark.parametrize("axis", ["obs", "var"])
+@pytest.mark.parametrize("attr", [pytest.param(None, id="x"), "layers", "obsm", "varm"])
+@pytest.mark.parametrize("by", ["blobs", ["blobs", "extra"]], ids=["single", "multi"])
+@pytest.mark.parametrize("use_str", [False, True], ids=["acc", "str"])
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
+)
+def test_acc_api(
+    *,
+    axis: Literal["obs", "var"],
+    attr: Literal["obsm", "varm", "layers"] | None,
+    by: str | list[str],
+    use_str: bool,
+) -> None:
+    if (attr == "obsm" and axis == "var") or (attr == "varm" and axis == "obs"):
+        pytest.skip()
+
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    adata.obs["blobs"] = adata.obs["blobs"].astype(str)
+    adata.obs["extra"] = np.tile(["a", "b"], adata.n_obs)[: adata.n_obs]
+    if attr == "layers":
+        adata.layers["test"] = adata.X.copy()
+        del adata.X
+    elif attr in {"obsm", "varm"}:
+        adata.obsm["test"] = adata.X[:, ::2].copy()
+        del adata.X
+    if axis == "var":
+        adata = adata.T.copy()
+
+    old = sc.get.aggregate(
+        *(adata, by, ["sum", "mean"]),
+        axis=axis,
+        **({} if attr is None else {attr.removesuffix("s"): "test"}),
+    )
+    use = A.X if attr is None else getattr(A, attr)["test"]
+    new = sc.get.aggregate(
+        *(adata, getattr(A, axis)[by], ["sum", "mean"]),
+        use=("X" if attr is None else f"{attr}.test") if use_str else use,
+    )
+
+    assert_equal(old, new)
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize(
+    ("mk_args", "exc_cls", "pat"),
+    [
+        pytest.param(
+            lambda _: dict(axis=0), TypeError, r"axis.*cannot be used", id="axis"
+        ),
+        pytest.param(
+            lambda _: dict(layer="x"),
+            TypeError,
+            r"use.*cannot be combined.*layer",
+            id="layer",
+        ),
+        pytest.param(
+            lambda a: dict(use=a.obsm["test"][:, 0]),
+            TypeError,
+            r"`use` must be a `LayerAcc`.*or.*`MultiAcc`",
+            id="use-type",
+        ),
+        pytest.param(
+            lambda a: dict(by=[a.obs["blobs"], a.var.index]),
+            ValueError,
+            "same single axis",
+            id="by-dims",
+        ),
+        pytest.param(
+            lambda a: dict(use=a.varm["test"]),
+            ValueError,
+            r"`dim`.*'obs'.*`use`.*.var.",
+            id="use-dim",
+        ),
+    ],
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
+)
+def test_acc_api_errors(
+    mk_args: Callable[[AdAcc], dict], exc_cls: type[Exception], pat: str
+) -> None:
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    adata.obs["blobs"] = adata.obs["blobs"].astype(str)
+    adata.varm["test"] = adata.X.T[:, ::2].copy()
+    adata.obsp["connectivities"] = np.eye(adata.n_obs)
+    kwargs = mk_args(A)
+    kwargs.setdefault("by", A.obs["blobs"])
+
+    with pytest.raises(exc_cls, match=pat):
+        sc.get.aggregate(adata, func="sum", **kwargs)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        pytest.param(
+            dict(layer="test", obsm="test"),
+            r"Only one of `layer`, or `obsm` can be specified",
+            id="layer-and-obsm",
+        ),
+        pytest.param(
+            dict(obsm="test", axis=1),
+            r"`obsm` cannot be used when `dim` is `var`",
+            id="obsm-axis-var",
+        ),
+        pytest.param(
+            dict(varm="test", axis=0),
+            r"`varm` cannot be used when `dim` is `obs`",
+            id="varm-axis-obs",
+        ),
+        pytest.param(dict(axis="foo"), r"was 'foo'", id="bad-axis-value"),
+    ],
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
+)
+def test_old_api_errors(kwargs: dict, match: str) -> None:
+    adata = sc.datasets.blobs()
+    adata.layers["test"] = adata.X.copy()
+    adata.obsm["test"] = adata.X.copy()
+    adata.varm["test"] = np.column_stack([adata.X[0], adata.X[1]])
+    with pytest.raises((TypeError, ValueError), match=match):
+        sc.get.aggregate(adata, by="blobs", func="sum", **kwargs)
+
+
+def test_error_by_invalid_type() -> None:
+    adata = sc.datasets.blobs()
+    with pytest.raises(TypeError, match=r"not iterable"):
+        sc.get.aggregate(adata, 123, "sum")  # type: ignore[arg-type]
+
+
+def test_error_dispatch_not_implemented() -> None:
     adata = sc.datasets.blobs()
     with pytest.raises(NotImplementedError):
-        sc.get.aggregate(adata.X, adata.obs["blobs"], "sum")
+        sc.get.aggregate(adata.X, adata.obs["blobs"], "sum")  # type: ignore[arg-type]
+
+
+@needs.anndata_acc
+def test_by_obsm_slice() -> None:
+    """Test that not only `.obs`/`.var` are supported."""
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    adata.obs["blobs"] = adata.obs["blobs"].astype(str)
+    adata.obsm["thing"] = np.column_stack([
+        adata.obs["blobs"].astype(int).to_numpy(),
+        np.zeros(adata.n_obs, dtype=int),
+    ])
+
+    result = sc.get.aggregate(adata, by=A.obsm["thing"][:, 0], func=["sum", "mean"])
+    expected = sc.get.aggregate(adata, by="blobs", func=["sum", "mean"])
+
+    np.testing.assert_allclose(result.layers["sum"], expected.layers["sum"])
+    np.testing.assert_allclose(result.layers["mean"], expected.layers["mean"])
+    pd.testing.assert_series_equal(
+        result.obs["n_obs_aggregated"], expected.obs["n_obs_aggregated"]
+    )
 
 
 def test_factors() -> None:
@@ -535,7 +775,7 @@ def test_nan() -> None:
     adata = ad.AnnData(x, obs=obs)
 
     adata_agg = sc.get.aggregate(
-        adata, by=["sample_id", "patient_type", "cell_type"], func="sum", layer=None
+        adata, by=["sample_id", "patient_type", "cell_type"], func="sum"
     )
 
     assert adata_agg.obs.index.tolist() == [
@@ -544,3 +784,103 @@ def test_nan() -> None:
         "s2_control_C",
     ]
     assert adata_agg.obs["n_obs_aggregated"].tolist() == [1, 2, 1]
+
+
+@pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
+def test_var_no_catastrophic_cancellation(array_type) -> None:
+    # Values of the form `offset + tiny_noise` make the textbook two-pass
+    # formula sum(x**2)/n - (sum(x)/n)**2 lose ~all precision: both terms are
+    # ~n*offset**2 ≈ 1e19 in float64 (precision ~1e3) but their difference is
+    # the variance ~1e-3, far below the rounding noise. Welford's online
+    # algorithm and Chan's parallel combine (per chunk in dask, and for the
+    # zero-block merge in sparse paths) avoid the subtraction entirely.
+
+    n_per_group, n_features = 1000, 4
+    offset, std = 1e8, 1e-3
+    groups = ["a", "b"]
+    x = np.vstack([
+        offset
+        + std * np.random.default_rng().standard_normal((n_per_group, n_features))
+        for _ in groups
+    ])
+    obs = pd.DataFrame(
+        {"group": pd.Categorical(np.repeat(groups, n_per_group))},
+        index=[f"cell_{i}" for i in range(x.shape[0])],
+    )
+    adata = ad.AnnData(X=array_type(x), obs=obs)
+
+    expected = np.vstack([
+        np.var(x[i * n_per_group : (i + 1) * n_per_group], axis=0, ddof=0)
+        for i in range(len(groups))
+    ])
+    # Sanity: textbook formula on this data is either catastrophically wrong by a large magnitude relative to the expected
+    # or the sum-sq and sq-sum in naive are literally identical due to precision errors at the upper bound of the range.
+    naive = np.vstack([
+        (xg**2).mean(axis=0) - xg.mean(axis=0) ** 2
+        for xg in (
+            x[i * n_per_group : (i + 1) * n_per_group] for i in range(len(groups))
+        )
+    ])
+    diff_magnitude = np.abs(naive - expected) / expected
+    all_large = (diff_magnitude > 1e5).all()
+    if not all_large:
+        does_naive_fully_cancel = naive == 0
+        assert does_naive_fully_cancel.any()
+        assert (diff_magnitude[does_naive_fully_cancel] == 1).all()
+
+    result = sc.get.aggregate(adata, by="group", func="var", dof=0).layers["var"]
+    if isinstance(result, DaskArray):
+        result = result.compute()
+    np.testing.assert_allclose(result, expected, rtol=1e-4)
+
+
+@needs.dask
+@pytest.mark.parametrize("dof", [0, 1, 4])
+def test_aggregate_var_group_matches_dof(dof: int) -> None:
+    # Guards that a one-observation (or n_obs==dof) group's variance is nan (not 0), and that a
+    # group split into single-observation chunks keeps its correct variance
+    # rather than being corrupted to nan by the dask per-chunk combine.
+    import dask.array as da
+
+    run_size = max(1, dof)
+    x = np.array(([1.0] * run_size) + ([2.0] * run_size) + ([3.0] * run_size)).reshape(
+        3 * run_size, 1
+    )
+    obs = pd.DataFrame(
+        {
+            "group": pd.Categorical(
+                (["a"] * run_size) + (["b"] * run_size) + (["a"] * run_size)
+            )
+        },
+        index=[f"cell_{i}" for i in range(x.shape[0])],
+    )
+    with (
+        pytest.warns(RuntimeWarning, match=r".*groups \['b'\] will be nan.*")
+        if dof > 0
+        else nullcontext()
+    ):
+        in_memory = sc.get.aggregate(
+            ad.AnnData(X=x, obs=obs), "group", "var", dof=dof
+        ).layers["var"]
+    # tests chunks that contain run_size item i.e., chunk matches dof
+    dask_x = da.from_array(x, chunks=(run_size, -1))
+    dask = (
+        sc.get
+        .aggregate(ad.AnnData(X=dask_x, obs=obs), "group", "var", dof=dof)
+        .layers["var"]
+        .compute()
+    )
+    # equal_nan=True by default
+    np.testing.assert_allclose(in_memory, dask)
+    var = dict(zip(["a", "b"], in_memory[:, 0], strict=True))
+    for cat in ["a", "b"]:
+        with (
+            pytest.warns(
+                RuntimeWarning, match=r"((Degrees of freedom.*)|(.*invalid value.*))"
+            )
+            if dof > 0 and cat == "b"
+            else nullcontext()
+        ):
+            np.testing.assert_equal(
+                var[cat], np.var(x[(obs["group"] == cat).to_numpy()], ddof=dof)
+            )

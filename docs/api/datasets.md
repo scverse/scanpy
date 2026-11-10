@@ -11,7 +11,7 @@
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    datasets.blobs
    datasets.ebi_expression_atlas
@@ -21,7 +21,6 @@
    datasets.pbmc3k_processed
    datasets.pbmc68k_reduced
    datasets.paul15
-   datasets.toggleswitch
    datasets.visium_sge
 
 ```

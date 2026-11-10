@@ -1,17 +1,27 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Literal, Protocol
+from collections.abc import Callable, Mapping
+from typing import TYPE_CHECKING, Literal, NamedTuple, Protocol, TypedDict
 
 import numpy as np
 
-if TYPE_CHECKING:
-    from typing import Any, Self
+from .._compat import CSRBase  # runtime: `NeighborsResult`’s default
 
-    from .._compat import CSRBase
+if TYPE_CHECKING:
+    from typing import Any, NotRequired, Self
+
+    from numpy.typing import NDArray
+
+    from .._utils.random import _LegacyRandom
+    from ..get._types import GraphAcc
 
 __all__ = [
     "KnnTransformerLike",
+    "KwdsForTransformer",
+    "NeighborsDict",
+    "NeighborsOut",
+    "NeighborsParams",
+    "NeighborsResult",
     "_KnownTransformer",
     "_Method",
     "_Metric",
@@ -19,6 +29,8 @@ __all__ = [
     "_MetricScipySpatial",
     "_MetricSparseCapable",
 ]
+
+type RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
 type _Method = Literal["umap", "gauss", "jaccard"]
 type _KnownTransformer = Literal["pynndescent", "sklearn"]
@@ -62,3 +74,56 @@ class KnnTransformerLike(Protocol):
     # from BaseEstimator
     def get_params(self, *, deep: bool = True) -> dict[str, Any]: ...
     def set_params(self, **params: Any) -> Self: ...
+
+
+class KwdsForTransformer(TypedDict):
+    """Keyword arguments passed to a _KnownTransformer.
+
+    IMPORTANT: when changing the parameters set here,
+    update the “*ignored*” part in the parameter docs!
+    """
+
+    n_neighbors: int
+    metric: _Metric | _MetricFn
+    metric_params: Mapping[str, Any]
+    rng: NotRequired[np.random.Generator]
+
+
+class NeighborsResult[T = CSRBase](NamedTuple):
+    """Outputs of :func:`~scanpy.pp.neighbors` and :func:`~scanpy.pp.bbknn`."""
+
+    connectivities: T
+    """Weighted adjacency matrix of the neighborhood graph."""
+    distances: T
+    """Distances to each observation’s nearest neighbors."""
+
+
+class NeighborsOut(TypedDict, total=False):
+    """Where a mapping `out` of :func:`~scanpy.pp.neighbors` and :func:`~scanpy.pp.bbknn` writes each output, see :class:`~scanpy.pp.NeighborsResult`."""
+
+    connectivities: GraphAcc | str
+    distances: GraphAcc | str
+
+
+class NeighborsDict[P: NeighborsParams](TypedDict):
+    connectivities_key: NotRequired[str]
+    distances_key: NotRequired[str]
+    params: P
+    rp_forest: NotRequired[RPForestDict]
+
+
+class NeighborsParams(TypedDict):
+    n_neighbors: int
+    method: _Method
+    metric: _Metric | _MetricFn | None
+    random_state: NotRequired[_LegacyRandom]
+    metric_kwds: NotRequired[Mapping[str, Any]]
+    use_rep: NotRequired[str]  # see `scanpy.get._uns._use_to_uns`
+    layer: NotRequired[str]
+    n_pcs: NotRequired[int]
+
+
+class BbknnParams(NeighborsParams):
+    batches: str | NDArray  # see `scanpy.get._uns._ref_to_uns`
+    neighbors_within_batch: int
+    trim: int

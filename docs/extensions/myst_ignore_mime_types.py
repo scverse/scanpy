@@ -5,8 +5,10 @@ from __future__ import annotations
 import sys
 from importlib.abc import MetaPathFinder
 from importlib.metadata import Distribution, EntryPoint, EntryPoints
-from types import MappingProxyType
 from typing import TYPE_CHECKING, override
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 from myst_nb.core.render import MimeRenderPlugin
 from sphinx.util.typing import ExtensionMetadata
@@ -31,14 +33,14 @@ class _Ignore(MimeRenderPlugin):
     @staticmethod
     def handle_mime(
         renderer: NbElementRenderer, data: MimeData, inline: bool
-    ) -> None | list[nodes.Element]:
+    ) -> list[nodes.Element] | None:
         if data.mime_type in ignore:
             return []  # returning a list instead of `None` means “we handled it”
         return None
 
 
 class _IgnoreMimeDist(Distribution):
-    metadata = MappingProxyType(dict(Name=__name__, Version="0.0.0"))
+    metadata = frozendict(dict(Name=__name__, Version="0.0.0"))
 
     @override
     def read_text(self, filename: str) -> str | None:

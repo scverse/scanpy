@@ -2,23 +2,22 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from numpy.typing import NDArray
+from scverse_misc import Deprecation, deprecated_arg
 
 from .._compat import CSBase
+from .._docs import DEPR_RAW
+from ._use import _get_arr, _resolve_layer, _resolve_obs
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
-    from typing import Any, Literal, Unpack
+    from typing import Literal
 
-    from anndata._core.sparse_dataset import BaseCompressedSparseDataset
-    from anndata._core.views import ArrayView
-
-    from .._compat import DaskArray
+    from ._types import LayerAcc, MultiAcc
 
 
 # --------------------------------------------------------------------------------
@@ -63,7 +62,7 @@ def rank_genes_groups_df(
     -------
     >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True)
+    >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain")
     >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")
 
     """
@@ -219,16 +218,20 @@ def _get_array_values(
     return matrix
 
 
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
 def obs_df(
     adata: AnnData,
     keys: Collection[str] = (),
     obsm_keys: Iterable[tuple[str, int]] = (),
     *,
-    layer: str | None = None,
+    use: LayerAcc | str | None = None,
     gene_symbols: str | None = None,
+    # deprecated
+    layer: str | None = None,
     use_raw: bool = False,
 ) -> pd.DataFrame:
-    """Return values for observations in adata.
+    r"""Return values for observations in adata.
 
     Params
     ------
@@ -238,10 +241,13 @@ def obs_df(
         Keys from either `.var_names`, `.var[gene_symbols]`, or `.obs.columns`.
     obsm_keys
         Tuples of `(key from obsm, column index of obsm[key])`.
-    layer
-        Layer of `adata` to use as expression values.
+    use
+        Which layer of `adata` to use as expression values, e.g. `A.layers['counts']`.
+        :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d, e.g. `'layers.counts'`.
     gene_symbols
         Column of `adata.var` to search for `keys` in.
+    layer
+        A key of :attr:`~anndata.AnnData.layers`, i.e. `layer='k'` is `use=A.layers['k']`.
     use_raw
         Whether to get expression values from `adata.raw`.
 
@@ -299,7 +305,7 @@ def obs_df(
     # add var values
     if len(var_idx_keys) > 0:
         matrix = _get_array_values(
-            _get_obs_rep(adata, layer=layer, use_raw=use_raw),
+            _get_arr(adata, _resolve_layer(use), layer=layer, use_raw=use_raw),
             var.index,
             var_idx_keys,
             axis=1,
@@ -331,14 +337,17 @@ def obs_df(
     return df
 
 
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 def var_df(
     adata: AnnData,
     keys: Collection[str] = (),
     varm_keys: Iterable[tuple[str, int]] = (),
     *,
+    use: LayerAcc | str | None = None,
+    # deprecated
     layer: str | None = None,
 ) -> pd.DataFrame:
-    """Return values for observations in adata.
+    r"""Return values for observations in adata.
 
     Params
     ------
@@ -348,8 +357,11 @@ def var_df(
         Keys from either `.obs_names`, or `.var.columns`.
     varm_keys
         Tuples of `(key from varm, column index of varm[key])`.
+    use
+        Which layer of `adata` to use as expression values, e.g. `A.layers['counts']`.
+        :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d, e.g. `'layers.counts'`.
     layer
-        Layer of `adata` to use as expression values.
+        A key of :attr:`~anndata.AnnData.layers`, i.e. `layer='k'` is `use=A.layers['k']`.
 
     Returns
     -------
@@ -369,7 +381,7 @@ def var_df(
 
     if len(obs_idx_keys) > 0:
         matrix = _get_array_values(
-            _get_obs_rep(adata, layer=layer),
+            _get_arr(adata, _resolve_layer(use), layer=layer),
             adata.obs_names,
             obs_idx_keys,
             axis=0,
@@ -400,134 +412,68 @@ def var_df(
     return df
 
 
-class _ObsRep(TypedDict, total=False):
-    use_raw: bool
-    layer: str | None
-    obsm: str | None
-    obsp: str | None
+def pca(adata: AnnData, *, use: MultiAcc | str | None = None) -> AnnData:
+    r"""Return PCA results as an :class:`~anndata.AnnData` indexed by component.
 
+    The principal components (not the genes) become the variables,
+    so per-component quantities like the variance ratio become `.var` columns.
+    Useful for feeding into functions that expect an axis to rank over,
+    e.g. :func:`~scanpy.pl.ranking`.
 
-def _get_obs_rep(
-    adata: AnnData, **choices: Unpack[_ObsRep]
-) -> (
-    np.ndarray | CSBase | pd.DataFrame | ArrayView | BaseCompressedSparseDataset | None
-):
-    """Choose array aligned with obs annotation."""
-    # https://github.com/scverse/scanpy/issues/1546
-    if not isinstance(use_raw := choices.get("use_raw", False), bool):
-        msg = f"use_raw expected to be bool, was {type(use_raw)}."
-        raise TypeError(msg)
-    assert choices.keys() <= {"layer", "use_raw", "obsm", "obsp"}
+    Parameters
+    ----------
+    adata
+        Annotated data matrix with PCA computed, e.g. via :func:`~scanpy.pp.pca`.
+    use
+        Where :func:`~scanpy.pp.pca` wrote the embedding, i.e. the `out` passed to it,
+        e.g. `A.obsm['p']` (with its `.uns` entry `'p'`).
+        :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d.
+        If :data:`None`, the default places.
 
-    # we do this here so the `case _` branch knows which ones are valid for the
-    # respective calling function. E.g. `_get_obs_rep(adata, layer="a", obsm="b")`
-    # will say that “Only one of `layer` or `obsm` can be specified.”
-    match [(k, v) for k, v in choices.items() if v not in {None, False}]:
-        case []:
-            return adata.X
-        # can’t use {"key": v} as match expression, since they allow additional entries
-        case [("layer", layer)]:
-            return adata.layers[layer]
-        case [("use_raw", True)]:
-            return adata.raw.X
-        case [("obsm", obsm)]:
-            return adata.obsm[obsm]
-        case [("obsp", obsp)]:
-            return adata.obsp[obsp]
-        case _:
-            valid = [f"`{k}`" for k in choices]
-            valid[-1] = f"or {valid[-1]}"
-            msg = f"Only one of {', '.join(valid)} can be specified."
-            raise ValueError(msg)
+    Returns
+    -------
+    An :class:`~anndata.AnnData` with:
 
+    `.X`
+        the PCA embedding (e.g. `adata.obsm['X_pca']`), observations × components.
+    `.obs`
+        `adata.obs`, unchanged.
+    `.var`
+        one row per principal component (named `PC1`, `PC2`, …),
+        with `variance` and `variance_ratio` columns
+        taken from the `.uns` entry (e.g. `adata.uns['pca']`).
 
-def _set_obs_rep(
-    adata: AnnData,
-    val: Any,
-    *,
-    use_raw: bool = False,
-    layer: str | None = None,
-    obsm: str | None = None,
-    obsp: str | None = None,
-):
-    """Set value for observation rep."""
-    is_layer = layer is not None
-    is_raw = use_raw is not False
-    is_obsm = obsm is not None
-    is_obsp = obsp is not None
-    choices_made = sum((is_layer, is_raw, is_obsm, is_obsp))
-    assert choices_made <= 1
-    if choices_made == 0:
-        adata.X = val
-    elif is_layer:
-        adata.layers[layer] = val
-    elif use_raw:
-        adata.raw.X = val
-    elif is_obsm:
-        adata.obsm[obsm] = val
-    elif is_obsp:
-        adata.obsp[obsp] = val
-    else:
-        msg = (
-            "That was unexpected. Please report this bug at:\n\n"
-            "\thttps://github.com/scverse/scanpy/issues"
-        )
-        raise AssertionError(msg)
+    Examples
+    --------
 
+    ..  exec-jupyter::
 
-def _check_mask[M: NDArray[np.bool] | NDArray[np.floating] | pd.Series | None](
-    data: AnnData | np.ndarray | CSBase | DaskArray,
-    mask: str | M,
-    dim: Literal["obs", "var"],
-    *,
-    allow_probabilities: bool = False,
-) -> M:  # Could also be a series, but should be one or the other
-    """Validate mask argument.
+        import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.get.pca(adata)
 
-    Params
-    ------
-    data
-        Annotated data matrix or numpy array.
-    mask
-        Mask (or probabilities if `allow_probabilities=True`).
-        Either an appropriatley sized array, or name of a column.
-    dim
-        The dimension being masked.
-    allow_probabilities
-        Whether to allow probabilities as `mask`
     """
-    if mask is None:
-        return mask
-    desc = "mask/probabilities" if allow_probabilities else "mask"
+    from .._keys import _embedding_keys
+    from .._settings import Default
+    from ..preprocessing._pca import PCA_KINDS, _pca_dests
+    from ._out import _out_dests
 
-    if isinstance(mask, str):
-        if not isinstance(data, AnnData):
-            msg = f"Cannot refer to {desc} with string without providing anndata object as argument"
-            raise ValueError(msg)
-
-        annot: pd.DataFrame = getattr(data, dim)
-        if mask not in annot.columns:
-            msg = (
-                f"Did not find `adata.{dim}[{mask!r}]`. "
-                f"Either add the {desc} first to `adata.{dim}`"
-                f"or consider using the {desc} argument with an array."
-            )
-            raise ValueError(msg)
-        mask_array = annot[mask].to_numpy()
-    else:
-        if len(mask) != data.shape[0 if dim == "obs" else 1]:
-            msg = f"The shape of the {desc} do not match the data."
-            raise ValueError(msg)
-        mask_array = mask
-
-    is_bool = pd.api.types.is_bool_dtype(mask_array.dtype)
-    if not allow_probabilities and not is_bool:
-        msg = "Mask array must be boolean."
-        raise ValueError(msg)
-    elif allow_probabilities and not (
-        is_bool or pd.api.types.is_float_dtype(mask_array.dtype)
-    ):
-        msg = f"{desc} array must be boolean or floating point."
-        raise ValueError(msg)
-
-    return mask_array
+    # find the `.uns` entry the way `pp.pca(out=use)` named it
+    key, _ = _out_dests(
+        False if use is None else _resolve_obs(use),
+        None,
+        dests=_pca_dests,
+        kinds=PCA_KINDS,
+        uns=True,
+        default=Default(),
+    )
+    keys = _embedding_keys("pca", key)
+    info = adata.uns[keys.uns]
+    x = adata.obsm[keys.obsm]
+    n_comps = x.shape[1]
+    var = pd.DataFrame(
+        {"variance": info["variance"], "variance_ratio": info["variance_ratio"]},
+        index=[f"PC{i + 1}" for i in range(n_comps)],
+    )
+    return AnnData(X=x, obs=adata.obs, var=var)

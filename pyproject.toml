@@ -30,7 +30,7 @@ authors = [
     { name = "Tobias Callies" },
     { name = "Tom White" },
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
@@ -43,42 +43,40 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 dynamic = [ "version" ]
 dependencies = [
-    "anndata>=0.10.8",
-    "certifi",
+    "anndata>=0.12.14",
     "fast-array-utils[accel,sparse]>=1.4",
-    "h5py>=3.11",
+    "h5py>=3.12.1",
     "joblib",
-    # skip 3.11.0rc1 for now: https://github.com/matplotlib/matplotlib/issues/31575
-    "matplotlib>=3.10,!=3.11.0rc1",
+    "matplotlib>=3.10",
     "natsort",
     "networkx>=3.4",
-    "numba>=0.61",
-    "numpy>=2.1",
+    "numba>=0.61.2",
+    "numpy>=2.2.5",
     "packaging>=25",
     "pandas>=2.3",
     "patsy",
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
-    "scipy>=1.14",
-    "scverse-misc[settings]>=0.0.5",
+    "scipy>=1.15",
+    "scverse-misc[datasets,settings]>=0.1.6",
     "seaborn>=0.13.2",
     "session-info2",
     "statsmodels>=0.14.5",
     "tqdm",
-    "typing-extensions; python_version<'3.13'",
     "umap-learn>=0.5.12",
+    "zarr>=3.2",
 ]
 urls.Bluesky = "https://bsky.app/profile/scverse.bsky.social"
 urls.Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
-urls.Documentation = "https://scanpy.readthedocs.io/"
+urls.Documentation = "https://scanpy.scverse.org/"
 urls.Homepage = "https://scanpy.org"
 urls.Source = "https://github.com/scverse/scanpy"
 urls.Twitter = "https://x.com/scverse_team"
@@ -86,7 +84,7 @@ scripts.scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 bbknn = [ "bbknn" ]
-dask = [ "anndata[dask]", "dask[array]>=2024.5.1" ]
+dask = [ "anndata[dask]", "dask[array]>=2024.10" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
 leiden = [ "igraph>=0.10.8", "leidenalg>=0.10.1" ]
@@ -98,7 +96,16 @@ scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
-scanpy2 = [ "igraph>=0.10.8", "scikit-misc>=0.5.1" ]
+illico = [ "illico>=0.6" ]
+scanpy2 = [
+    "anndata>=0.13.3",
+    "holoviews>=1.23.2",
+    "hv-anndata>=0.0.3a5",
+    "igraph>=0.10.8",
+    "matplotlib>=3.11",
+    "scanpy[illico]",
+    "scikit-misc>=0.5.1",
+]
 
 [dependency-groups]
 dev = [
@@ -108,32 +115,29 @@ dev = [
 test = [
     "scanpy[dask-ml]",
     "scanpy[dask]",
+    "scanpy[illico]",
     "scanpy[leiden]",
     "scanpy[plotting]",
     "scanpy[scrublet]",
     "scanpy[skmisc]",
-    "zarr>=2.18.7",
     { include-group = "test-min" },
 ]
-doc = [
-    "ipython>=8.27",                        # for nbsphinx code highlighting
+docs = [
+    "ipython>=8.27",                                         # for nbsphinx code highlighting
     "myst-nb>=1.4",
     "myst-parser>=2",
     "nbsphinx>=0.9",
-    "numpy>=2.4",                           # type aliases
-    "sam-algorithm",
+    "numpy>=2.4",                                            # type aliases
+    "plotly",
     # TODO: remove necessity for being able to import doc-linked classes
-    "scanpy[dask-ml,leiden,paga,plotting]",
-    "scanpydoc>=0.16.1",
+    "scanpy[dask-ml,leiden,paga,plotting,scanpy2,scrublet]",
+    "scverse-doc[full]>=0.4",
+    "scverse-misc[sphinx]>=0.1.7",
     "sphinx>=9.1",
-    "sphinx-autodoc-typehints>=1.25.2",
-    "sphinx-book-theme>=1.1",
-    "sphinx-copybutton",
-    "sphinx-design",
+    "sphinx-autodoc-typehints>=3.13.5",
+    "sphinx-exec-jupyter[holoviews]>=0.4.2",
     "sphinx-issues>=5.0.1",
     "sphinxcontrib-bibtex",
-    "sphinxcontrib-katex",
-    "sphinxext-opengraph",                  # for nice cards when sharing on social
 ]
 test-min = [
     "dependency-groups",    # for CI scripts doctests
@@ -148,9 +152,9 @@ test-min = [
 ]
 
 [tool.hatch]
-build.targets.wheel.packages = [ "src/testing", "src/scanpy" ]
 version.source = "vcs"
 version.raw-options.version_scheme = "release-branch-semver"
+build.targets.wheel.packages = [ "src/scanpy", "src/testing" ]
 
 [tool.ruff]
 src = [ "src" ]
@@ -207,7 +211,6 @@ lint.per-file-ignores."src/scanpy/tools/_sim.py" = [ "N" ]
 # PLR0913: Test may use many fixtures
 lint.per-file-ignores."tests/**/*.py" = [ "D100", "D101", "D103", "PLR0913" ]
 lint.allowed-confusables = [ "×", "–", "‘", "’", "α" ]
-lint.external = [ "PLR0917" ]
 lint.flake8-bugbear.extend-immutable-calls = [ "scanpy._settings.Default" ]
 lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.runtime-evaluated-base-classes = [ "scverse_misc.Settings" ]
@@ -225,10 +228,18 @@ lint.pylint.max-positional-args = 5
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
-"scipy.sparse.csc_array".msg = "Use _compat.CSCBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing"
-"scipy.sparse.csc_matrix".msg = "Use _compat.CSCBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing"
-"scipy.sparse.csr_array".msg = "Use _compat.CSRBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing"
-"scipy.sparse.csr_matrix".msg = "Use _compat.CSRBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing"
+"scipy.sparse.csc_array".msg = """\
+    Use _compat.CSCBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing\
+    """
+"scipy.sparse.csc_matrix".msg = """\
+    Use _compat.CSCBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing\
+    """
+"scipy.sparse.csr_array".msg = """\
+    Use _compat.CSRBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing\
+    """
+"scipy.sparse.csr_matrix".msg = """\
+    Use _compat.CSRBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing\
+    """
 "scipy.sparse.issparse".msg = "Use isinstance(_, _compat.CSBase) or isinstance(_, _compat.SpBase) instead"
 "scipy.sparse.sparray".msg = "Use _compat.SpBase instead"
 "scipy.sparse.spmatrix".msg = "Use _compat.SpBase instead"
@@ -244,21 +255,12 @@ expand_tables = [
 ]
 
 [tool.pytest]
-strict = true
 addopts = [
     "--import-mode=importlib",
     "--strict-markers",
     "--doctest-modules",
     "-ptesting.scanpy._pytest",
     "--pyargs",
-]
-testpaths = [ "./tests", "./ci", "scanpy" ]
-norecursedirs = [ "tests/_images" ]
-junit_family = "xunit1"
-markers = [
-    "internet: tests which rely on internet resources (enable with `--internet-tests`)",
-    "gpu: tests that use a GPU (unused, required by anndata.tests.helpers)",
-    "array_api: tests that use array_api (unused, required by anndata.tests.helpers)",
 ]
 filterwarnings = [
     "error",
@@ -279,23 +281,42 @@ filterwarnings = [
     "ignore:is_categorical_dtype is deprecated:FutureWarning",
     # Ignore numba PEP 456 warning specific to ARM machines
     "ignore:FNV hashing is not implemented in Numba.*:UserWarning",
+    # Ignore numba macOS warnings
+    "ignore:Detected unsupported threading environment:UserWarning",
     # we want to see and eventually fix these
     "default::numba.core.errors.NumbaPerformanceWarning",
-    "default:.*TSNE.*random.*to.*pca:FutureWarning",                                    # we should set init=obsm["X_pca"] or so
+    # we should set init=obsm["X_pca"] or so
+    "default:.*TSNE.*random.*to.*pca:FutureWarning",
     # igraph vs leidenalg warning
     "ignore:The `igraph` implementation of leiden clustering:UserWarning",
     # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …
     "ignore:Consolidated metadata is currently not part:UserWarning",
     # joblib fallback to serial mode in restricted multiprocessing environments
     "ignore:.*joblib will operate in serial mode:UserWarning",
+    # anndata≤0.13.4 accesses options deprecated in pandas 3.1
+    # (no `::anndata` module filter: `pytest.warns` re-emits warnings with module="warnings")
+    "ignore:The '(future\\.infer_string|mode\\.chained_assignment)' option is deprecated",
+    # anndata≤0.13.4 uses `inplace=True` when reading legacy zarr (fixed in scverse/anndata#2671)
+    "ignore:The inplace keyword in DataFrame\\.set_index is deprecated::anndata\\.",
+    # anndata<0.12.18 passes arguments deprecated in scverse-misc 0.1
+    "ignore:The (decorator_name|docstring_style) argument is deprecated:DeprecationWarning",
 ]
+junit_family = "xunit1"
+markers = [
+    "internet: tests which rely on internet resources (enable with `--internet-tests`)",
+    "gpu: tests that use a GPU (unused, required by anndata.tests.helpers)",
+    "array_api: tests that use array_api (unused, required by anndata.tests.helpers)",
+]
+norecursedirs = [ "tests/_images" ]
+strict = true
+testpaths = [ "./tests", "./ci", "scanpy" ]
 
 [tool.coverage]
+run.source_pkgs = [ "scanpy" ]
+run.omit = [ "src/testing/*", "tests/*" ]
 run.concurrency = [ "multiprocessing" ]
 run.data_file = "test-data/raw-coverage"
-run.omit = [ "src/testing/*", "tests/*" ]
 run.patch = [ "subprocess" ]
-run.source_pkgs = [ "scanpy" ]
 paths.source = [ "src", "**/site-packages" ]
 report.exclude_also = [
     # https://github.com/numba/numba/issues/4268
@@ -309,19 +330,19 @@ xml.output = "test-data/coverage.xml"
 [tool.towncrier]
 name = "scanpy"
 package = "scanpy"
+package_dir = "src"
 directory = "docs/release-notes"
 filename = "docs/release-notes/{version}.md"
-single_file = false
-package_dir = "src"
-issue_format = "{{pr}}`{issue}`"
 title_format = "(v{version})=\n### {version} {{small}}`{project_date}`"
+issue_format = "{{pr}}`{issue}`"
+single_file = false
+fragment.breaking.name = "Breaking changes"  # add `!` to commit type (e.g. “feature!:”)
+fragment.chore.name = "Miscellaneous changes"
+fragment.docs.name = "Documentation"
 # Valid fragments should be a subset of conventional commit types (except for `breaking`):
 # https://github.com/commitizen/conventional-commit-types/blob/master/index.json
 # style, refactor, test, build, ci: should not go into changelog
 fragment.feat.name = "Features"
 fragment.fix.name = "Bug fixes"
-fragment.docs.name = "Documentation"
 fragment.perf.name = "Performance"
-fragment.chore.name = "Miscellaneous changes"
 fragment.revert.name = "Revert"
-fragment.breaking.name = "Breaking changes"  # add `!` to commit type (e.g. “feature!:”)

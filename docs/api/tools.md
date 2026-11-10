@@ -8,14 +8,14 @@
 .. currentmodule:: scanpy
 ```
 
-Any transformation of the data matrix that is not *preprocessing*. In contrast to a *preprocessing* function, a *tool* usually adds an easily interpretable annotation to the data matrix, which can then be visualized with a corresponding plotting function.
+Any transformation of the data matrix that is not _preprocessing_. In contrast to a _preprocessing_ function, a _tool_ usually adds an easily interpretable annotation to the data matrix, which can then be visualized with a corresponding plotting function.
 
 ## Embeddings
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    pp.pca
    tl.tsne
@@ -29,7 +29,7 @@ Compute densities on embeddings.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.embedding_density
 ```
@@ -39,7 +39,7 @@ Compute densities on embeddings.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.leiden
    tl.dendrogram
@@ -54,7 +54,7 @@ Compute densities on embeddings.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.ingest
 ```
@@ -64,7 +64,7 @@ Compute densities on embeddings.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.rank_genes_groups
    tl.filter_rank_genes_groups
@@ -76,19 +76,24 @@ Compute densities on embeddings.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.score_genes
    tl.score_genes_cell_cycle
 ```
 
-## Simulations
+## Output types
+
+Functions with several outputs return a `…Result` if passed `out=True`,
+and take a `…Out` mapping as `out` to write each output to a place of choice.
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
-   tl.sim
-
+   tl.CellCycleResult
+   tl.CellCycleOut
+   tl.DptResult
+   tl.DptOut
 ```

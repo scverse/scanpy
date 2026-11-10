@@ -2,7 +2,6 @@
 
 # Settings
 
-
 ```{eval-rst}
 .. currentmodule:: scanpy
 ```
@@ -13,7 +12,7 @@ high-resolution jupyter display backend useful for use in notebooks.
 ```{eval-rst}
 .. autosummary::
    :signatures: none
-   :toctree: ../generated/
+   :toctree: generated/
 
    set_figure_params
 ```
@@ -23,7 +22,7 @@ An object that allows configuring Scanpy.
 ```{eval-rst}
 .. autosummary::
    :signatures: none
-   :toctree: ../generated/
+   :toctree: generated/
 
    settings
    settings.override
@@ -36,7 +35,7 @@ Presets allow to set the behavior of many scanpy functions at once:
 ```{eval-rst}
 .. autosummary::
    :signatures: none
-   :toctree: ../generated/
+   :toctree: generated/
    :template: enum
 
    Preset
@@ -47,7 +46,7 @@ Verbosity controls the amount of logging output:
 ```{eval-rst}
 .. autosummary::
    :signatures: none
-   :toctree: ../generated/
+   :toctree: generated/
 
    Verbosity
 ```
@@ -80,7 +79,7 @@ Print versions of packages that might influence numerical results.
 ```{eval-rst}
 .. autosummary::
    :signatures: none
-   :toctree: ../generated/
+   :toctree: generated/
 
    logging.print_header
 ```

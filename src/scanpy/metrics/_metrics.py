@@ -9,8 +9,12 @@ import pandas as pd
 from anndata import AnnData
 from natsort import natsorted
 from pandas.api.types import CategoricalDtype
+from scverse_misc import deprecated_arg
 
-from .._utils import NeighborsView
+from .._docs import DEPR_NEIGHBORS_KEY
+from .._utils import _doc_params, get_igraph_from_adjacency
+from ..neighbors._common import _use_graph
+from ..tools._docs import doc_use_neighbors
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -24,6 +28,7 @@ if TYPE_CHECKING:
         )
 
     from .._compat import SpBase
+    from ..get._types import GraphAcc
 
 
 def confusion_matrix(
@@ -53,7 +58,7 @@ def confusion_matrix(
     Examples
     --------
 
-    .. plot::
+    ..  exec-jupyter::
 
         import scanpy as sc; import seaborn as sns
         pbmc = sc.datasets.pbmc68k_reduced()
@@ -117,19 +122,24 @@ def modularity(
     /,
     labels: str | AnyArrayLike = "leiden",
     *,
-    neighbors_key: str | None = None,
+    use: GraphAcc | str | None = None,
     mode: Literal["calculate", "update", "retrieve"] = "calculate",
+    neighbors_key: str | None = None,
 ) -> float: ...
 
 
+@_doc_params(use=doc_use_neighbors())
+@deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
 def modularity(
     adata_or_connectivities: AnnData | AnyArrayLike | SpBase,
     /,
     labels: str | AnyArrayLike = "leiden",
     *,
-    neighbors_key: str | None = None,
+    use: GraphAcc | str | None = None,
     is_directed: bool | None = None,
     mode: Literal["calculate", "update", "retrieve"] = "calculate",
+    # deprecated
+    neighbors_key: str | None = None,
 ) -> float:
     """Compute the modularity of a graph given its connectivities and labels.
 
@@ -140,8 +150,8 @@ def modularity(
     labels
         Cluster labels for each node in the graph.
         When `AnnData` is provided, this can be the key in `adata.obs` that contains the clustering labels and defaults to `"leiden"`.
-    neighbors_key
-        When `AnnData` is provided, the key in `adata.obsp` that contains the connectivities.
+    {use}
+        Only used when `AnnData` is provided.
     is_directed
         Whether the connectivities are directed or undirected.
         Always `False` if `AnnData` is provided, as connectivities are derived from (symmetric) neighbors.
@@ -149,6 +159,8 @@ def modularity(
         When `AnnData` is provided,
         this controls if the stored modularity is retrieved,
         or if we should calculate it (and optionally update it in `adata.uns[labels]`).
+    neighbors_key
+        When `AnnData` is provided, the key in `adata.uns` naming the connectivities.
 
     Returns
     -------
@@ -161,6 +173,7 @@ def modularity(
         return modularity_adata(
             adata_or_connectivities,
             labels=labels,
+            use=use,
             neighbors_key=neighbors_key,
             mode=mode,
         )
@@ -180,6 +193,7 @@ def modularity_adata(
     /,
     *,
     labels: str | AnyArrayLike,
+    use: GraphAcc | str | None,
     neighbors_key: str | None,
     mode: Literal["calculate", "update", "retrieve"],
 ) -> float:
@@ -190,7 +204,7 @@ def modularity_adata(
         return adata.uns[labels]["modularity"]
 
     labels_vec = adata.obs[labels] if isinstance(labels, str) else labels
-    connectivities = NeighborsView(adata, neighbors_key)["connectivities"]
+    connectivities = _use_graph(adata, use, neighbors_key=neighbors_key)
 
     # distances are treated as symmetric, so connectivities as well
     m = modularity(connectivities, labels_vec, is_directed=False)
@@ -203,15 +217,14 @@ def modularity_array(
     connectivities: AnyArrayLike | SpBase, /, *, labels: AnyArrayLike, is_directed: bool
 ) -> float:
     try:
-        import igraph as ig
+        import igraph  # noqa: F401
     except ImportError as e:  # pragma: no cover
         e.add_note(
             "`igraph` is required for computing modularity. "
             "Please install `igraph` and try again."
         )
         raise
-    igraph_mode: str = ig.ADJ_DIRECTED if is_directed else ig.ADJ_UNDIRECTED
-    graph: ig.Graph = ig.Graph.Weighted_Adjacency(connectivities, mode=igraph_mode)
+    graph = get_igraph_from_adjacency(connectivities, directed=is_directed)
     return graph.modularity(_codes(labels), "weight")
 
 

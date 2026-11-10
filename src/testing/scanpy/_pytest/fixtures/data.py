@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from importlib.metadata import version
 from itertools import product
 from typing import TYPE_CHECKING, cast
 
@@ -10,14 +9,8 @@ import numpy as np
 import pytest
 from anndata import AnnData, read_h5ad
 from anndata._core.sparse_dataset import BaseCompressedSparseDataset
-from packaging.version import Version
+from anndata.io import sparse_dataset
 from scipy import sparse
-
-if Version(version("anndata")) >= Version("0.11.0rc2"):
-    from anndata.io import sparse_dataset
-else:
-    from anndata.experimental import sparse_dataset
-
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -61,7 +54,7 @@ def random_csr(rng: np.random.Generator, size: tuple[int, int]) -> CSRBase:
 
 
 @pytest.fixture(
-    params=[np.random.Generator.standard_normal, random_csr], ids=["sparse", "dense"]
+    params=[np.random.Generator.standard_normal, random_csr], ids=["dense", "sparse"]
 )
 def backed_adata(request: pytest.FixtureRequest, tmp_path: Path) -> AnnData:
     rng = np.random.default_rng()

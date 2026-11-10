@@ -44,4 +44,4 @@ given as a comment on the PR, or a label or milestone description:
 In our case, these commands are part of the milestone description,
 which causes the merge of a PR assigned to a milestone to trigger the bot.
 
-[meseeks bot]: https://meeseeksbox.github.io
+[meeseeks bot]: https://meeseeksbox.github.io

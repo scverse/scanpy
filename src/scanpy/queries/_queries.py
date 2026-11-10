@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Iterable
 from functools import singledispatch
-from types import MappingProxyType
 from typing import TYPE_CHECKING
 
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
+
 from anndata import AnnData
+from scverse_misc import Deprecation, deprecated
 
 from .._utils import _doc_params
 from .._utils._doctests import doctest_needs
@@ -113,6 +117,12 @@ def biomart_annotations(
     return simple_query(org=org, attrs=attrs, host=host, use_cache=use_cache)
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use :func:`~scanpy.queries.biomart_annotations` and filter its result instead.",
+    )
+)
 @doctest_needs("pybiomart")
 @_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def gene_coordinates(
@@ -147,6 +157,8 @@ def gene_coordinates(
     --------
     >>> import scanpy as sc
     >>> sc.queries.gene_coordinates("hsapiens", "MT-TF")
+    FutureWarning: The function gene_coordinates is deprecated and will be removed in the future. Use :func:`~scanpy.queries.biomart_annotations` and filter its result instead.
+        sc.queries.gene_coordinates("hsapiens", "MT-TF")
 
     """
     res = simple_query(
@@ -215,7 +227,7 @@ def enrich(
     container: Iterable[str] | Mapping[str, Iterable[str]],
     *,
     org: str = "hsapiens",
-    gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    gprofiler_kwargs: Mapping[str, Any] = frozendict({}),
 ) -> pd.DataFrame:
     """Get enrichment for DE results.
 
@@ -303,7 +315,7 @@ def _enrich_anndata(
     log2fc_min: float | None = None,
     log2fc_max: float | None = None,
     gene_symbols: str | None = None,
-    gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    gprofiler_kwargs: Mapping[str, Any] = frozendict({}),
 ) -> pd.DataFrame:
     de = rank_genes_groups_df(
         adata,

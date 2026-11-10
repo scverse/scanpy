@@ -1,6 +1,5 @@
 # Plotting: PL
 
-
 ```{eval-rst}
 .. module:: scanpy.external.pl
 .. currentmodule:: scanpy.external
@@ -8,7 +7,7 @@
 
 ```{eval-rst}
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    pl.phate
    pl.trimap
