@@ -14,7 +14,7 @@ from scverse_misc import Deprecation, deprecated
 from .. import _utils
 from .._compat import pkg_version
 from .._docs import doc_rng
-from .._settings import Verbosity, settings
+from .._settings import Preset, Verbosity, settings
 from .._utils import _doc_params
 from .._utils._doctests import doctest_internet, doctest_needs, doctest_skipif
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
@@ -162,6 +162,9 @@ def krumsiek11() -> AnnData:
 
     Simulate via :func:`~scanpy.tl.sim`.
 
+    The observation names are simulation time steps, which repeat across branches.
+    With :attr:`~scanpy.Preset.ScanpyV2Preview`, they are made unique.
+
     Returns
     -------
     Annotated data matrix.
@@ -178,8 +181,13 @@ def krumsiek11() -> AnnData:
         layers: None (.X)
 
     """  # noqa: D401
-    with settings.override(verbosity=Verbosity.error):  # suppress output...
+    v2 = settings.preset is Preset.ScanpyV2Preview
+    with settings.override(verbosity=Verbosity.error), warnings.catch_warnings():
+        if v2:  # obs names are time steps, repeated per branch
+            warnings.filterwarnings("ignore", "Observation names are not unique")
         adata = read(HERE / "krumsiek11.txt", first_column_names=True)
+    if v2:
+        adata.obs_names_make_unique()
     adata.uns["iroot"] = 0
     fate_labels = {0: "Stem", 159: "Mo", 319: "Ery", 459: "Mk", 619: "Neu"}
     adata.uns["highlights"] = fate_labels

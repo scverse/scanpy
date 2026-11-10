@@ -94,9 +94,18 @@ def test_ebi_expression_atlas(monkeypatch: pytest.MonkeyPatch):
     assert 23899 <= adata.shape[1] <= 24051
 
 
-def test_krumsiek11():
-    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
-        adata = sc.datasets.krumsiek11()
+@pytest.mark.parametrize(
+    "preset",
+    [sc.Preset.ScanpyV1, pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2)],
+)
+def test_krumsiek11(preset: sc.Preset):
+    with sc.settings.override(preset=preset):
+        if preset is sc.Preset.ScanpyV1:
+            with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+                adata = sc.datasets.krumsiek11()
+        else:
+            adata = sc.datasets.krumsiek11()
+            assert adata.obs_names.is_unique
     assert adata.shape == (640, 11)
     assert set(adata.obs["cell_type"]) == {"Ery", "Mk", "Mo", "Neu", "progenitor"}
 

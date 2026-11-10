@@ -91,7 +91,7 @@ def highly_variable_genes(adata: AnnData) -> hv.Layout:
         A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
-        sc.pp.highly_variable_genes(adata, layer="counts")  # TODO: this should be the default
+        sc.pp.highly_variable_genes(adata, use=A.layers["counts"])  # TODO: this should be the default
         sc.pl.highly_variable_genes(adata)
 
     """
