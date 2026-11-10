@@ -285,7 +285,7 @@ def hashsolo(
     hashes: MultiAcc | Collection[AdRef] | Collection[str],
     *,
     priors: tuple[float, float, float] = (0.01, 0.8, 0.19),
-    pre_existing_clusters: AdRef | str | None = None,
+    groupby: AdRef | str | None = None,
     n_noise_barcodes: int | None = None,
     out: VecRef | HashsoloOut | bool = False,
 ) -> HashsoloResult | None:
@@ -313,7 +313,7 @@ def hashsolo(
         `[0.01, 0.8, 0.19]` assuming barcode counts are from cells that
         have passed QC in the transcriptome space, e.g. UMI counts, pct
         mito reads, etc.
-    pre_existing_clusters
+    groupby
         Reference to a vector of pre-existing cluster assignments
         (e.g. Leiden clusters or cell types, but not batch assignments).
         If provided, demultiplexing is performed separately for each cluster.
@@ -375,9 +375,7 @@ def hashsolo(
     )
     data, names = _get_hashes(adata, hashes)
     clusters = (
-        None
-        if pre_existing_clusters is None
-        else np.asarray(_get_vec(adata, pre_existing_clusters, dim="obs"))
+        None if groupby is None else np.asarray(_get_vec(adata, groupby, dim="obs"))
     )
     probs = _hashsolo(
         data, priors=priors, clusters=clusters, n_barcodes_noise=n_noise_barcodes

@@ -56,7 +56,7 @@ def bbknn(  # noqa: PLR0913
     neighbors_within_batch: int = 3,
     n_pcs: int | None = None,
     *,
-    batches: AdRef | str = "obs.batch",
+    batch: AdRef | str = "obs.batch",
     use: RepAcc | str | None = None,
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: _Metric | _MetricFn = "euclidean",
@@ -89,7 +89,7 @@ def bbknn(  # noqa: PLR0913
         which then serves as the basis for the construction of a symmetrical
         matrix of connectivities.
     {n_pcs}
-    batches
+    batch
         The annotation discriminating between the batches, e.g. `A.obs['batch']`.
         :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d, e.g. `'obs.batch'`.
     {use}
@@ -147,7 +147,7 @@ def bbknn(  # noqa: PLR0913
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> adata.obs["batch"] = adata.obs["phase"]
-    >>> sc.pp.bbknn(adata, batches="obs.batch")
+    >>> sc.pp.bbknn(adata, batch="obs.batch")
     >>> sc.tl.umap(adata)
 
     See Also
@@ -172,20 +172,20 @@ def bbknn(  # noqa: PLR0913
     if adata.is_view:  # we shouldn’t need this here...
         adata._init_as_actual(adata.copy())
 
-    if not isinstance(batches, AdRef):
-        batches = A.resolve(batches, vec=True)
+    if not isinstance(batch, AdRef):
+        batch = A.resolve(batch, vec=True)
     if use is not None:
         use = _resolve_obs(use, rep=True)
 
     if neighbors_within_batch < 1:
         msg = "`neighbors_within_batch` needs to be greater than 0."
         raise ValueError(msg)
-    if batches not in adata:
-        msg = f"Batch key {batches!r} not found in `adata.obs`."
+    if batch not in adata:
+        msg = f"Batch {batch!r} not found."
         raise KeyError(msg)
     rng = np.random.default_rng(rng)
 
-    batch_arr = np.asarray(adata[batches])
+    batch_arr = np.asarray(adata[batch])
     unique_batches, batch_sizes = np.unique(batch_arr, return_counts=True)
     if len(too_small := unique_batches[batch_sizes < neighbors_within_batch]):
         msg = (
@@ -235,7 +235,7 @@ def bbknn(  # noqa: PLR0913
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
         **_use_to_uns(use, rep=True),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
-        batches=_ref_to_uns(batches, np.asarray(adata[batches])),
+        batch=_ref_to_uns(batch, batch_arr),
         neighbors_within_batch=neighbors_within_batch,
         trim=trim,
     )
