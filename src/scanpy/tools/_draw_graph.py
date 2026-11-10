@@ -187,7 +187,7 @@ def draw_graph(  # noqa: PLR0912, PLR0913
         adata, use, adjacency=adjacency, obsp=obsp, neighbors_key=neighbors_key
     )
     # init coordinates
-    if isinstance(init_pos, str) and init_pos != "paga":
+    if isinstance(init_pos, str) and "." in init_pos:  # 'paga' has no dot
         init_pos = _resolve_ref(init_pos, vec=False)
     if isinstance(init_pos, MultiAcc):
         init_coords = cast("NDArray[np.floating]", adata[init_pos])

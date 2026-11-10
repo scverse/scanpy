@@ -7,6 +7,7 @@ from scverse_misc import deprecated_arg
 from sklearn.utils import check_array
 
 from .. import logging as logg
+from .._compat import pkg_version
 from .._docs import DEPR_KEY_ADDED, DEPR_NEIGHBORS_KEY, doc_out_key, doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default, settings
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
     from ..get._types import GraphAcc, RepAcc
 
 
-type _InitPos = Literal["paga", "spectral", "random"]
+type _InitPos = Literal["auto", "paga", "spectral", "random", "recursive"]
 
 
 @_accepts_legacy_random_state(0)
@@ -73,11 +74,14 @@ def umap(  # noqa: PLR0913
     alpha: float = 1.0,
     gamma: float = 1.0,
     negative_sample_rate: int = 5,
-    init_pos: _InitPos | MultiAcc | str | np.ndarray | None = "spectral",
+    init_pos: _InitPos | MultiAcc | str | np.ndarray | None = "auto",
     rng: SeedLike | RNGLike | None = None,
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap"] = "umap",
+    compatibility_layout: bool | Default = Default(
+        preset=("umap", "compatibility_layout")
+    ),
     use: GraphAcc | str | None = None,
     rep: RepAcc | str | None = None,
     out: MultiAcc | str | bool = False,
@@ -139,9 +143,13 @@ def umap(  # noqa: PLR0913
           A :class:`str` is :meth:`~anndata.acc.AdAcc.resolve`\ d
           if :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`
           (e.g. `'obsm.pca'`), otherwise it is a key of `.obsm`.
+        * 'auto': 'spectral' if `compatibility_layout`, else 'recursive'
+          (umap-learn’s choice).
         * 'paga': positions from :func:`~scanpy.pl.paga`.
         * 'spectral': use a spectral embedding of the graph.
         * 'random': assign initial embedding positions at random.
+        * 'recursive': label propagation-based hierarchical initialization
+          (requires umap-learn ≥0.6).
         * A numpy array of initial embedding positions.
     {rng}
     a
@@ -157,6 +165,10 @@ def umap(  # noqa: PLR0913
 
         ``'umap'``
             Umap’s simplical set embedding.
+    compatibility_layout
+        Use the layout pipeline of umap-learn 0.5 (`True`)
+        or the faster one introduced in umap-learn 0.6 (`False`, requires umap-learn ≥0.6).
+        Stored in `.uns['umap']['params']`, so :func:`~scanpy.tl.ingest` can match it.
     {use}
     rep
         The data to lay out more than `2 * n_components` connected components with,
@@ -201,25 +213,16 @@ def umap(  # noqa: PLR0913
 
     from umap.umap_ import find_ab_params, simplicial_set_embedding
 
+    compatibility_layout = _resolve_compatibility_layout(compatibility_layout)
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
-    params = dict(a=a, b=b, **meta_random_state)
-    if isinstance(init_pos, str) and init_pos not in {"paga", "spectral", "random"}:
-        init_pos = _resolve_ref(init_pos, vec=False)
-    if isinstance(init_pos, MultiAcc):
-        init_coords = adata[init_pos]
-    elif isinstance(init_pos, str) and init_pos in adata.obsm:
-        init_coords = adata.obsm[init_pos]
-    elif isinstance(init_pos, str) and init_pos == "paga":
-        init_coords = get_init_pos_from_paga(adata, rng=rng, adjacency=conns)
-    else:
-        init_coords = init_pos  # Let umap handle it
-    if hasattr(init_coords, "dtype"):
-        init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
-
+    params = dict(
+        a=a, b=b, compatibility_layout=compatibility_layout, **meta_random_state
+    )
+    init_coords = _init_coords(adata, init_pos, rng=rng, conns=conns)
     x = _umap_data(adata, conns, rep, neigh_params, n_components=n_components)
     if method == "umap":
         default_epochs = 500 if conns.shape[0] <= 10000 else 200
@@ -243,6 +246,7 @@ def umap(  # noqa: PLR0913
             densmap_kwds={},
             output_dens=False,
             verbose=settings.verbosity > 3,
+            **_umap_layout_kw(compatibility_layout=compatibility_layout),
         )
     else:
         msg = f"Unknown method {method}"
@@ -263,6 +267,40 @@ def umap(  # noqa: PLR0913
         ),
     )
     return None
+
+
+def _init_coords(
+    adata: AnnData,
+    init_pos: _InitPos | MultiAcc | str | np.ndarray | None,
+    *,
+    rng: np.random.Generator,
+    conns: CSBase,
+) -> np.ndarray | str | None:
+    """Resolve `init_pos` into coordinates or a method name umap-learn understands."""
+    if (
+        isinstance(init_pos, str)
+        and init_pos == "auto"
+        and not _umap_layout_kw(compatibility_layout=False)
+    ):
+        return "spectral"  # umap-learn <0.6 has no 'auto'
+    # method names have no dots
+    ref = (
+        _resolve_ref(init_pos, vec=False)
+        if isinstance(init_pos, str) and "." in init_pos
+        else init_pos
+    )
+    match ref:
+        case MultiAcc():
+            coords = adata[ref]
+        case str() if ref in adata.obsm:
+            coords = adata.obsm[ref]
+        case "paga":
+            coords = get_init_pos_from_paga(adata, rng=rng, adjacency=conns)
+        case str() | None:
+            return ref  # let umap handle it
+        case _:
+            coords = ref
+    return check_array(coords, dtype=np.float32, accept_sparse=False)
 
 
 def _umap_data(
@@ -296,3 +334,22 @@ def _umap_data(
         )
         raise ValueError(msg)
     return None
+
+
+def _umap_layout_kw(*, compatibility_layout: bool) -> dict[str, bool]:
+    """Get `compatibility_layout` kwarg, empty for umap-learn <0.6, which lacks the choice."""
+    if pkg_version("umap-learn").release < (0, 6):
+        return {}
+    return dict(compatibility_layout=compatibility_layout)
+
+
+def _resolve_compatibility_layout(compatibility_layout: bool | Default) -> bool:  # noqa: FBT001
+    if not isinstance(compatibility_layout, Default):
+        if not (compatibility_layout or _umap_layout_kw(compatibility_layout=False)):
+            msg = "`compatibility_layout=False` requires umap-learn ≥0.6."
+            raise ImportError(msg)
+        return compatibility_layout
+    # umap-learn <0.6 only has the compatibility layout
+    return settings.preset.umap.compatibility_layout or not _umap_layout_kw(
+        compatibility_layout=False
+    )

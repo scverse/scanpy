@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 from collections.abc import MutableMapping
-from inspect import signature
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -245,19 +244,20 @@ class Ingest:
     def _init_umap(self, adata: AnnData, keys: _EmbeddingKeys) -> None:
         from umap import UMAP
 
-        rng = self._get_rng(adata.uns[keys.uns]["params"])
-        # we replicate the legacy (0.5.x) transform pipeline below
-        compat = (
-            dict(compatibility_layout=True)
-            if "compatibility_layout" in signature(UMAP).parameters
-            else {}
+        from ._umap import _resolve_compatibility_layout, _umap_layout_kw
+
+        params = adata.uns[keys.uns]["params"]
+        rng = self._get_rng(params)
+        # transform with the pipeline that made the reference embedding
+        compat_layout = _resolve_compatibility_layout(
+            params.get("compatibility_layout", True)
         )
         self._umap = UMAP(
-            **compat,
+            **_umap_layout_kw(compatibility_layout=compat_layout),
             metric=self._metric,
             random_state=_legacy_random_state(rng),
-            # umap can’t be run in parallel with `random_state is not None`
-            n_jobs=-1 if rng is None else 1,
+            # the compatibility pipeline is only reproducible single-threaded
+            n_jobs=1 if rng is not None and compat_layout else -1,
         )
 
         self._umap._initial_alpha = self._umap.learning_rate
