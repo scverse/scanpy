@@ -78,13 +78,22 @@ autodoc_default_options = {
 napoleon_custom_sections = [("Params", "Parameters")]
 todo_include_todos = False
 api_dir = HERE / "api"  # function_images
-exec_jupyter_code = """
+exec_jupyter_code = r"""
 # setup notebook backend
 import matplotlib
 matplotlib.use("module://matplotlib_inline.backend_inline")
 # import all slow optional imports before running code
 import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx
 del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib
+# make warnings in executed examples fail like they do in doctests
+import warnings
+warnings.simplefilter("error")
+# hv_anndata: holoviews’ `dendrogram` operation compares `str(dim)`s
+warnings.filterwarnings("default", r"Probably comparing to a dimension created from `Dimension\.name`", DeprecationWarning)
+# holoviews’ plotly backend takes log10 of HVLinePlot’s fallback [0, 1] y range under `logy`
+warnings.filterwarnings("default", "divide by zero encountered in log10", RuntimeWarning, "holoviews.plotting.plotly")
+# seaborn≤0.13.2 passes `vert` to matplotlib (same filter as in pyproject.toml)
+warnings.filterwarnings("ignore", r"vert.*bool was deprecated", module="seaborn")
 """
 holoviews_backends = ["bokeh", "matplotlib", "plotly"]
 myst_url_schemes = ("http", "https", "mailto", "ftp")
