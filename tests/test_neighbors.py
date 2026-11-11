@@ -260,13 +260,13 @@ def test_gauss_noknn_connectivities_euclidean(neigh):
 @pytest.mark.parametrize("transformer", ["sklearn", "pynndescent"])
 def test_gauss_knn_sparse_symmetric(transformer: str) -> None:
     # pynndescent stores the cell itself and is not sorted by distance (see #4416)
+    # with fewer than 50 variables, .X is used directly (no PCA)
     x = np.random.default_rng(0).normal(size=(300, 10)).astype(np.float32)
     adata = AnnData(x)
     sc.pp.neighbors(
         adata,
         n_neighbors=10,
         method="gauss",
-        use="X",
         transformer=transformer,
         random_state=0,
     )
