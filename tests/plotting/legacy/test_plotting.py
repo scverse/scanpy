@@ -453,14 +453,17 @@ def test_multi_groupby_partial_nan(plot_fn):
 )
 def test_multi_groupby_mixed_type(plot_fn):
     """Multi-column `groupby` accepts object columns mixing types and
-    missing values."""
+    missing values.
+    """
     adata = pbmc68k_reduced()
     mixed = np.empty(len(adata), dtype=object)
     mixed[::2] = "control"
     mixed[1::2] = 1
     mixed[:10] = np.nan
     adata.obs["mixed"] = mixed
-    plot = plot_fn(adata, adata.var_names[:4], ["bulk_labels", "mixed"], return_fig=True)
+    plot = plot_fn(
+        adata, adata.var_names[:4], ["bulk_labels", "mixed"], return_fig=True
+    )
     categories = [str(c) for c in plot.categories]
     assert not any("nan" in c for c in categories)
     assert any(c.endswith("_control") for c in categories)
