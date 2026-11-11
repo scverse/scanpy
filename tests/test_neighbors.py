@@ -266,7 +266,7 @@ def test_gauss_knn_sparse_symmetric(transformer: str) -> None:
         adata,
         n_neighbors=10,
         method="gauss",
-        use_rep="X",
+        use="X",
         transformer=transformer,
         random_state=0,
     )
