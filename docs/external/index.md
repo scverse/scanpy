@@ -9,7 +9,7 @@
 For tools that integrate well with scanpy and anndata, or to submit your own, see the [scverse ecosystem](https://scverse.org/packages/#ecosystem).
 ```
 
-Import Scanpy's wrappers to external tools as:
+Import Scanpy’s wrappers to external tools as:
 
 ```
 import scanpy.external as sce

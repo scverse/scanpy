@@ -10,7 +10,7 @@
 
 Filtering of highly-variable genes, batch-effect correction, per-cell normalization, preprocessing recipes.
 
-Any transformation of the data matrix that is not a *tool*. Other than *tools*, preprocessing steps usually don't return an easily interpretable annotation, but perform a basic transformation on the data matrix.
+Any transformation of the data matrix that is not a *tool*. Other than *tools*, preprocessing steps usually don’t return an easily interpretable annotation, but perform a basic transformation on the data matrix.
 
 ## Basic Preprocessing
 

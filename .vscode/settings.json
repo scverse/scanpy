@@ -1,5 +1,5 @@
 {
-    "[python][json][jsonc][markdown]": {
+    "[python][json][jsonc][yaml][markdown]": {
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
             "source.organizeImports": "explicit",
@@ -9,7 +9,7 @@
     "[python]": {
         "editor.defaultFormatter": "charliermarsh.ruff",
     },
-    "[json][jsonc]": {
+    "[json][jsonc][yaml]": {
         "editor.defaultFormatter": "biomejs.biome",
     },
     "[markdown]": {

@@ -17,7 +17,7 @@ The Python-based implementation efficiently deals with datasets of more than one
 For datasets too large to fit into memory, [many scanpy functions][] are now compatible with [dask][] (**warning: experimental**).
 
 Discuss usage on the scverse [Discourse][]. Read the [documentation][].
-If you'd like to contribute by opening an issue or creating a pull request, please take a look at our [contribution guide][].
+If you’d like to contribute by opening an issue or creating a pull request, please take a look at our [contribution guide][].
 
 [anndata]: https://anndata.scverse.org/
 [dask]: https://docs.dask.org/
@@ -41,7 +41,7 @@ If you like scverse® and want to support our mission, please consider making a 
 ## Public API
 
 Our public API is documented in the [API section][] of these docs.
-We cannot guarantee the stability of our internal APIs, whether it's the location of a function, its arguments, or something else.
+We cannot guarantee the stability of our internal APIs, whether it’s the location of a function, its arguments, or something else.
 In other words, we do not officially support (or encourage users to do) something like `from scanpy.logging import debug` as `logging` is not documented, even though it does not contain a [leading underscore][].
 However, we are aware that many users do use these internal APIs and thus encourage them to [open an issue][] or migrate to the public API.
 That is, if something is missing from our public API as documented, for example a feature you wish to be exported publicly, please open an issue.

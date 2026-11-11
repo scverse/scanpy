@@ -15,11 +15,21 @@ repos:
       - id: biome-format
         groups: [format]
         exclude: ^\.cruft\.json$ # inconsistent indentation with cruft - file never to be modified manually.
-  - repo: https://github.com/jolars/panache-pre-commit
-    rev: v3.17.2
+  #- repo: https://github.com/jolars/panache-pre-commit
+  #  rev: v3.17.2
+  #  hooks:
+  #    - id: panache-format
+  #      groups: [format]
+  - repo: local
     hooks:
       - id: panache-format
-        groups: [format]
+        name: panache format
+        description: "Format Quarto and other Markdown files with panache"
+        entry: panache format --force-exclude
+        language: python
+        files: '\.(qmd|Rmd|md|markdown|mdown|mkd)$'
+        require_serial: true
+        additional_dependencies: [panache-cli==3.18.0]
   - repo: https://github.com/tox-dev/pyproject-fmt
     rev: v2.30.3
     hooks:

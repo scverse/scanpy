@@ -3,6 +3,7 @@ flavor = "myst"
 
 [format]
 wrap = "preserve"
+smart-punctuation = "unicode"
 
 # MyST syntax extensions from `scverse_doc.config.MYST_ENABLE_EXTENSIONS`
 [extensions]
