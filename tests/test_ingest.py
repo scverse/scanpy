@@ -80,16 +80,29 @@ def test_representation(adatas):
 
 @needs.anndata_acc
 def test_representation_acc(adatas) -> None:
-    """`use` is stored in `.uns` like `use_rep`, and used for the new data."""
+    """`use=A.obsm["X_pca"]` is stored in `.uns` like `use_rep="X_pca"`.
+
+    `adata_new` (which has no `X_pca` of its own) must be re-projected
+    through the stored PCA basis -- giving the same representation as the
+    implicit default path -- not fall back to raw `.X`.
+    """
     adata_ref, adata_new = (a.copy() for a in adatas)
-    adata_new.obsm["X_pca"] = adata_ref.obsm["X_pca"][: adata_new.n_obs]
-    sc.pp.neighbors(adata_ref, use=A.obsm["X_pca"])
+    assert "X_pca" not in adata_new.obsm
 
-    ing = sc.tl.Ingest(adata_ref)
-    ing.fit(adata_new)
+    # implicit default path: `adatas` already ran `sc.pp.neighbors(adata_ref)`
+    # with no `use`/`use_rep`, recording `n_pcs` instead.
+    ing_implicit = sc.tl.Ingest(adata_ref)
+    ing_implicit.fit(adata_new.copy())
 
-    assert ing._use_rep == "X_pca"
-    np.testing.assert_array_equal(ing._obsm["rep"], adata_new.obsm["X_pca"])
+    # explicit equivalent: same PCA representation, recorded as `use_rep="X_pca"`
+    adata_ref_explicit = adata_ref.copy()
+    sc.pp.neighbors(adata_ref_explicit, use=A.obsm["X_pca"])
+    ing_explicit = sc.tl.Ingest(adata_ref_explicit)
+    ing_explicit.fit(adata_new.copy())
+
+    assert ing_explicit._use_rep == "X_pca"
+    assert ing_explicit._obsm["rep"].shape == ing_implicit._obsm["rep"].shape
+    np.testing.assert_allclose(ing_explicit._obsm["rep"], ing_implicit._obsm["rep"])
 
 
 @needs.anndata_acc
