@@ -679,8 +679,12 @@ class _RankGenes:
     ) -> None:
         generate_test_results = None
         if method in {"t-test", "t-test_overestim_var"}:
-            self._basic_stats(exponentiate_values=not mean_in_log_space, need_var=True)
-            generate_test_results = self.t_test(method)
+            # The test always runs on the (log-transformed) values in `X`;
+            # `mean_in_log_space` only selects how the fold change is computed.
+            self._basic_stats(exponentiate_values=False, need_var=True)
+            generate_test_results = list(self.t_test(method))
+            if not mean_in_log_space:
+                self._basic_stats(exponentiate_values=True)
         elif "wilcoxon" in method:
             generate_test_results = (
                 self.illico(tie_correct=tie_correct)
@@ -797,7 +801,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     pts: bool = False,
     method: DETest | Default = Default(preset=("rank_genes_groups", "method")),
     corr_method: _CorrMethod = "benjamini-hochberg",
-    tie_correct: bool = False,
+    tie_correct: bool | Default = Default(preset=("rank_genes_groups", "tie_correct")),
     use: LayerAcc | str | None = None,
     mean_in_log_space: bool | Default = Default(
         preset=("rank_genes_groups", "mean_in_log_space")
@@ -935,6 +939,8 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     mask = _mask_arg(mask, mask_var, dim="var")
     if isinstance(mean_in_log_space, Default):
         mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
+    if isinstance(tie_correct, Default):
+        tie_correct = settings.preset.rank_genes_groups.tie_correct
     # If scanpy presets are used for v2, use illico - prevents the presets from showing the `wilcoxon_illico` method and allows us to silently replace `wilcoxon`'s implementation.
     if method is None or isinstance(method, Default):
         method = settings.preset.rank_genes_groups.method

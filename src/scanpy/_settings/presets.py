@@ -97,6 +97,7 @@ PcaPreset = UmapPreset = TsnePreset = DiffmapPreset = DrawGraphPreset = (
 class RankGenesGroupsPreset(NamedTuple):
     method: DETest
     mean_in_log_space: bool
+    tie_correct: bool
 
 
 class ScalePreset(NamedTuple):
@@ -221,16 +222,16 @@ class Preset(enum.StrEnum):
     def umap() -> Mapping[Preset, UmapPreset]:
         """Settings for :func:`~scanpy.tl.umap`."""  # noqa: D401
         return {
-            Preset.ScanpyV1: DiffmapPreset(key_added=None),
-            Preset.ScanpyV2Preview: DiffmapPreset(key_added="umap"),
+            Preset.ScanpyV1: UmapPreset(key_added=None),
+            Preset.ScanpyV2Preview: UmapPreset(key_added="umap"),
         }
 
     @preset_property
     def tsne() -> Mapping[Preset, UmapPreset]:
         """Settings for :func:`~scanpy.tl.tsne`."""  # noqa: D401
         return {
-            Preset.ScanpyV1: DiffmapPreset(key_added=None),
-            Preset.ScanpyV2Preview: DiffmapPreset(key_added="tsne"),
+            Preset.ScanpyV1: TsnePreset(key_added=None),
+            Preset.ScanpyV2Preview: TsnePreset(key_added="tsne"),
         }
 
     @preset_property
@@ -258,10 +259,10 @@ class Preset(enum.StrEnum):
         """
         return {
             Preset.ScanpyV1: RankGenesGroupsPreset(
-                method="t-test", mean_in_log_space=True
+                method="t-test", mean_in_log_space=True, tie_correct=False
             ),
             Preset.ScanpyV2Preview: RankGenesGroupsPreset(
-                method="wilcoxon", mean_in_log_space=False
+                method="wilcoxon", mean_in_log_space=False, tie_correct=True
             ),
         }
 

@@ -91,7 +91,7 @@ def highly_variable_genes(adata: AnnData) -> hv.Layout:
         A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
-        sc.pp.highly_variable_genes(adata, layer="counts")  # TODO: this should be the default
+        sc.pp.highly_variable_genes(adata, use=A.layers["counts"])  # TODO: this should be the default
         sc.pl.highly_variable_genes(adata)
 
     """
@@ -105,7 +105,8 @@ def highly_variable_genes(adata: AnnData) -> hv.Layout:
     return hv.Layout([
         hv.Scatter(table, ["means"], [d, "highly_variable"]).opts(
             color="highly_variable",
-            **(  # https://github.com/holoviz/holoviews/issues/6938
+            # https://github.com/holoviz/holoviews/issues/7144
+            **(
                 dict(cmap={True: "black", False: "gray"})
                 if hv.Store.current_backend != "plotly"
                 else {}

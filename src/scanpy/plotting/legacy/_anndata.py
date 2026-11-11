@@ -1055,7 +1055,8 @@ def clustermap(
     ..  exec-jupyter::
 
         import scanpy as sc
-        adata = sc.datasets.krumsiek11()
+        with sc.settings.override(preset=sc.Preset.ScanpyV2Preview):  # unique obs names
+            adata = sc.datasets.krumsiek11()
         sc.pl.clustermap(adata)
 
     ..  exec-jupyter::
