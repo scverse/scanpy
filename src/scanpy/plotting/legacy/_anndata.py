@@ -1970,6 +1970,17 @@ def correlation_matrix(  # noqa: PLR0912, PLR0913, PLR0915
     return axs
 
 
+def _unique_group_values(s: pd.Series) -> np.ndarray | pd.api.extensions.ExtensionArray:
+    try:
+        return np.unique(s)
+    except TypeError:
+        # object columns mixing types (e.g. ints and strings, or strings
+        # and missing values) cannot be sorted; keep appearance order and
+        # drop missing values, which never form categories
+        values = pd.unique(s)
+        return values[~pd.isna(values)]
+
+
 def _prepare_dataframe(  # noqa: PLR0912
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
@@ -2085,7 +2096,7 @@ def _prepare_dataframe(  # noqa: PLR0912
                     *(
                         obs_tidy[g].cat.categories
                         if isinstance(obs_tidy[g].dtype, CategoricalDtype)
-                        else np.unique(obs_tidy[g])
+                        else _unique_group_values(obs_tidy[g])
                         for g in groupby
                     )
                 )

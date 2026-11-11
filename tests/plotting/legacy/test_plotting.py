@@ -446,6 +446,27 @@ def test_multi_groupby_partial_nan(plot_fn):
     assert not any("nan" in str(c) for c in plot.categories)
 
 
+@pytest.mark.parametrize(
+    "plot_fn",
+    [sc.pl.dotplot, sc.pl.matrixplot],
+    ids=["dotplot", "matrixplot"],
+)
+def test_multi_groupby_mixed_type(plot_fn):
+    """Multi-column `groupby` accepts object columns mixing types and
+    missing values."""
+    adata = pbmc68k_reduced()
+    mixed = np.empty(len(adata), dtype=object)
+    mixed[::2] = "control"
+    mixed[1::2] = 1
+    mixed[:10] = np.nan
+    adata.obs["mixed"] = mixed
+    plot = plot_fn(adata, adata.var_names[:4], ["bulk_labels", "mixed"], return_fig=True)
+    categories = [str(c) for c in plot.categories]
+    assert not any("nan" in c for c in categories)
+    assert any(c.endswith("_control") for c in categories)
+    assert any(c.endswith("_1") for c in categories)
+
+
 def test_dotplot_add_totals(plot_cmp):
     pbmc = pbmc68k_reduced()
     markers = {"T-cell": "CD3D", "B-cell": "CD79A", "myeloid": "CST3"}
