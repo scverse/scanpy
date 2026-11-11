@@ -104,12 +104,13 @@ def test_heatmap(plot_cmp, params: dict[str, Any], key: str) -> None:
     plot_cmp(key)
 
 
+@needs.anndata_acc
 @needs.leidenalg
 def test_heatmap_var_as_dict(plot_cmp) -> None:
     pbmc = pbmc68k_reduced()
     sc.tl.leiden(
         pbmc,
-        key_added="clusters",
+        out="obs.clusters",
         resolution=0.5,
         flavor="igraph",
         n_iterations=2,
@@ -1089,6 +1090,21 @@ def test_genes_symbols(plot_cmp, id, fn):
     plot_cmp(f"{id}_gene_symbols")
 
 
+@pytest.mark.parametrize(
+    "fn",
+    [
+        sc.pl.heatmap,
+        sc.pl.tracksplot,
+        sc.pl.dotplot,
+        sc.pl.matrixplot,
+        sc.pl.stacked_violin,
+    ],
+)
+def test_var_names_gene_symbols_documented(fn):
+    """Docs must state that `gene_symbols` changes where `var_names` are looked up."""
+    assert "adata.var[gene_symbols]" in fn.__doc__
+
+
 @pytest.fixture(scope="session")
 def pbmc_scatterplots_session() -> AnnData:
     # Wrapped in another fixture to avoid mutation
@@ -1400,8 +1416,8 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
 def pbmc_68k_dpt_session() -> AnnData:
     adata = pbmc68k_reduced()
     sc.pp.neighbors(adata, n_neighbors=5, method="gauss", knn=False)
-    sc.tl.leiden(adata, resolution=0.5, key_added="leiden_0_5", flavor="leidenalg")
-    adata.uns["iroot"] = np.flatnonzero(adata.obs["leiden_0_5"] == "0")[0]
+    sc.tl.leiden(adata, resolution=0.5, flavor="leidenalg")
+    adata.uns["iroot"] = np.flatnonzero(adata.obs["leiden"] == "0")[0]
     sc.tl.diffmap(adata, n_comps=10)
     with warnings.catch_warnings():
         warnings.filterwarnings(
@@ -1762,14 +1778,13 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
 
     sc.tl.filter_rank_genes_groups(
         adata,
-        key_added="rank_genes_groups_filtered",
         min_in_group_fraction=0.25,
         min_fold_change=1,
         max_out_group_fraction=0.5,
     )
 
     conditions = "logfoldchanges >= 1 & pct_nz_group >= .25 & pct_nz_reference < .5"
-    df = sc.get.rank_genes_groups_df(adata, group=None, key="rank_genes_groups")
+    df = sc.get.rank_genes_groups_df(adata, group=None)
     df = df.query(conditions)[["group", "names"]]
 
     var_names = {
@@ -1798,7 +1813,12 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
         pytest.param("scrublet", {}, id="scrublet"),
         pytest.param("scrublet_no_threshold", {}, id="scrublet_no_threshold"),
         pytest.param(
-            "scrublet_with_batches", dict(batch_key="batch"), id="scrublet_with_batches"
+            "scrublet_with_batches",
+            dict(batch_key="batch"),
+            marks=pytest.mark.filterwarnings(
+                "ignore:.*argument batch_key is deprecated:FutureWarning"
+            ),
+            id="scrublet_with_batches",
         ),
     ],
 )

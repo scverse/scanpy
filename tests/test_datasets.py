@@ -94,9 +94,18 @@ def test_ebi_expression_atlas(monkeypatch: pytest.MonkeyPatch):
     assert 23899 <= adata.shape[1] <= 24051
 
 
-def test_krumsiek11():
-    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
-        adata = sc.datasets.krumsiek11()
+@pytest.mark.parametrize(
+    "preset",
+    [sc.Preset.ScanpyV1, pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2)],
+)
+def test_krumsiek11(preset: sc.Preset):
+    with sc.settings.override(preset=preset):
+        if preset is sc.Preset.ScanpyV1:
+            with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+                adata = sc.datasets.krumsiek11()
+        else:
+            adata = sc.datasets.krumsiek11()
+            assert adata.obs_names.is_unique
     assert adata.shape == (640, 11)
     assert set(adata.obs["cell_type"]) == {"Ery", "Mk", "Mo", "Neu", "progenitor"}
 
@@ -123,6 +132,14 @@ def test_pbmc68k_reduced():
         sc.datasets.pbmc68k_reduced()
 
 
+def _assert_visium_equal(a: AnnData, b: AnnData) -> None:
+    # `assert_adata_equal` densifies sparse `X`, which takes ~2.4GB here
+    # https://github.com/scverse/anndata/issues/2727
+    assert (a.X != b.X).nnz == 0
+    del a.X, b.X
+    assert_adata_equal(a, b)
+
+
 @pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets():
@@ -131,7 +148,7 @@ def test_visium_datasets():
         hheart = sc.datasets.visium_sge("V1_Human_Heart")
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         hheart_again = sc.datasets.visium_sge("V1_Human_Heart")
-    assert_adata_equal(hheart, hheart_again)
+    _assert_visium_equal(hheart, hheart_again)
 
 
 @pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
@@ -143,7 +160,7 @@ def test_visium_datasets_dir_change(tmp_path: Path):
     sc.settings.datasetdir = tmp_path
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         mbrain_again = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
-    assert_adata_equal(mbrain, mbrain_again)
+    _assert_visium_equal(mbrain, mbrain_again)
 
 
 @pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")

@@ -1,6 +1,5 @@
 # Plotting: PL
 
-
 ```{eval-rst}
 .. module:: scanpy.external.pl
 .. currentmodule:: scanpy.external

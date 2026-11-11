@@ -86,6 +86,8 @@ def original_settings(
     yield _original_settings
 
     plt.close("all")
+    # also reset at teardown: module/session fixtures are set up before this fixture
+    sc.settings.preset = sc.Preset.ScanpyV1
 
 
 @pytest.fixture(autouse=True, scope="session")

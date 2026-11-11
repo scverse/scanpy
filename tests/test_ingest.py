@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from inspect import signature
 from typing import TYPE_CHECKING
 
 import anndata
@@ -67,7 +68,8 @@ def test_representation(adatas):
     assert ing._obsm["rep"].shape == (adata_new.n_obs, 30)
     assert not ing._pca_centered
 
-    sc.pp.neighbors(adata_ref, use_rep="X")
+    with pytest.warns(FutureWarning, match=r"argument use_rep is deprecated"):
+        sc.pp.neighbors(adata_ref, use_rep="X")
 
     ing = sc.tl.Ingest(adata_ref)
     ing.fit(adata_new)
@@ -78,15 +80,15 @@ def test_representation(adatas):
 
 @needs.anndata_acc
 def test_representation_acc(adatas) -> None:
-    """An accessor `use_rep` round-trips through `.uns` and is used for the new data."""
+    """`use` is stored in `.uns` like `use_rep`, and used for the new data."""
     adata_ref, adata_new = (a.copy() for a in adatas)
     adata_new.obsm["X_pca"] = adata_ref.obsm["X_pca"][: adata_new.n_obs]
-    sc.pp.neighbors(adata_ref, use_rep=A.obsm["X_pca"])
+    sc.pp.neighbors(adata_ref, use=A.obsm["X_pca"])
 
     ing = sc.tl.Ingest(adata_ref)
     ing.fit(adata_new)
 
-    assert ing._use_rep == A.obsm["X_pca"]
+    assert ing._use_rep == "X_pca"
     np.testing.assert_array_equal(ing._obsm["rep"], adata_new.obsm["X_pca"])
 
 
@@ -157,7 +159,7 @@ def test_neighbors(adatas):
     assert percent_correct > 0.99
 
 
-@pytest.mark.parametrize("n", [3, 4])
+@pytest.mark.parametrize("n", [8, 12])
 def test_neighbors_defaults(adatas, n):
     adata_ref = adatas[0].copy()
     adata_new = adatas[1].copy()
@@ -180,20 +182,20 @@ def test_ingest_function(adatas: tuple[sc.AnnData, sc.AnnData]) -> None:
         adata_ref,
         obs="bulk_labels",
         embedding_method=["umap", "pca"],
-        inplace=True,
     )
 
     assert "bulk_labels" in adata_new.obs
     assert "X_umap" in adata_new.obsm
     assert "X_pca" in adata_new.obsm
 
-    ad = sc.tl.ingest(
-        adata_new,
-        adata_ref,
-        obs="bulk_labels",
-        embedding_method=["umap", "pca"],
-        inplace=False,
-    )
+    with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
+        ad = sc.tl.ingest(
+            adata_new,
+            adata_ref,
+            obs="bulk_labels",
+            embedding_method=["umap", "pca"],
+            inplace=False,
+        )
 
     assert "bulk_labels" in ad.obs
     assert "X_umap" in ad.obsm
@@ -202,6 +204,7 @@ def test_ingest_function(adatas: tuple[sc.AnnData, sc.AnnData]) -> None:
 
 # https://github.com/lmcinnes/umap/issues/1174
 @pytest.mark.filterwarnings("ignore:.*renamed to.*ensure_all_finite:FutureWarning")
+@pytest.mark.filterwarnings("ignore:.*argument use_rep is deprecated:FutureWarning")
 def test_ingest_map_embedding_umap() -> None:
     adata_ref = sc.AnnData(X)
     adata_new = sc.AnnData(T)
@@ -215,7 +218,13 @@ def test_ingest_map_embedding_umap() -> None:
     ing.fit(adata_new)
     ing.map_embedding(method="umap")
 
-    reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4, n_jobs=1)
+    # ingest replicates the legacy (0.5.x) pipeline
+    compat = (
+        dict(compatibility_layout=True)
+        if "compatibility_layout" in signature(UMAP).parameters
+        else {}
+    )
+    reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4, n_jobs=1, **compat)
     reducer.fit(X)
     umap_transformed_t = reducer.transform(T)
 

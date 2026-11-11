@@ -15,7 +15,7 @@ sc.tl.umap(adata, **tool_params)  # embed a neighborhood graph of the data using
 ```
 
 where `adata` is an {class}`~anndata.AnnData` object.
-Each of these calls adds annotation to an expression matrix *X*,
+Each of these calls adds annotation to an expression matrix _X_,
 which stores *n_obs* observations (cells) of *n_vars* variables (genes).
 For each tool, there typically is an associated plotting function in `sc.pl`:
 
@@ -27,7 +27,7 @@ If you pass `show=False`, a {class}`~matplotlib.axes.Axes` instance is returned
 and you have all of matplotlib's detailed configuration possibilities.
 
 To facilitate writing memory-efficient pipelines, by default,
-Scanpy tools operate *inplace* on `adata` and return `None` –
+Scanpy tools operate _inplace_ on `adata` and return `None` –
 this also allows to easily transition to [out-of-memory pipelines].
 If you want to return a copy of the {class}`~anndata.AnnData` object
 and leave the passed `adata` unchanged, pass `copy=True` or `inplace=False`.

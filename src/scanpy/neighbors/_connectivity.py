@@ -154,8 +154,9 @@ def umap(
         n_neighbors,
         None,
         None,
-        knn_indices=knn_indices,
-        knn_dists=knn_dists,
+        # umap ≥0.6 requires C-contiguous arrays
+        knn_indices=np.ascontiguousarray(knn_indices),
+        knn_dists=np.ascontiguousarray(knn_dists),
         set_op_mix_ratio=set_op_mix_ratio,
         local_connectivity=local_connectivity,
     )
