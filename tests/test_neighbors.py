@@ -268,6 +268,26 @@ def test_gauss_knn_sparse_symmetric(transformer: str) -> None:
     assert not w.diagonal().any()
 
 
+@pytest.mark.parametrize("isolated", [1, 3], ids=["middle", "last"])
+def test_gauss_knn_sparse_isolated_cell(isolated: int) -> None:
+    # A cell with no stored neighbor other than itself must get an empty row,
+    # without an IndexError and without borrowing another row's distances.
+    from scanpy.neighbors._connectivity import gauss
+
+    d = np.array(
+        [[0, 1, 2, 3], [1, 0, 1, 2], [2, 1, 0, 1], [3, 2, 1, 0]], dtype=np.float64
+    )
+    d[isolated, :] = 0
+    d[:, isolated] = 0
+    d_others = np.delete(np.delete(d, isolated, 0), isolated, 1)
+    w = gauss(sparse.csr_matrix(d), n_neighbors=3, knn=True)  # noqa: TID251
+    expected = gauss(sparse.csr_matrix(d_others), n_neighbors=3, knn=True)  # noqa: TID251
+    assert w[isolated].nnz == 0
+    assert w[:, isolated].nnz == 0
+    others = np.delete(np.arange(4), isolated)
+    np.testing.assert_allclose(w[others][:, others].toarray(), expected.toarray())
+
+
 def test_metrics_argument():
     no_knn_euclidean = get_neighbors()
     no_knn_euclidean.compute_neighbors(

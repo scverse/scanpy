@@ -111,12 +111,18 @@ def _sparse_knn(
 def _sorted_row_median(
     rows: NDArray[np.intp], values: NDArray[np.floating], n_rows: int
 ) -> NDArray[np.floating]:
-    """Median per row of `values`, which are sorted by row and then by value."""
+    """Median per row of `values`, which are sorted by row and then by value.
+
+    Rows without values (cells with no neighbor other than themselves) get 0.
+    """
     starts = np.searchsorted(rows, np.arange(n_rows))
     counts = np.bincount(rows, minlength=n_rows)
-    lo = starts + (counts - 1) // 2
-    hi = starts + counts // 2
-    return (values[lo] + values[hi]) / 2
+    medians = np.zeros(n_rows, dtype=values.dtype)
+    has_values = counts > 0
+    lo = (starts + (counts - 1) // 2)[has_values]
+    hi = (starts + counts // 2)[has_values]
+    medians[has_values] = (values[lo] + values[hi]) / 2
+    return medians
 
 
 def umap(
