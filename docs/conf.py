@@ -82,9 +82,12 @@ exec_jupyter_code = r"""
 # setup notebook backend
 import matplotlib
 matplotlib.use("module://matplotlib_inline.backend_inline")
+# kernels are forked from this process, and GNU OpenMP (numba’s default on Linux) isn’t fork-safe
+import numba
+numba.config.THREADING_LAYER = "forksafe"
 # import all slow optional imports before running code
 import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx
-del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib
+del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib, numba
 # make warnings in executed examples fail like they do in doctests
 import warnings
 warnings.simplefilter("error")
