@@ -8,7 +8,7 @@
 .. currentmodule:: scanpy
 ```
 
-Any transformation of the data matrix that is not _preprocessing_. In contrast to a _preprocessing_ function, a _tool_ usually adds an easily interpretable annotation to the data matrix, which can then be visualized with a corresponding plotting function.
+Any transformation of the data matrix that is not *preprocessing*. In contrast to a *preprocessing* function, a *tool* usually adds an easily interpretable annotation to the data matrix, which can then be visualized with a corresponding plotting function.
 
 ## Embeddings
 
