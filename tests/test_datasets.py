@@ -78,14 +78,15 @@ def test_ebi_expression_atlas(monkeypatch: pytest.MonkeyPatch):
     from scanpy.datasets import _ebi_expression_atlas as ea_mod
 
     # make sure we use chunks when testing.
-    # This dataset has <8M entries, so 4M entries/chunk = 2 chunks
+    # This dataset has ~31k entries, so 20k entries/chunk = 2 chunks
     assert hasattr(ea_mod, "CHUNK_SIZE")
-    monkeypatch.setattr(ea_mod, "CHUNK_SIZE", int(4e6))
+    monkeypatch.setattr(ea_mod, "CHUNK_SIZE", 20_000)
 
-    adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
+    # a tiny dataset (~160kB), since EBI’s downloads can be very slow
+    adata = sc.datasets.ebi_expression_atlas("E-ENAD-19")
     # The shape changes sometimes
-    assert 2261 <= adata.shape[0] <= 2315
-    assert 23899 <= adata.shape[1] <= 24051
+    assert 24 <= adata.shape[0] <= 28
+    assert 3500 <= adata.shape[1] <= 3800
 
 
 def test_krumsiek11():
