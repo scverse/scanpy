@@ -27,7 +27,6 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from anndata.acc import LayerAcc, MultiAcc
-    from holoviews.plotting.plot import GenericElementPlot
     from pandas.api.extensions import ExtensionArray
 
     # TODO: export in scanpy: https://github.com/scverse/scanpy/issues/3826
@@ -316,7 +315,7 @@ def tracksplot(
             xlabel="",
             ylabel=vdim.label,
             title="",
-            show_legend=False,  # TODO: switch to below impl after fixing https://github.com/holoviz/holoviews/issues/5438
+            show_legend=False,  # TODO: switch to below impl once it works, see its docstring
             aspect=2 * len(vdims),
         )
         for vdim in vdims
@@ -337,22 +336,17 @@ def _tracksplot2(
 ) -> hv.GridSpace:
     """Tracksplot variant. Faster but Gridspace is generally buggy.
 
-    We can switch after <https://github.com/holoviz/holoviews/issues/5438> is fixed.
+    Needs holoviews>=1.24 (<https://github.com/holoviz/holoviews/pull/7003> aligns axes),
+    but still blocked on:
+
+    - <https://github.com/holoviz/holoviews/issues/7142>: the bokeh legend is clipped to the top-right plot
+    - <https://github.com/holoviz/holoviews/issues/7143>: the outer-axis figures become visible
+      when ``panel_material_ui``'s ``MaterialDesign`` is active, which hv-anndata enables
     """
     if kdim is None:
         [dim] = {dim for vdim in vdims for dim in vdim.dims}
         kdim = getattr(A, dim).index
     more_vdims = [] if color is None else [color]
-
-    _shared = {}
-
-    def link_x(plot, element):
-        """Work around <https://github.com/holoviz/holoviews/issues/6948>."""
-        fig = plot.state
-        if "x_range" not in _shared:
-            _shared["x_range"] = fig.x_range
-        else:
-            fig.x_range = _shared["x_range"]
 
     return (
         hv
@@ -368,7 +362,6 @@ def _tracksplot2(
         .opts(show_legend=True, xaxis=None)
         # .opts(hv.opts.Curve(aspect=2 * len(vdims)))
         .opts(hv.opts.GridSpace(plot_size=(300, 20)))
-        .opts(hv.opts.NdOverlay(hooks=[link_x]))
     )
 
 
@@ -646,7 +639,7 @@ def dotplot(
         opts.update(_supported_opts(hv.Points, s=area, size=area**0.5).options)
 
     return hv.Points(stats_long, ["group", "marker"], list(funcs.values())).opts(
-        xrotation=30, hooks=[_anchor_rotated_xticks], **opts
+        xrotation=30, **opts
     )
 
 
@@ -698,19 +691,16 @@ def matrixplot(
         )
 
     """
-    agg = sc.get.aggregate(adata, group_by, func, acc=data)
+    agg = sc.get.aggregate(adata, group_by, func, use=data)
     agg.var["totals"] = stats.sum(agg.layers[func], axis=0)
     heatmap = hv.HeatMap(
         agg,
         [A.obs.index, A.var.index],
         [A.layers[func][:, :]],
-    ).opts(xrotation=30, hooks=[_anchor_rotated_xticks])
+    ).opts(xrotation=30)
     if not add_totals:
         return _add_hover(heatmap)
-    bars = hv.Bars(agg, A.var.index, A.var["totals"]).opts(
-        yticks=0,
-        xlabel="",  # TODO: holoviews issue
-    )
+    bars = hv.Bars(agg, A.var.index, A.var["totals"]).opts(yticks=0)
     return hv.AdjointLayout([_add_hover(heatmap), _add_hover(bars)])
 
 
@@ -741,20 +731,6 @@ def _facet[D: hv.core.dimension.Dimensioned](
 ) -> hv.Layout:
     """Facet a plot over multiple ``color`` dimensions into a `hv.Layout`."""
     return hv.Layout([plot(c).opts(title=c.label) for c in dims]).opts(axiswise=True)
-
-
-def _anchor_rotated_xticks(
-    plot: GenericElementPlot, element: hv.core.dimension.Dimensioned
-) -> None:
-    """Workaround for <https://github.com/holoviz/holoviews/issues/6967>."""
-    from matplotlib.axes import Axes
-
-    ax = plot.handles.get("axis")
-    if not isinstance(ax, Axes):
-        return
-    for label in ax.get_xticklabels():
-        if label.get_rotation():
-            label.set(ha="right", rotation_mode="anchor")
 
 
 def _get_categories(

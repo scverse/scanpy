@@ -22,6 +22,7 @@ if sys.version_info < (3, 15):
 
 import numpy as np
 import scipy as sp
+from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
 from .. import logging as logg
@@ -41,6 +42,7 @@ if TYPE_CHECKING:
     from .._utils.random import RNGLike, SeedLike
 
 
+@deprecated(Deprecation("1.13.0"))
 @_doc_params(rng=doc_rng)
 def sim(  # noqa: PLR0913
     model: Literal["krumsiek11", "toggleswitch"],
