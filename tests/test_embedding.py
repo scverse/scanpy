@@ -110,6 +110,20 @@ def test_umap_preserves_connectivities(preset: sc.Preset) -> None:
     assert ("X_umap" if preset is sc.Preset.ScanpyV1 else "umap") in pbmc.obsm
 
 
+@pytest.mark.parametrize(
+    "preset",
+    [
+        pytest.param(sc.Preset.ScanpyV1, id="v1"),
+        pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2, id="v2"),
+    ],
+)
+def test_umap_init_pos_unknown(preset: sc.Preset) -> None:
+    pbmc = pbmc68k_reduced()[:100, :].copy()  # load before preset: cached
+    sc.settings.preset = preset
+    with pytest.raises(ValueError, match=r"Unknown `init_pos` 'spectal'"):
+        sc.tl.umap(pbmc, init_pos="spectal")
+
+
 @pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
 def test_diffmap(
     subtests: pytest.Subtests, rng_arg: Literal["rng", "random_state"]

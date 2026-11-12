@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 from scverse_misc import deprecated_arg
@@ -11,7 +11,7 @@ from .._compat import pkg_version
 from .._docs import DEPR_KEY_ADDED, DEPR_NEIGHBORS_KEY, doc_out_key, doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default, Preset, settings
-from .._utils import _doc_params
+from .._utils import _doc_params, get_literal_vals
 from .._utils.random import (
     _accepts_legacy_random_state,
     _legacy_random_state,
@@ -27,7 +27,7 @@ from ._utils import _choose_representation_compat, get_init_pos_from_paga
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-    from typing import Any, Literal
+    from typing import Any
 
     from anndata import AnnData
 
@@ -36,7 +36,9 @@ if TYPE_CHECKING:
     from ..get._types import GraphAcc, RepAcc
 
 
-type _InitPos = Literal["auto", "paga", "spectral", "random", "recursive"]
+type _InitPos = Literal[
+    "auto", "paga", "spectral", "tswspectral", "random", "recursive"
+]
 
 
 @_accepts_legacy_random_state(0)
@@ -147,6 +149,7 @@ def umap(  # noqa: PLR0913
           (umap-learn’s choice).
         * 'paga': positions from :func:`~scanpy.pl.paga`.
         * 'spectral': use a spectral embedding of the graph.
+        * 'tswspectral': a cheaper approximation of 'spectral'.
         * 'random': assign initial embedding positions at random.
         * 'recursive': label propagation-based hierarchical initialization
           (requires umap-learn ≥0.6).
@@ -293,6 +296,10 @@ def _init_coords(
             coords = adata[init_pos]
         case str() if init_pos == "paga":
             coords = get_init_pos_from_paga(adata, rng=rng, adjacency=conns)
+        # umap-learn’s `simplicial_set_embedding` doesn’t validate `init`
+        case str() if init_pos not in get_literal_vals(_InitPos):
+            msg = f"Unknown `init_pos` {init_pos!r}, expected one of {sorted(get_literal_vals(_InitPos))}, an array, or a reference."
+            raise ValueError(msg)
         case str() | None:
             return init_pos  # let umap handle it
         case _:
