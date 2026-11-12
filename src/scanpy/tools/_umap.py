@@ -222,7 +222,9 @@ def umap(  # noqa: PLR0913
     params = dict(
         a=a, b=b, compatibility_layout=compatibility_layout, **meta_random_state
     )
-    init_coords = _init_coords(adata, init_pos, rng=rng, conns=conns)
+    init_coords = _init_coords(
+        adata, init_pos, rng=rng, conns=conns, compatibility_layout=compatibility_layout
+    )
     x = _umap_data(adata, conns, rep, neigh_params, n_components=n_components)
     if method == "umap":
         default_epochs = 500 if conns.shape[0] <= 10000 else 200
@@ -276,16 +278,13 @@ def _init_coords(
     *,
     rng: np.random.Generator,
     conns: CSBase,
+    compatibility_layout: bool,
 ) -> np.ndarray | str | None:
     """Resolve `init_pos` into coordinates or a method name umap-learn understands."""
-    if (
-        isinstance(init_pos, str)
-        and init_pos == "auto"
-        and not _umap_layout_kw(compatibility_layout=False)
-    ):
-        return "spectral"  # umap-learn <0.6 has no 'auto'
     v1 = settings.preset is Preset.ScanpyV1
     match init_pos:
+        case str() if init_pos == "auto" and compatibility_layout:
+            return "spectral"  # umap-learn <0.6 has no 'auto'
         case str() if not v1 and "." in init_pos:  # method names have no dots
             coords = adata[_resolve_ref(init_pos, vec=False)]
         case str() if v1 and init_pos in adata.obsm:
