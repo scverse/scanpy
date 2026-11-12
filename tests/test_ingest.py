@@ -174,8 +174,20 @@ def test_neighbors_defaults(adatas, n):
 
 # https://github.com/lmcinnes/umap/issues/1174
 @pytest.mark.filterwarnings("ignore:.*renamed to.*ensure_all_finite:FutureWarning")
-def test_ingest_function(adatas: tuple[sc.AnnData, sc.AnnData]) -> None:
+@pytest.mark.parametrize(
+    "has_pca_params",
+    [
+        pytest.param(True, id="pca_params"),
+        # PCA from old scanpy versions has no `.uns["pca"]["params"]` (#4507)
+        pytest.param(False, id="no_pca_params"),
+    ],
+)
+def test_ingest_function(
+    adatas: tuple[sc.AnnData, sc.AnnData], *, has_pca_params: bool
+) -> None:
     adata_ref, adata_new = (ad.copy() for ad in adatas)
+    if not has_pca_params:
+        del adata_ref.uns["pca"]["params"]
 
     sc.tl.ingest(
         adata_new,

@@ -332,10 +332,12 @@ class Ingest:
         )
 
     def _init_pca(self, adata: AnnData) -> None:
-        self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
+        # PCA from old scanpy versions has no `params`, use `pp.pca`’s defaults
+        params = adata.uns["pca"].get("params", {})
+        self._pca_centered = params.get("zero_center", True)
         self._pca_mask = _check_mask(
             adata,
-            _mask_arg(None, adata.uns["pca"]["params"]["mask_var"], dim="var"),
+            _mask_arg(None, params.get("mask_var"), dim="var"),
             "var",
         )
 
