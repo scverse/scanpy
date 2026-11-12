@@ -10,13 +10,13 @@ repos:
           - --drop=abstract
         groups: [format]
   - repo: https://github.com/biomejs/pre-commit
-    rev: v2.6.3
+    rev: v2.6.4
     hooks:
       - id: biome-format
         groups: [format]
         exclude: ^\.cruft\.json$ # inconsistent indentation with cruft - file never to be modified manually.
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: v2.30.3
+    rev: v2.30.6
     hooks:
       - id: pyproject-fmt
         groups: [format]
@@ -51,7 +51,7 @@ repos:
       - id: no-commit-to-branch
         args: [--branch=main]
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.31.1
+    rev: v1.32.0
     hooks:
       - id: zizmor
         args: [--no-progress, --fix]
