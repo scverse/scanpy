@@ -229,7 +229,8 @@ def umap(  # noqa: PLR0913
         n_epochs = default_epochs if maxiter is None else maxiter
         x_umap, _ = simplicial_set_embedding(
             data=x,
-            graph=conns.tocoo(copy=True),
+            # umap-learn ≥0.6’s layout functions are compiled for float32 only
+            graph=conns.astype(np.float32).tocoo(),
             n_components=n_components,
             initial_alpha=alpha,
             a=a,

@@ -85,19 +85,29 @@ def test_umap_init_paga(layout):
     sc.tl.umap(pbmc, init_pos="paga")
 
 
-def test_umap_preserves_connectivities():
+@pytest.mark.parametrize(
+    "preset",
+    [
+        pytest.param(sc.Preset.ScanpyV1, id="v1"),
+        # umap-learn ≥0.6’s new layout is compiled for float32 graphs only
+        pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2, id="v2"),
+    ],
+)
+def test_umap_preserves_connectivities(preset: sc.Preset) -> None:
     # https://github.com/scverse/scanpy/issues/4028
-    pbmc = pbmc68k_reduced()[:100, :].copy()
+    pbmc = pbmc68k_reduced()[:100, :].copy()  # load before preset: cached
     conn = pbmc.obsp["connectivities"]
+    assert conn.dtype == np.float64
     data_before = conn.data.copy()
     nnz_before = conn.nnz
 
+    sc.settings.preset = preset
     sc.tl.umap(pbmc)
 
     assert_array_equal(data_before, conn.data)
     assert conn.nnz == nnz_before
     assert (conn.data == 0).sum() == 0, "CSR should have no explicit zeros"
-    assert "X_umap" in pbmc.obsm
+    assert ("X_umap" if preset is sc.Preset.ScanpyV1 else "umap") in pbmc.obsm
 
 
 @pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
