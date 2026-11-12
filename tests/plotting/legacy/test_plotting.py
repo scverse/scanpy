@@ -452,9 +452,7 @@ def test_multi_groupby_partial_nan(plot_fn):
     ids=["dotplot", "matrixplot"],
 )
 def test_multi_groupby_mixed_type(plot_fn):
-    """Multi-column `groupby` accepts object columns mixing types and
-    missing values.
-    """
+    """Multi-column `groupby` accepts object columns mixing types and missing values."""
     adata = pbmc68k_reduced()
     mixed = np.empty(len(adata), dtype=object)
     mixed[::2] = "control"

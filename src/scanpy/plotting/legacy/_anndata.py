@@ -1970,17 +1970,6 @@ def correlation_matrix(  # noqa: PLR0912, PLR0913, PLR0915
     return axs
 
 
-def _unique_group_values(s: pd.Series) -> np.ndarray | pd.api.extensions.ExtensionArray:
-    try:
-        return np.unique(s)
-    except TypeError:
-        # object columns mixing types (e.g. ints and strings, or strings
-        # and missing values) cannot be sorted; keep appearance order and
-        # drop missing values, which never form categories
-        values = pd.unique(s)
-        return values[~pd.isna(values)]
-
-
 def _prepare_dataframe(  # noqa: PLR0912
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
@@ -2078,33 +2067,21 @@ def _prepare_dataframe(  # noqa: PLR0912
         categorical = obs_tidy[groupby[0]].astype("category")
         categorical.name = groupby[0]
     else:
-        # join the groupby values  using "_" to make a new 'category'
-        joined = obs_tidy[groupby].apply(lambda r: "_".join(map(str, r)), axis=1)
-        # rows missing any groupby value get no category, as in the
-        # single-column path where NaN never becomes a category
-        joined = joined.where(obs_tidy[groupby].notna().all(axis=1))
-        categorical = joined.astype("category")
-        categorical.name = "_".join(groupby)
-
-        # preserve category order
+        # join the groupby values using "_" to make a new 'category';
+        # rows missing any value stay NaN, `object` needed as `1` would get turned into `"1.0"`
+        parts = [
+            obs_tidy[g].map(str, na_action="ignore").astype(object) for g in groupby
+        ]
+        # categories in product order of each column's categories (NaN-free, sorted if possible)
         from itertools import product
 
-        order = {
-            "_".join(map(str, k)): idx
-            for idx, k in enumerate(
-                product(
-                    *(
-                        obs_tidy[g].cat.categories
-                        if isinstance(obs_tidy[g].dtype, CategoricalDtype)
-                        else _unique_group_values(obs_tidy[g])
-                        for g in groupby
-                    )
-                )
-            )
-        }
-        categorical = categorical.cat.reorder_categories(
-            sorted(categorical.cat.categories, key=lambda x: order.get(x, len(order)))
-        )
+        levels = [obs_tidy[g].astype("category").cat.categories for g in groupby]
+        all_cats = list(dict.fromkeys("_".join(map(str, k)) for k in product(*levels)))
+        categorical = pd.Series(
+            pd.Categorical(parts[0].str.cat(parts[1:], sep="_"), categories=all_cats),
+            index=obs_tidy.index,
+            name="_".join(groupby),
+        ).cat.remove_unused_categories()
     obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
 
