@@ -395,68 +395,6 @@ def test_dotplot_style_no_reset():
     assert plot.cmap == "winter", "style() should not reset unspecified parameters"
 
 
-@pytest.mark.parametrize(
-    "plot_fn",
-    [sc.pl.dotplot, sc.pl.matrixplot],
-    ids=["dotplot", "matrixplot"],
-)
-@pytest.mark.parametrize(
-    ("values", "expected_suffixes"),
-    [
-        pytest.param(
-            pd.Categorical(np.tile([1, 2], 350)), ("_1", "_2"), id="int_categorical"
-        ),
-        pytest.param(np.tile([0.5, 2.0], 350), ("_0.5", "_2.0"), id="numeric"),
-    ],
-)
-def test_multi_groupby_nonstring(plot_fn, values, expected_suffixes):
-    """Multi-column `groupby` accepts non-string columns."""
-    adata = pbmc68k_reduced()
-    adata.obs["num"] = values
-    plot = plot_fn(adata, adata.var_names[:4], ["bulk_labels", "num"], return_fig=True)
-    categories = list(plot.categories)
-    assert len(categories) == 2 * adata.obs["bulk_labels"].nunique()
-    first_label = adata.obs["bulk_labels"].cat.categories[0]
-    assert categories[:2] == [f"{first_label}{s}" for s in expected_suffixes]
-
-
-@pytest.mark.parametrize(
-    "plot_fn",
-    [sc.pl.dotplot, sc.pl.matrixplot],
-    ids=["dotplot", "matrixplot"],
-)
-def test_multi_groupby_partial_nan(plot_fn):
-    """Rows missing any of several `groupby` values get no joined category."""
-    adata = pbmc68k_reduced()
-    labels = adata.obs["bulk_labels"].astype(object)
-    labels.iloc[:10] = np.nan
-    adata.obs["part_nan"] = pd.Categorical(labels)
-    plot = plot_fn(adata, adata.var_names[:4], ["part_nan", "phase"], return_fig=True)
-    assert not any("nan" in str(c) for c in plot.categories)
-
-
-@pytest.mark.parametrize(
-    "plot_fn",
-    [sc.pl.dotplot, sc.pl.matrixplot],
-    ids=["dotplot", "matrixplot"],
-)
-def test_multi_groupby_mixed_type(plot_fn):
-    """Multi-column `groupby` accepts object columns mixing types and missing values."""
-    adata = pbmc68k_reduced()
-    mixed = np.empty(len(adata), dtype=object)
-    mixed[::2] = "control"
-    mixed[1::2] = 1
-    mixed[:10] = np.nan
-    adata.obs["mixed"] = mixed
-    plot = plot_fn(
-        adata, adata.var_names[:4], ["bulk_labels", "mixed"], return_fig=True
-    )
-    categories = [str(c) for c in plot.categories]
-    assert not any("nan" in c for c in categories)
-    assert any(c.endswith("_control") for c in categories)
-    assert any(c.endswith("_1") for c in categories)
-
-
 def test_dotplot_add_totals(plot_cmp):
     pbmc = pbmc68k_reduced()
     markers = {"T-cell": "CD3D", "B-cell": "CD79A", "myeloid": "CST3"}
@@ -1750,10 +1688,27 @@ def test_groupby_index(plot_cmp):
     plot_cmp("dotplot_groupby_index")
 
 
-def test_groupby_list() -> None:
-    """Test category order when groupby is a list.
+def _mixed_with_nan(n: int) -> np.ndarray:
+    col = np.array(["control", 1] * (n // 2) + ["control"] * (n % 2), dtype=object)
+    col[:10] = np.nan
+    return col
 
-    See <https://github.com/scverse/scanpy/issues/1735>
+
+@pytest.mark.parametrize(
+    "make_other",
+    [
+        pytest.param(lambda a: a.obs["cell_type"], id="categorical"),
+        pytest.param(
+            lambda a: pd.Categorical(np.arange(a.n_obs) % 2 + 1), id="int_categorical"
+        ),
+        pytest.param(lambda a: np.where(np.arange(a.n_obs) % 2, 2.0, 0.5), id="float"),
+        pytest.param(lambda a: _mixed_with_nan(a.n_obs), id="mixed_with_nan"),
+    ],
+)
+def test_groupby_list(make_other: Callable[[AnnData], object]) -> None:
+    """Test category order when groupby is a list, incl. non-string and missing values.
+
+    See <https://github.com/scverse/scanpy/issues/1735> and #4384.
     """
     rng = np.random.default_rng()
     adata = krumsiek11()
@@ -1762,11 +1717,12 @@ def test_groupby_list() -> None:
     cats = adata.obs.cell_type.cat.categories.tolist()
     rng.shuffle(cats)
     adata.obs["rand_cat"] = pd.Categorical(cat_val, categories=cats)
+    adata.obs["other"] = make_other(adata)
 
     plot = sc.pl.dotplot(
         adata,
         ["Gata1", "Gata2"],
-        ["rand_cat", "cell_type"],
+        ["rand_cat", "other"],
         swap_axes=True,
         show=False,
         return_fig=True,
@@ -1774,13 +1730,15 @@ def test_groupby_list() -> None:
     plot.make_figure()
     ticks = [t.get_text() for t in plot.get_axes()["mainplot_ax"].get_xticklabels()]
 
-    # each group’s categories determine the tick order, unobserved pairs are dropped
-    observed = set(zip(adata.obs.rand_cat, adata.obs.cell_type, strict=True))
+    # each group’s categories determine the tick order,
+    # unobserved pairs and rows with missing values are dropped
+    other = adata.obs["other"]
+    observed = set(zip(adata.obs.rand_cat, other, strict=True))
     assert ticks == [
-        f"{rand}_{cell}"
+        f"{rand}_{o}"
         for rand in cats
-        for cell in adata.obs.cell_type.cat.categories
-        if (rand, cell) in observed
+        for o in other.astype("category").cat.categories
+        if (rand, o) in observed
     ]
 
 
