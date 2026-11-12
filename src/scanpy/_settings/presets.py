@@ -232,7 +232,7 @@ class Preset(enum.StrEnum):
         }
 
     @preset_property
-    def tsne() -> Mapping[Preset, UmapPreset]:
+    def tsne() -> Mapping[Preset, TsnePreset]:
         """Settings for :func:`~scanpy.tl.tsne`."""  # noqa: D401
         return {
             Preset.ScanpyV1: TsnePreset(key_added=None),
