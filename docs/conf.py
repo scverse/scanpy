@@ -82,9 +82,12 @@ exec_jupyter_code = r"""
 # setup notebook backend
 import matplotlib
 matplotlib.use("module://matplotlib_inline.backend_inline")
+# kernels are forked from this process, and GNU OpenMP (numba’s default on Linux) isn’t fork-safe
+import numba
+numba.config.THREADING_LAYER = "forksafe"
 # import all slow optional imports before running code
 import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx
-del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib
+del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib, numba
 # make warnings in executed examples fail like they do in doctests
 import warnings
 warnings.simplefilter("error")
@@ -102,6 +105,9 @@ myst_ignore_mime_types = [  # from custom extension patch_myst_nb
     "application/vnd.microsoft.datawrangler.viewer.v0+json",
 ]
 nb_execution_mode = "cache"
+# holoviews’ matplotlib backend renders `Graph`s slowly (~30s for `pl.draw_graph` on RTD)
+# https://github.com/holoviz/holoviews/issues/7157
+nb_execution_timeout = 120
 nb_execution_excludepatterns = [
     f"{d}{'/*' * n}" for d in ["tutorials", "how-to"] for n in (1, 2, 3)
 ]

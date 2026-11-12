@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from inspect import signature
 from typing import TYPE_CHECKING
 
 import anndata
@@ -12,6 +11,7 @@ from umap import UMAP
 
 import scanpy as sc
 from scanpy import settings
+from scanpy.tools._umap import _umap_layout_kw
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
@@ -205,26 +205,41 @@ def test_ingest_function(adatas: tuple[sc.AnnData, sc.AnnData]) -> None:
 # https://github.com/lmcinnes/umap/issues/1174
 @pytest.mark.filterwarnings("ignore:.*renamed to.*ensure_all_finite:FutureWarning")
 @pytest.mark.filterwarnings("ignore:.*argument use_rep is deprecated:FutureWarning")
-def test_ingest_map_embedding_umap() -> None:
+@pytest.mark.parametrize(
+    "compatibility_layout",
+    [
+        pytest.param(True, id="compat"),
+        pytest.param(
+            False,
+            id="modern",
+            marks=pytest.mark.skipif(
+                not _umap_layout_kw(compatibility_layout=False),
+                reason="needs umap-learn ≥0.6",
+            ),
+        ),
+    ],
+)
+def test_ingest_map_embedding_umap(*, compatibility_layout: bool) -> None:
     adata_ref = sc.AnnData(X)
     adata_new = sc.AnnData(T)
 
     sc.pp.neighbors(
         adata_ref, method="umap", use_rep="X", n_neighbors=4, random_state=0
     )
-    sc.tl.umap(adata_ref, random_state=0)
+    sc.tl.umap(adata_ref, random_state=0, compatibility_layout=compatibility_layout)
 
     ing = sc.tl.Ingest(adata_ref)
     ing.fit(adata_new)
     ing.map_embedding(method="umap")
 
-    # ingest replicates the legacy (0.5.x) pipeline
-    compat = (
-        dict(compatibility_layout=True)
-        if "compatibility_layout" in signature(UMAP).parameters
-        else {}
+    # ingest replicates the pipeline `tl.umap` used
+    reducer = UMAP(
+        min_dist=0.5,
+        random_state=0,
+        n_neighbors=4,
+        n_jobs=1,
+        **_umap_layout_kw(compatibility_layout=compatibility_layout),
     )
-    reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4, n_jobs=1, **compat)
     reducer.fit(X)
     umap_transformed_t = reducer.transform(T)
 
