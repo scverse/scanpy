@@ -2079,22 +2079,21 @@ def _prepare_dataframe(  # noqa: PLR0912
         categorical = obs_tidy[groupby[0]].astype("category")
         categorical.name = groupby[0]
     else:
-        # join the groupby values  using "_" to make a new 'category'
-        categorical = obs_tidy[groupby].apply("_".join, axis=1).astype("category")
-        categorical.name = "_".join(groupby)
-
-        # preserve category order
+        # join the groupby values using "_" to make a new 'category';
+        # rows missing any value stay NaN, `object` needed as `1` would get turned into `"1.0"`
+        parts = [
+            obs_tidy[g].map(str, na_action="ignore").astype(object) for g in groupby
+        ]
+        # categories in product order of each column's categories (NaN-free, sorted if possible)
         from itertools import product
 
-        order = {
-            "_".join(k): idx
-            for idx, k in enumerate(
-                product(*(obs_tidy[g].cat.categories for g in groupby))
-            )
-        }
-        categorical = categorical.cat.reorder_categories(
-            sorted(categorical.cat.categories, key=lambda x: order[x])
-        )
+        levels = [obs_tidy[g].astype("category").cat.categories for g in groupby]
+        all_cats = list(dict.fromkeys("_".join(map(str, k)) for k in product(*levels)))
+        categorical = pd.Series(
+            pd.Categorical(parts[0].str.cat(parts[1:], sep="_"), categories=all_cats),
+            index=obs_tidy.index,
+            name="_".join(groupby),
+        ).cat.remove_unused_categories()
     obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
 
