@@ -752,6 +752,28 @@ def test_filter_cells(array_type, arg: str) -> None:
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
 
+@needs.jax
+@pytest.mark.parametrize(
+    "func",
+    [
+        pytest.param(sc.pp.log1p, id="log1p"),
+        pytest.param(lambda a: sc.pp.scale(a, zero_center=True), id="scale"),
+        pytest.param(sc.pp.normalize_total, id="normalize_total"),
+        pytest.param(sc.pp.normalize_shifted_clr, id="normalize_shifted_clr"),
+        pytest.param(lambda a: sc.pp.filter_cells(a, min_genes=1), id="filter_cells"),
+        pytest.param(lambda a: sc.pp.filter_genes(a, min_cells=1), id="filter_genes"),
+    ],
+)
+def test_array_api_type_preserved(func: Callable[[AnnData], None]) -> None:
+    """Functions returning a matrix keep it in the input’s array API namespace."""
+    import jax
+
+    x = np.random.default_rng(0).negative_binomial(2, 0.3, (50, 20)).astype("float32")
+    adata = AnnData(jax.numpy.asarray(x))
+    func(adata)
+    assert isinstance(adata.X, jax.Array), type(adata.X)
+
+
 @needs.anndata_acc
 def test_regress_out_keys_ref() -> None:
     """`keys` can also be references."""
