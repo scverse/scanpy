@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 from collections.abc import Sequence
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
@@ -21,7 +22,7 @@ from .._docs import (
     doc_out_key,
     doc_rng,
 )
-from .._settings import Default
+from .._settings import Default, settings
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng, _set_igraph_rng
 from ..get._out import _out_key, deprecated_copy
@@ -93,6 +94,7 @@ def leiden(  # noqa: PLR0913
     n_iterations: int = -1,
     partition_type: type[MutableVertexPartition] | None = None,
     flavor: LeidenFlavor | Default = Default(preset=("leiden", "flavor")),
+    n_jobs: int | None = None,
     use: GraphAcc | str | None = None,
     out: VecRef | bool = False,
     # deprecated
@@ -143,6 +145,12 @@ def leiden(  # noqa: PLR0913
         :func:`~leidenalg.find_partition`.
     flavor
         Which package's implementation to use.
+        `'networkit'` runs in parallel (see `n_jobs`).
+    n_jobs
+        Number of threads for `flavor='networkit'` (`-1` means all cores).
+        With multiple threads, results for the same `rng` are similar but not identical,
+        so `None` means :attr:`scanpy.settings.n_jobs` if `rng=None` is passed
+        and `1` otherwise, for exact reproducibility.
     {use}
     {out}
     {adjacency}
@@ -179,6 +187,9 @@ def leiden(  # noqa: PLR0913
     )
     _utils.ensure_igraph()
     clustering_args = dict(clustering_args)
+    if n_jobs is None:
+        # unseeded runs needn’t be reproducible, so they can be parallel
+        n_jobs = settings.n_jobs if rng is None else 1
     rng = np.random.default_rng(rng)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
@@ -231,6 +242,7 @@ def leiden(  # noqa: PLR0913
         part = _leiden_networkit(
             adjacency,
             rng=rng,
+            n_jobs=n_jobs,
             use_weights=use_weights,
             n_iterations=n_iterations,
             resolution=resolution,
@@ -283,6 +295,7 @@ def _leiden_networkit(
     adjacency: CSBase,
     *,
     rng: np.random.Generator,
+    n_jobs: int,
     use_weights: bool,
     n_iterations: int,
     resolution: float | None,
@@ -292,8 +305,8 @@ def _leiden_networkit(
 
     # Seeding controls which nodes are tried and in what order, but not
     # which thread wins when two move neighboring nodes simultaneously.
-    # So runs are statistically reproducible for a fixed thread count,
-    # but not bit-for-bit identical.
+    # So runs are statistically reproducible, but only bit-for-bit identical
+    # when single-threaded (a fixed thread count > 1 is not enough).
     seed = int(rng.integers(np.iinfo(np.int64).max))
     networkit.setSeed(seed, useThreadId=True)
 
@@ -308,7 +321,12 @@ def _leiden_networkit(
     algorithm = networkit.community.ParallelLeiden(
         g, iterations=iterations, gamma=gamma
     )
-    algorithm.run()
+    prev_n_threads = networkit.getCurrentNumberOfThreads()
+    networkit.setNumberOfThreads(n_jobs if n_jobs > 0 else os.process_cpu_count() or 1)
+    try:
+        algorithm.run()
+    finally:
+        networkit.setNumberOfThreads(prev_n_threads)
     nk_part = algorithm.getPartition()
     # NetworKit's Partition exposes getVector() for the labels and a
     # separate Modularity measure, rather than .membership / .modularity.

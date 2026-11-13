@@ -118,6 +118,7 @@ test = [
     "scanpy[dask]",
     "scanpy[illico]",
     "scanpy[leiden]",
+    "scanpy[networkit]",
     "scanpy[plotting]",
     "scanpy[scrublet]",
     "scanpy[skmisc]",

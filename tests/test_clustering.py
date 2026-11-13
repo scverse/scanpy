@@ -17,6 +17,8 @@ from testing.scanpy._pytest.marks import needs
 if TYPE_CHECKING:
     from typing import Literal
 
+    from pytest_mock import MockerFixture
+
 
 @pytest.fixture
 def adata_neighbors() -> AnnData:
@@ -81,8 +83,6 @@ def test_leiden_random_state(
     flavor: Literal["igraph", "leidenalg", "networkit"],
     rng_arg: Literal["rng", "random_state"],
 ) -> None:
-    if flavor == "networkit":
-        pytest.skip("ParallelLeiden is not bit-for-bit reproducible")
     is_leiden_alg = flavor == "leidenalg"
     n_iterations = 2 if is_leiden_alg else -1
     adata_1, adata_1_again, adata_2 = (
@@ -93,7 +93,8 @@ def test_leiden_random_state(
             n_iterations=n_iterations,
             **{rng_arg: seed},
         )
-        for seed in (1, 1, 42)
+        # some seeds give the same partition as 1 for some flavor, 8 differs for all
+        for seed in (1, 1, 8)
     )
     with subtests.test("reproducible"):
         pd.testing.assert_series_equal(
@@ -135,6 +136,30 @@ def test_leiden_igraph_directed():
 
 
 @needs.networkit
+@pytest.mark.parametrize(
+    ("kwargs", "expected"),
+    [
+        pytest.param({}, 1, id="default"),
+        pytest.param({"rng": 0}, 1, id="seeded"),
+        pytest.param({"rng": None}, 3, id="unseeded"),
+        pytest.param({"rng": 0, "n_jobs": 2}, 2, id="explicit"),
+    ],
+)
+def test_leiden_networkit_n_jobs(
+    mocker: MockerFixture,
+    adata_neighbors: AnnData,
+    kwargs: dict[str, int | None],
+    expected: int,
+) -> None:
+    import networkit
+
+    sc.settings.n_jobs = 3
+    spy = mocker.spy(networkit, "setNumberOfThreads")
+    sc.tl.leiden(adata_neighbors, flavor="networkit", **kwargs)
+    assert spy.call_args_list[0].args == (expected,)
+
+
+@needs.networkit
 def test_leiden_networkit_directed(adata_neighbors):
     with pytest.raises(ValueError, match=r"Cannot use NetworKit's leiden.*directed"):
         sc.tl.leiden(adata_neighbors, flavor="networkit", directed=True)
@@ -154,15 +179,12 @@ def test_leiden_networkit_directed(adata_neighbors):
     ],
 )
 def test_leiden_directed_default(
-    monkeypatch: pytest.MonkeyPatch,
-    preset: sc.Preset,
-    directed_flavors: set[str],
-    flavor: str,
+    preset: sc.Preset, directed_flavors: set[str], flavor: str
 ) -> None:
     from scanpy._settings import Default
     from scanpy.tools._leiden import _resolve_directed
 
-    monkeypatch.setattr(sc.settings, "preset", preset)
+    sc.settings.preset = preset
     assert _resolve_directed(Default(), flavor=flavor) is (flavor in directed_flavors)
 
 
@@ -185,37 +207,49 @@ def test_leiden_igraph_partition_type(adata_neighbors):
         )
 
 
+@pytest.fixture(
+    params=[
+        pytest.param("igraph", marks=needs.igraph),
+        pytest.param("networkit", marks=needs.networkit),
+    ]
+)
+def fast_flavor(request: pytest.FixtureRequest) -> Literal["igraph", "networkit"]:
+    return request.param
+
+
 @needs.leidenalg
-@needs.igraph
-def test_leiden_equal_defaults_same_args(adata_neighbors):
-    """Ensure the two implementations are the same for the same args."""
+def test_leiden_equal_defaults_same_args(
+    adata_neighbors: AnnData, fast_flavor: Literal["igraph", "networkit"]
+) -> None:
+    """Ensure the implementations are the same for the same args."""
     leiden_alg_clustered = _leiden_copy(
         adata_neighbors, flavor="leidenalg", n_iterations=2
     )
-    igraph_clustered = _leiden_copy(
-        adata_neighbors, flavor="igraph", directed=False, n_iterations=2
+    fast_clustered = _leiden_copy(
+        adata_neighbors, flavor=fast_flavor, directed=False, n_iterations=2
     )
     assert (
         normalized_mutual_info_score(
-            leiden_alg_clustered.obs["leiden"], igraph_clustered.obs["leiden"]
+            leiden_alg_clustered.obs["leiden"], fast_clustered.obs["leiden"]
         )
         > 0.9
     )
 
 
 @needs.leidenalg
-@needs.igraph
-def test_leiden_equal_defaults(adata_neighbors):
+def test_leiden_equal_defaults(
+    adata_neighbors: AnnData, fast_flavor: Literal["igraph", "networkit"]
+) -> None:
     """Ensure that the old leidenalg defaults are close enough to the current default outputs."""
     leiden_alg_clustered = _leiden_copy(
         adata_neighbors, flavor="leidenalg", directed=True
     )
-    igraph_clustered = _leiden_copy(
-        adata_neighbors, flavor="igraph", n_iterations=2, directed=False
+    fast_clustered = _leiden_copy(
+        adata_neighbors, flavor=fast_flavor, n_iterations=2, directed=False
     )
     assert (
         normalized_mutual_info_score(
-            leiden_alg_clustered.obs["leiden"], igraph_clustered.obs["leiden"]
+            leiden_alg_clustered.obs["leiden"], fast_clustered.obs["leiden"]
         )
         > 0.9
     )
