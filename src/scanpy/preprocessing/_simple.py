@@ -720,14 +720,10 @@ def regress_out(
         regressors = covariates.to_numpy()
         normalized = _NormalizedRegressors(regressors)
 
-    # if the regressors are not categorical and the matrix is not singular
-    # use the shortcut numpy_regress_out
+    # non-categorical regressors & non-singular matrix → shortcut
     if not variable_is_categorical and np.linalg.det(normalized.gram) != 0:
         res = normalized.regress_out(x)
-
-    # for a categorical variable or if the above checks failed,
-    # we fall back to the GLM implemetation of regression.
-    else:
+    else:  # GLM implemetation
         # split the adata.X matrix by columns in chunks of size n_chunk
         # (the last chunk could be of smaller size than the others)
         len_chunk = int(np.ceil(min(1000, x.shape[1]) / n_jobs))
