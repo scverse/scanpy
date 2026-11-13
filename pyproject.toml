@@ -288,8 +288,8 @@ filterwarnings = [
     "default::numba.core.errors.NumbaPerformanceWarning",
     # we should set init=obsm["X_pca"] or so
     "default:.*TSNE.*random.*to.*pca:FutureWarning",
-    # igraph vs leidenalg warning
-    "ignore:The `igraph` implementation of leiden clustering:UserWarning",
+    # igraph/networkit vs leidenalg warning
+    "ignore:The `igraph` and `networkit` implementations of leiden clustering:UserWarning",
     # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …
     "ignore:Consolidated metadata is currently not part:UserWarning",
     # joblib fallback to serial mode in restricted multiprocessing environments

@@ -56,7 +56,8 @@ def test_leiden_basic(
         nullcontext()
         if flavor in {"igraph", "networkit"}
         else pytest.warns(
-            UserWarning, match=r"The `igraph` implementation of leiden clustering"
+            UserWarning,
+            match=r"The `igraph` and `networkit` implementations of leiden clustering",
         )
     ):
         sc.tl.leiden(

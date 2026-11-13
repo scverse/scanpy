@@ -383,8 +383,8 @@ def _validate_flavor(
                 raise ValueError(msg)
         case "leidenalg":
             msg = (
-                "The `igraph` implementation of leiden clustering is *orders of magnitude faster*. "
-                "Set the flavor argument to (and install if needed) 'igraph' to use it."
+                "The `igraph` and `networkit` implementations of leiden clustering are *orders of magnitude faster*. "
+                "Set the flavor argument to (and install if needed) 'igraph' or 'networkit' to use them."
             )
             if was_default:
                 msg += (
