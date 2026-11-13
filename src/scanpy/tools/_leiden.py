@@ -313,6 +313,7 @@ def _leiden_graspologic(
     rng: np.random.Generator,
     **kwargs,
 ) -> _Partition:
+    """Cluster with ``graspologic_native.leiden_csr``, on the undirected graph with the larger weight of both directions."""
     from graspologic_native import leiden_csr
     from scipy import sparse
 
