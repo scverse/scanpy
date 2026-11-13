@@ -57,9 +57,8 @@ class _RNGIgraph:
     def getrandbits(self, k: int) -> int:
         if isinstance(self._rng, _LegacyRng):
             i = self._rng.state.tomaxint()
-        else:
-            lims = np.iinfo(np.uint64)
-            i = int(self._rng.integers(0, lims.max, dtype=np.uint64, endpoint=True))
+        else:  # ~10× faster than `.integers(…)`, igraph calls this a lot
+            i = self._rng.bit_generator.random_raw()
         return i & ((1 << k) - 1)
 
     def randint(self, a: int, b: int) -> np.int64:
