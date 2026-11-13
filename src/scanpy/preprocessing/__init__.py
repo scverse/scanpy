@@ -7,6 +7,7 @@ from ..neighbors._bbknn import bbknn
 from ..neighbors._types import NeighborsOut, NeighborsResult
 from ._combat import combat
 from ._deprecated.sampling import subsample
+from ._dsb import dsb
 from ._harmony import harmony_integrate
 from ._hashsolo import HashsoloOut, HashsoloResult, hashsolo
 from ._highly_variable_genes import highly_variable_genes
@@ -50,6 +51,7 @@ __all__ = [
     "calculate_qc_metrics",
     "combat",
     "downsample_counts",
+    "dsb",
     "filter_cells",
     "filter_genes",
     "harmony_integrate",
