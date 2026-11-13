@@ -123,16 +123,21 @@ def umap(
         warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
         from umap.umap_ import fuzzy_simplicial_set
 
+    from ..tools._umap import _umap_layout_kw
+
     x = sparse.coo_matrix((n_obs, 1))
     connectivities, _sigmas, _rhos = fuzzy_simplicial_set(
         x,
         n_neighbors,
         None,
         None,
-        knn_indices=knn_indices,
-        knn_dists=knn_dists,
+        # umap ≥0.6 requires C-contiguous arrays
+        knn_indices=np.ascontiguousarray(knn_indices),
+        knn_dists=np.ascontiguousarray(knn_dists),
         set_op_mix_ratio=set_op_mix_ratio,
         local_connectivity=local_connectivity,
+        # with precomputed kNNs, this only selects a faster kernel with identical results
+        **_umap_layout_kw(compatibility_layout=False),
     )
 
     return connectivities.tocsr()

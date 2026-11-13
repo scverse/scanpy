@@ -10,7 +10,7 @@
 
 Filtering of highly-variable genes, batch-effect correction, per-cell normalization, preprocessing recipes.
 
-Any transformation of the data matrix that is not a *tool*. Other than *tools*, preprocessing steps usually don't return an easily interpretable annotation, but perform a basic transformation on the data matrix.
+Any transformation of the data matrix that is not a *tool*. Other than *tools*, preprocessing steps usually don’t return an easily interpretable annotation, but perform a basic transformation on the data matrix.
 
 ## Basic Preprocessing
 
@@ -29,6 +29,7 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
    pp.log1p
    pp.pca
    pp.normalize_total
+   pp.normalize_shifted_clr
    pp.regress_out
    pp.scale
    pp.sample
@@ -43,7 +44,6 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
    :toctree: generated/
 
    pp.recipe_zheng17
-   pp.recipe_weinreb17
    pp.recipe_seurat
 ```
 
@@ -96,5 +96,30 @@ Also see {ref}`data integration tools <data-integration>` and external {ref}`ext
 
    pp.bbknn
    pp.neighbors
+```
 
+## Output types
+
+Functions with several outputs return a `…Result` if passed `out=True`,
+and take a `…Out` mapping as `out` to write each output to a place of choice.
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   pp.HashsoloResult
+   pp.HashsoloOut
+   pp.NeighborsResult
+   pp.NeighborsOut
+   pp.NormalizeTotalResult
+   pp.NormalizeTotalOut
+   pp.PcaResult
+   pp.PcaOut
+   pp.QcMetricsResult
+   pp.QcMetricsOut
+   pp.ScaleResult
+   pp.ScaleOut
+   pp.ScrubletResult
+   pp.ScrubletOut
 ```

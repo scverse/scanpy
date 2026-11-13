@@ -5,32 +5,45 @@ from typing import TYPE_CHECKING, cast
 import numpy as np
 import pandas as pd
 from natsort import natsorted
+from scverse_misc import deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
 from .._compat import warn
-from .._docs import doc_rng
+from .._docs import (
+    DEPR_ADJACENCY,
+    DEPR_KEY_ADDED,
+    DEPR_NEIGHBORS_KEY,
+    DEPR_OBSP_GRAPH,
+    doc_out_key,
+    doc_rng,
+)
 from .._settings import Default
+from .._settings.presets import LeidenPreset
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng, _set_igraph_rng
+from ..get._out import _out_key, deprecated_copy
+from ..neighbors._common import _use_graph
 from ._docs import (
     doc_adata,
     doc_adjacency,
     doc_neighbors_key,
     doc_obsp,
     doc_restrict_to,
+    doc_use_neighbors,
 )
 from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Literal
 
     from anndata import AnnData
+    from igraph import Graph
 
     from .._compat import CSBase
     from .._settings.presets import LeidenFlavor
     from .._utils.random import RNGLike, SeedLike
+    from ..get._types import GraphAcc, VecRef
 
     try:  # sphinx-autodoc-typehints + optional dependency
         from leidenalg.VertexPartition import MutableVertexPartition
@@ -49,27 +62,45 @@ if TYPE_CHECKING:
     adjacency=doc_adjacency,
     neighbors_key=doc_neighbors_key.format(method="leiden"),
     obsp=doc_obsp,
+    use=doc_use_neighbors(),
     rng=doc_rng,
+    out=doc_out_key(
+        "the cluster labels",
+        example="A.obs['clusters']",
+        key_added="`key_added='k'` is `out=A.obs['k']`.",
+        default=(
+            "`.obs['leiden']` and `.uns['leiden']` "
+            "(`'leiden_R'` if `restrict_to` is passed)"
+        ),
+    ),
 )
 @_accepts_legacy_random_state(0)
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_arg("adjacency", DEPR_ADJACENCY)
+@deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
+@deprecated_arg("obsp", DEPR_OBSP_GRAPH)
+@deprecated_copy
 def leiden(  # noqa: PLR0913
     adata: AnnData,
     resolution: float = 1,
     *,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     rng: SeedLike | RNGLike | None = None,
-    key_added: str = "leiden",
-    adjacency: CSBase | None = None,
-    directed: bool | None = None,
+    directed: bool | Default | None = Default(preset=("leiden", "directed")),
     use_weights: bool = True,
     n_iterations: int = -1,
     partition_type: type[MutableVertexPartition] | None = None,
+    flavor: LeidenFlavor | Default = Default(preset=("leiden", "flavor")),
+    use: GraphAcc | str | None = None,
+    out: VecRef | bool = False,
+    # deprecated
+    adjacency: CSBase | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
+    key_added: str | None = None,
     copy: bool = False,
-    flavor: LeidenFlavor | Default = Default(preset=("leiden", "flavor")),
     **clustering_args,
-) -> AnnData | None:
+) -> AnnData | pd.Categorical | None:
     r"""Cluster cells into subgroups :cite:p:`Traag2019`.
 
     Cluster cells using the Leiden algorithm :cite:p:`Traag2019`,
@@ -91,11 +122,9 @@ def leiden(  # noqa: PLR0913
         to one that doesn’t accept a `resolution_parameter`.
     {rng}
     {restrict_to}
-    key_added
-        `adata.obs` key under which to add the cluster labels.
-    {adjacency}
     directed
         Whether to treat the graph as directed or undirected.
+        `None` means directed for `flavor='leidenalg'` and undirected for `flavor='igraph'`.
     use_weights
         If `True`, edge weights from the graph are used in the computation
         (placing more emphasis on stronger edges).
@@ -109,36 +138,42 @@ def leiden(  # noqa: PLR0913
         Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`.
         For the available options, consult the documentation for
         :func:`~leidenalg.find_partition`.
+    flavor
+        Which package's implementation to use.
+    {use}
+    {out}
+    {adjacency}
     {neighbors_key}
     {obsp}
     copy
         Whether to copy `adata` or modify it inplace.
-    flavor
-        Which package's implementation to use.
     **clustering_args
         Any further arguments to pass to :func:`~leidenalg.find_partition` (which in turn passes arguments to the `partition_type`)
         or :meth:`igraph.Graph.community_leiden` from `igraph`.
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the cluster labels if `out=True`, else `None`.
+    By default sets the following fields (see `out` for others):
 
-    `adata.obs['leiden' | key_added]` : :class:`pandas.Series` (dtype ``category``)
+    `adata.obs['leiden']` : :class:`pandas.Series` (dtype ``category``)
         Array of dim (number of samples) that stores the subgroup id
         (``'0'``, ``'1'``, ...) for each cell.
 
-    `adata.uns['leiden' | key_added]['params']` : :class:`dict`
+    `adata.uns['leiden']['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `n_iterations`,
         and `random_state` (if applicable).
 
-    `adata.uns['leiden' | key_added]['modularity']` : :class:`float`
+    `adata.uns['leiden']['modularity']` : :class:`float`
         The modularity score of the final clustering,
         as calculated by the `flavor`.
         Use :func:`scanpy.metrics.modularity`\ `(adata, mode='calculate' | 'update')`
         to calculate a score independent of `flavor`.
 
     """
-    flavor = _validate_flavor(flavor, partition_type=partition_type, directed=directed)
+    flavor, directed = _validate_flavor(
+        flavor, partition_type=partition_type, directed=directed
+    )
     _utils.ensure_igraph()
     clustering_args = dict(clustering_args)
     rng = np.random.default_rng(rng)
@@ -146,11 +181,16 @@ def leiden(  # noqa: PLR0913
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
 
+    key = _out_key(out, key_added, kind="obs", default="leiden")
+    # like `key_added`, the default key gets a suffix, keys from `out` are literal
+    if restrict_to is not None and key == "leiden" and out is False:
+        key += "_R"
+
     start = logg.info("running Leiden clustering")
-    adata = adata.copy() if copy else adata
     # are we clustering a user-provided graph or the default AnnData one?
-    if adjacency is None:
-        adjacency = _utils._choose_graph(adata, obsp, neighbors_key)
+    adjacency = _use_graph(
+        adata, use, adjacency=adjacency, obsp=obsp, neighbors_key=neighbors_key
+    )
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
         adjacency, restrict_indices = restrict_adjacency(
@@ -169,7 +209,6 @@ def leiden(  # noqa: PLR0913
 
         if resolution is not None:
             clustering_args["resolution_parameter"] = resolution
-        directed = True if directed is None else directed
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if partition_type is None:
             partition_type = leidenalg.RBConfigurationVertexPartition
@@ -186,60 +225,81 @@ def leiden(  # noqa: PLR0913
             leidenalg.find_partition(g, partition_type, seed=seed, **clustering_args),
         )
     else:
-        g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if use_weights:
             clustering_args["weights"] = "weight"
         if resolution is not None:
             clustering_args["resolution"] = resolution
         clustering_args.setdefault("objective_function", "modularity")
+        if (
+            directed
+            and clustering_args["objective_function"] == "modularity"
+            and clustering_args.keys().isdisjoint({"node_weights", "node_in_weights"})
+        ):
+            clustering_args |= _directed_node_weights(
+                g, weights=clustering_args.get("weights")
+            )
         with _set_igraph_rng(rng):
             part = g.community_leiden(**clustering_args)
     # store output into adata.obs
     groups = np.array(part.membership)
     if restrict_to is not None:
-        if key_added == "leiden":
-            key_added += "_R"
         groups = rename_groups(
             adata,
-            key_added=key_added,
             restrict_key=restrict_key,
             restrict_categories=restrict_categories,
             restrict_indices=restrict_indices,
             groups=groups,
         )
-    adata.obs[key_added] = pd.Categorical(
+    labels = pd.Categorical(
         values=groups.astype("U"),
         categories=natsorted(map(str, np.unique(groups))),
     )
+    if key is True:
+        logg.info("    finished", time=start)
+        return labels
+    adata.obs[key] = labels
     # store information on the clustering parameters
-    adata.uns[key_added] = {}
-    adata.uns[key_added]["params"] = dict(
+    adata.uns[key] = {}
+    adata.uns[key]["params"] = dict(
         resolution=resolution, n_iterations=n_iterations, **meta_random_state
     )
-    adata.uns[key_added]["modularity"] = part.modularity
+    adata.uns[key]["modularity"] = part.modularity
     logg.info(
         "    finished",
         time=start,
         deep=(
             f"found {len(np.unique(groups))} clusters and added\n"
-            f"    {key_added!r}, the cluster labels (adata.obs, categorical)"
+            f"    {key!r}, the cluster labels (adata.obs, categorical)"
         ),
     )
-    return adata if copy else None
+    return None
+
+
+def _directed_node_weights(
+    g: Graph, *, weights: str | Sequence[float] | None
+) -> dict[str, list[float]]:
+    """Get in- and out-degrees as node weights; python-igraph otherwise only counts out-degrees."""
+    return dict(
+        node_weights=g.strength(mode="out", weights=weights),
+        node_in_weights=g.strength(mode="in", weights=weights),
+    )
 
 
 def _validate_flavor(
-    flavor: str | None, *, partition_type: object | None, directed: bool | None
-) -> Literal["igraph", "leidenalg"]:
-    if was_default := (flavor is None or isinstance(flavor, Default)):
-        from scanpy import settings
+    flavor: str | None,
+    *,
+    partition_type: object | None,
+    directed: bool | Default | None,
+) -> LeidenPreset:
+    from scanpy import settings
 
+    if was_default := (flavor is None or isinstance(flavor, Default)):
         flavor = settings.preset.leiden.flavor
+    if isinstance(directed, Default):
+        directed = settings.preset.leiden.directed
     match flavor:
         case "igraph":
-            if directed:
-                msg = "Cannot use igraph’s leiden implementation with a directed graph."
-                raise ValueError(msg)
             if partition_type is not None:
                 msg = "Do not pass in partition_type argument when using igraph."
                 raise ValueError(msg)
@@ -251,8 +311,7 @@ def _validate_flavor(
             if was_default:
                 msg += (
                     "\nIn the future, the default backend for leiden will be igraph instead of leidenalg. "
-                    "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`. "
-                    "`directed` must also be `False` to work with igraph’s implementation."
+                    "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`."
                 )
             warn(msg, FutureWarning if was_default else UserWarning)
             try:
@@ -265,4 +324,6 @@ def _validate_flavor(
         case _:
             msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed."
             raise ValueError(msg)
-    return flavor
+    if directed is None:
+        directed = flavor == "leidenalg"
+    return LeidenPreset(flavor, directed)

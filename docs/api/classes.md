@@ -1,6 +1,5 @@
 # Classes
 
-
 ```{eval-rst}
 .. currentmodule:: scanpy
 ```
@@ -15,5 +14,4 @@ Represent data as a neighborhood structure, usually a knn graph.
    :toctree: generated/
 
    Neighbors
-
 ```

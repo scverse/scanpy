@@ -15,28 +15,42 @@ from scverse_misc import Deprecation, deprecated_arg
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, warn
-from .._docs import doc_mask
+from .._docs import (
+    DEPR_RAW,
+    doc_mask,
+    doc_out_key,
+    doc_use,
+)
 from .._settings import Default, Preset, settings
 from .._settings.presets import DETest
 from .._utils import (
     _doc_params,
     _numba_thread_limit,
     check_nonnegative_integers,
+    check_use_raw,
     dim_acc,
     get_literal_vals,
     raise_not_implemented_error_if_backed_type,
 )
-from ..get import _check_mask, _get_arr, aggregate
+from ..get import aggregate
 from ..get._aggregated import _chan_combine
-from ..get.get import _mask_arg
+from ..get._out import _out_key, deprecated_copy
+from ..get._uns import _use_to_uns
+from ..get._use import (
+    _check_mask,
+    _get_arr,
+    _mask_arg,
+    _obs_col,
+    _resolve_layer,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
-    from typing import Literal
+    from typing import Any, Literal
 
     from numpy.typing import NDArray
 
-    from ..get.get import Mask
+    from ..get._types import AdRef, LayerAcc, Mask
 
 
 type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
@@ -121,7 +135,7 @@ def _ranks(
     /,
     mask_obs: NDArray[np.bool] | None = None,
     mask_obs_rest: NDArray[np.bool] | None = None,
-) -> Generator[tuple[NDArray[np.float64], int, int], None, None]:
+) -> Generator[tuple[NDArray[np.float64], int, int]]:
     n_genes = x.shape[1]
 
     if isinstance(x, CSBase):
@@ -244,7 +258,7 @@ def _vars_rest(
 
 
 class _RankGenes:
-    def __init__(
+    def __init__(  # noqa: PLR0912
         self,
         adata: AnnData,
         groups: Iterable[str] | Literal["all"],
@@ -253,6 +267,7 @@ class _RankGenes:
         mask_var: NDArray[np.bool] | None = None,
         reference: Literal["rest"] | str = "rest",
         use_raw: bool = True,
+        use: LayerAcc | str | None = None,
         layer: str | None = None,
         comp_pts: bool = False,
     ) -> None:
@@ -280,7 +295,12 @@ class _RankGenes:
             raise ValueError(msg)
 
         adata_comp = adata
-        if layer is not None:
+        if use is not None:
+            if use_raw:
+                msg = "Cannot specify `use` and have `use_raw=True`."
+                raise ValueError(msg)
+            x = _get_arr(adata_comp, use)
+        elif layer is not None:
             if use_raw:
                 msg = "Cannot specify `layer` and have `use_raw=True`."
                 raise ValueError(msg)
@@ -459,7 +479,7 @@ class _RankGenes:
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
-    ) -> Generator[_TestResult, None, None]:
+    ) -> Generator[_TestResult]:
         from scipy import stats
 
         for group_index, (mask_obs, mean_group, var_group) in enumerate(
@@ -508,7 +528,7 @@ class _RankGenes:
 
             yield group_index, scores, pvals
 
-    def wilcoxon(self, *, tie_correct: bool) -> Generator[_TestResult, None, None]:
+    def wilcoxon(self, *, tie_correct: bool) -> Generator[_TestResult]:
         from scipy import stats
 
         n_genes = self.X.shape[1]
@@ -585,7 +605,7 @@ class _RankGenes:
 
                 yield group_index, scores[group_index], pvals
 
-    def logreg(self, **kwds) -> Generator[_TestResult, None, None]:
+    def logreg(self, **kwds) -> Generator[_TestResult]:
         # if reference is not set, then the groups listed will be compared to the rest
         # if reference is set, then the groups listed will be compared only to the other groups listed
         from sklearn.linear_model import LogisticRegression
@@ -616,7 +636,7 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def illico(self, *, tie_correct: bool) -> Generator[_TestResult, None, None]:
+    def illico(self, *, tie_correct: bool) -> Generator[_TestResult]:
         from illico import asymptotic_wilcoxon
 
         adata = AnnData(
@@ -659,8 +679,12 @@ class _RankGenes:
     ) -> None:
         generate_test_results = None
         if method in {"t-test", "t-test_overestim_var"}:
-            self._basic_stats(exponentiate_values=not mean_in_log_space, need_var=True)
-            generate_test_results = self.t_test(method)
+            # The test always runs on the (log-transformed) values in `X`;
+            # `mean_in_log_space` only selects how the fold change is computed.
+            self._basic_stats(exponentiate_values=False, need_var=True)
+            generate_test_results = list(self.t_test(method))
+            if not mean_in_log_space:
+                self._basic_stats(exponentiate_values=True)
         elif "wilcoxon" in method:
             generate_test_results = (
                 self.illico(tie_correct=tie_correct)
@@ -747,12 +771,26 @@ def _build_stats_dataframe(
 
 
 @_doc_params(
-    mask=doc_mask("Select subset of genes to use in statistical tests.", dim="var")
+    mask=doc_mask("Select subset of genes to use in statistical tests.", dim="var"),
+    use=doc_use(
+        "Which matrix to perform tests on.", legacy=("layer",), layers_only=True
+    ),
+    out=doc_out_key(
+        "the results",
+        default="`.uns['rank_genes_groups']`",
+        key_added=(
+            "Name of the :attr:`~anndata.AnnData.uns` entry to write to instead "
+            "(until there are `.uns` accessors)."
+        ),
+    ),
 )
 @deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
+@deprecated_copy
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
-    groupby: str,
+    groupby: AdRef | str,
     *,
     mask: Mask | None = None,
     use_raw: bool | None = None,
@@ -761,18 +799,21 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     n_genes: int | None = None,
     rankby_abs: bool = False,
     pts: bool = False,
-    key_added: str | None = None,
-    copy: bool = False,
     method: DETest | Default = Default(preset=("rank_genes_groups", "method")),
     corr_method: _CorrMethod = "benjamini-hochberg",
-    tie_correct: bool = False,
-    layer: str | None = None,
+    tie_correct: bool | Default = Default(preset=("rank_genes_groups", "tie_correct")),
+    use: LayerAcc | str | None = None,
     mean_in_log_space: bool | Default = Default(
         preset=("rank_genes_groups", "mean_in_log_space")
     ),
+    out: bool = False,
+    key_added: str | None = None,
+    # deprecated
+    layer: str | None = None,
     mask_var: Mask | None = None,
+    copy: bool = False,
     **kwds,
-) -> AnnData | None:
+) -> AnnData | dict[str, Any] | None:
     r"""Rank genes for characterizing groups.
 
     Expects logarithmized data.
@@ -793,12 +834,13 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata
         Annotated data matrix.
     groupby
-        The key of the observations grouping to consider.
+        The observations grouping to consider.
+        Given by a reference like `A.obs['leiden']`, or by column name
+        (:class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d with :attr:`~scanpy.Preset.ScanpyV2Preview`).
     {mask}
     use_raw
         Use `raw` attribute of `adata` if present. The default behavior is to use `raw` if present.
-    layer
-        Key from `adata.layers` whose value will be used to perform tests on.
+    {use}
     groups
         Subset of groups, e.g. [`'g1'`, `'g2'`, `'g3'`], to which comparison
         shall be restricted, or `'all'` (default), for all groups. Note that if
@@ -829,10 +871,6 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         score. The returned scores are never the absolute values.
     pts
         Compute the fraction of cells expressing the genes.
-    key_added
-        The key in `adata.uns` information is saved to.
-    copy
-        Whether to copy `adata` or modify it inplace.
     mean_in_log_space
         Whether to do :math:`\log(\operatorname{{mean}}(e^x))` (`False`)
         or :math:`\log(e^{{\operatorname{{mean}}(x)}})` (`True`).
@@ -844,10 +882,13 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         For instance, you can pass `penalty='l1'` to try to come up with a
         minimal set of genes that are good predictors (sparse solution meaning
         few non-zero fitted coefficients).
+    {out}
+    copy
+        Whether to copy `adata` or modify it inplace.
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns the results as a :class:`dict` if `out=True`, else `None`. Sets the following fields:
 
     `adata.uns['rank_genes_groups' | key_added]['names']` : structured :class:`numpy.ndarray` (dtype `object`)
         Structured array to be indexed by group id storing the gene
@@ -886,9 +927,20 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
+    key = _out_key(
+        out,
+        key_added,
+        kind="uns",
+        default="rank_genes_groups",
+    )
+    groupby = _obs_col(groupby, param="groupby")
+    if use is not None:
+        use = _resolve_layer(use)
     mask = _mask_arg(mask, mask_var, dim="var")
     if isinstance(mean_in_log_space, Default):
         mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
+    if isinstance(tie_correct, Default):
+        tie_correct = settings.preset.rank_genes_groups.tie_correct
     # If scanpy presets are used for v2, use illico - prevents the presets from showing the `wilcoxon_illico` method and allows us to silently replace `wilcoxon`'s implementation.
     if method is None or isinstance(method, Default):
         method = settings.preset.rank_genes_groups.method
@@ -904,11 +956,10 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     mask_var = _check_mask(adata, mask, "var")
 
-    if use_raw is None:
-        use_raw = adata.raw is not None
-    elif use_raw is True and adata.raw is None:
+    if use_raw is True and adata.raw is None:
         msg = "Received `use_raw=True`, but `adata.raw` is empty."
         raise ValueError(msg)
+    use_raw = check_use_raw(adata, use_raw, use=use, layer=layer)
 
     if "only_positive" in kwds:
         rankby_abs = not kwds.pop("only_positive")  # backwards compat
@@ -922,8 +973,6 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     if corr_method not in avail_corr:
         msg = f"Correction method must be one of {avail_corr}."
         raise ValueError(msg)
-
-    adata = adata.copy() if copy else adata
     _utils.sanitize_anndata(adata)
     # for clarity, rename variable
     if groups == "all":
@@ -942,15 +991,13 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         msg = f"reference = {reference} needs to be one of groupby = {cats}."
         raise ValueError(msg)
 
-    if key_added is None:
-        key_added = "rank_genes_groups"
-    adata.uns[key_added] = {}
-    adata.uns[key_added]["params"] = dict(
+    res: dict[str, Any] = {}
+    res["params"] = dict(
         groupby=groupby,
         reference=reference,
         method=method,
         use_raw=use_raw,
-        layer=layer,
+        **dict(layer=layer) | _use_to_uns(use, rep=False),
         corr_method=corr_method,
     )
 
@@ -961,6 +1008,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         mask_var=mask_var,
         reference=reference,
         use_raw=use_raw,
+        use=use,
         layer=layer,
         comp_pts=pts,
     )
@@ -994,11 +1042,11 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     if test_obj.pts is not None:
         groups_names = [str(name) for name in test_obj.groups_order]
-        adata.uns[key_added]["pts"] = pd.DataFrame(
+        res["pts"] = pd.DataFrame(
             test_obj.pts.T, index=test_obj.var_names, columns=groups_names
         )
     if test_obj.pts_rest is not None:
-        adata.uns[key_added]["pts_rest"] = pd.DataFrame(
+        res["pts_rest"] = pd.DataFrame(
             test_obj.pts_rest.T, index=test_obj.var_names, columns=groups_names
         )
 
@@ -1013,15 +1061,19 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     }
 
     for col in test_obj.stats.columns.levels[0]:
-        adata.uns[key_added][col] = test_obj.stats[col].to_records(
+        res[col] = test_obj.stats[col].to_records(
             index=False, column_dtypes=dtypes[col]
         )
 
+    if key is True:
+        logg.info("    finished", time=start)
+        return res
+    adata.uns[key] = res
     logg.info(
         "    finished",
         time=start,
         deep=(
-            f"added to `.uns[{key_added!r}]`\n"
+            f"added to `.uns[{key!r}]`\n"
             "    'names', sorted np.recarray to be indexed by group ids\n"
             "    'scores', sorted np.recarray to be indexed by group ids\n"
             + (
@@ -1033,7 +1085,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
             )
         ),
     )
-    return adata if copy else None
+    return None
 
 
 def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
@@ -1043,19 +1095,37 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
     return n_nonzero / x.shape[0]
 
 
-def filter_rank_genes_groups(  # noqa: PLR0912
+@_doc_params(
+    use=doc_use(
+        "Which matrix to compute fractions and fold changes from. "
+        "Defaults to `A.X` (or `adata.raw`, see `use_raw`).",
+        legacy=(),
+        layers_only=True,
+    ),
+    out=doc_out_key(
+        "the filtered results",
+        default="`.uns['rank_genes_groups_filtered']`",
+        key_added=(
+            "Name of the :attr:`~anndata.AnnData.uns` entry to write to instead "
+            "(until there are `.uns` accessors)."
+        ),
+    ),
+)
+@deprecated_arg("use_raw", DEPR_RAW)
+def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     *,
     key: str | None = None,
-    groupby: str | None = None,
-    layer: str | None = None,
+    groupby: AdRef | str | None = None,
+    use: LayerAcc | str | None = None,
     use_raw: bool | None = None,
-    key_added: str = "rank_genes_groups_filtered",
     min_in_group_fraction: float = 0.25,
     min_fold_change: float = 1,
     max_out_group_fraction: float = 0.5,
     compare_abs: bool = False,
-) -> None:
+    out: bool = False,
+    key_added: str | None = None,
+) -> dict[str, Any] | None:
     """Filter out genes based on two criteria.
 
     1. log fold change and
@@ -1064,29 +1134,54 @@ def filter_rank_genes_groups(  # noqa: PLR0912
 
     See :func:`~scanpy.tl.rank_genes_groups`.
 
-    Results are stored in `adata.uns[key_added]`
-    (default: 'rank_genes_groups_filtered').
+    Results are stored in `adata.uns['rank_genes_groups_filtered']` (see `out`).
 
     To preserve the original structure of adata.uns['rank_genes_groups'],
     filtered genes are set to `NaN`.
 
+    The log2 fold changes and fractions of expressing cells are taken from
+    the :func:`~scanpy.tl.rank_genes_groups` results if they are stored there
+    (`'logfoldchanges'`, and `'pts'` and `'pts_rest'` if `pts=True` was passed),
+    `groupby` and `use_raw` are the same as for that call,
+    and it compared each group to `reference='rest'`.
+    Otherwise, they are computed from the expression values,
+    comparing each group to all other cells.
+
     Parameters
     ----------
     adata
+        Annotated data matrix containing the results of
+        :func:`~scanpy.tl.rank_genes_groups`.
     key
+        The key in `adata.uns` where the results of
+        :func:`~scanpy.tl.rank_genes_groups` are stored (its `key_added`).
+        Defaults to `'rank_genes_groups'`.
     groupby
-    layer
+        The key of the observations grouping to consider.
+        Defaults to the one used for :func:`~scanpy.tl.rank_genes_groups`.
+    {use}
+        Unlike `use_raw`, it is not taken from the results.
     use_raw
-    key_added
+        Use `raw` attribute of `adata` when fractions or fold changes are computed.
+        Defaults to the value used for :func:`~scanpy.tl.rank_genes_groups`,
+        or to `False` if `use` is specified.
     min_in_group_fraction
+        Only keep genes expressed (i.e. with a non-zero value) in more than
+        this fraction of the cells in the group.
     min_fold_change
+        Only keep genes whose log2 fold change between the group and
+        all other cells is greater than this. See `compare_abs`.
     max_out_group_fraction
+        Only keep genes expressed in less than this fraction of the cells
+        outside the group.
     compare_abs
         If `True`, compare absolute values of log fold change with `min_fold_change`.
+    {out}
 
     Returns
     -------
     Same output as :func:`scanpy.tl.rank_genes_groups` but with filtered genes names set to `nan`.
+    Returned as a :class:`dict` if `out=True`, else `None`.
 
     Examples
     --------
@@ -1100,16 +1195,24 @@ def filter_rank_genes_groups(  # noqa: PLR0912
     >>> sc.pl.rank_genes_groups_dotplot(adata, key="rank_genes_groups_filtered")
 
     """
+    key_out = _out_key(
+        out,
+        key_added,
+        kind="uns",
+        default="rank_genes_groups_filtered",
+    )
     if key is None:
         key = "rank_genes_groups"
 
+    groupby = _obs_col(groupby, param="groupby")
     if groupby is None:
         groupby = adata.uns[key]["params"]["groupby"]
 
+    use = _resolve_layer(use)
     if use_raw is None:
-        use_raw = adata.uns[key]["params"]["use_raw"] if layer is None else False
+        use_raw = adata.uns[key]["params"]["use_raw"] if use is None else False
 
-    x = _get_arr(adata, use_raw=use_raw, layer=layer)
+    x = _get_arr(adata, use, use_raw=use_raw)
 
     same_params = (
         adata.uns[key]["params"]["groupby"] == groupby
@@ -1195,6 +1298,9 @@ def filter_rank_genes_groups(  # noqa: PLR0912
         & (fraction_out_cluster_matrix < max_out_group_fraction)
         & (fold_change_matrix > min_fold_change)
     ]
-    # create new structured array using 'key_added'.
-    adata.uns[key_added] = adata.uns[key].copy()
-    adata.uns[key_added]["names"] = gene_names.to_records(index=False)
+    res = adata.uns[key].copy()
+    res["names"] = gene_names.to_records(index=False)
+    if key_out is True:
+        return res
+    adata.uns[key_out] = res
+    return None

@@ -100,7 +100,7 @@ def test_read_10x(
 def test_read_10x_mtx_int(
     data_10x: Path, genes: Literal["symbols", "ids"], other_col: str
 ) -> None:
-    str_dt = "str" if pd.options.future.infer_string else "object"
+    str_dt = pd.Series(["x"]).dtype
 
     adata = sc.io.read_10x_mtx(
         data_10x / "int-ids", var_names=f"gene_{genes}", compressed=False
@@ -135,7 +135,7 @@ def test_read_10x_mtx_gene_symbol_nan(
         adata.var["mt"] = adata.var_names.str.startswith("mt:")
         assert not adata.var["mt"].isna().any()
         sc.pp.calculate_qc_metrics(
-            adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
+            adata, qc_vars=["mt"], percent_top=None, log1p=False, out=False
         )
     else:
         assert adata.var["gene_symbols"].iloc[0] == "nan"
