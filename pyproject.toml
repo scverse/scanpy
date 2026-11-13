@@ -88,7 +88,7 @@ dask = [ "anndata[dask]", "dask[array]>=2024.10" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
 leiden = [ "igraph>=1", "leidenalg>=0.11" ]
-networkit = [ "networkit>=11.2.2" ]
+networkit = [ "networkit>=11.3" ]
 louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ]
 magic = [ "magic-impute>=2.0.4" ]
 paga = [ "igraph" ]
