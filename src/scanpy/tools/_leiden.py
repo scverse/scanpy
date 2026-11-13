@@ -190,6 +190,7 @@ def leiden(  # noqa: PLR0913
     if n_jobs is None:
         # unseeded runs needn’t be reproducible, so they can be parallel
         n_jobs = settings.n_jobs if rng is None else 1
+    seeded = rng is not None
     rng = np.random.default_rng(rng)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
@@ -250,7 +251,7 @@ def leiden(  # noqa: PLR0913
     else:
         part = _leiden_igraph(
             adjacency,
-            rng=rng,
+            rng=rng if seeded else None,
             directed=directed,
             use_weights=use_weights,
             resolution=resolution,
@@ -339,7 +340,7 @@ def _leiden_networkit(
 def _leiden_igraph(
     adjacency: CSBase,
     *,
-    rng: np.random.Generator,
+    rng: np.random.Generator | None,
     directed: bool,
     use_weights: bool,
     resolution: float | None,
