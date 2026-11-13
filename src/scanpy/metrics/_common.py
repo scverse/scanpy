@@ -7,20 +7,28 @@ from typing import TYPE_CHECKING, ClassVar, overload
 
 import numpy as np
 import pandas as pd
+from fast_array_utils.types import HasArrayNamespace
+from scverse_misc import Deprecation
 
 from .._compat import CSRBase, DaskArray, SpBase, fullname, warn
-from .._utils import NeighborsView
+from ..get._types import AdRef, GraphAcc, LayerAcc, MultiAcc
+from ..get._use import _get_arr, _get_vec, _resolve_obs
+from ..neighbors._common import _use_graph
 
 if TYPE_CHECKING:
-    from typing import NoReturn
-
     from anndata import AnnData
     from numpy.typing import NDArray
+
+    from ..get._types import ArrAcc, VecRef
 
     type _Vals = NDArray | SpBase | DaskArray | pd.DataFrame | pd.Series
 
 
-__all__ = ["_SparseMetric", "_get_graph"]
+__all__ = ["DEPR_GRAPH", "DEPR_VALS", "_SparseMetric", "_graph_and_vals"]
+
+
+DEPR_GRAPH = Deprecation("1.13.0", "Use `use=A.obsp[...]` instead.")
+DEPR_VALS = Deprecation("1.13.0", "Use `vals=A....` instead.")
 
 
 @dataclass
@@ -66,22 +74,41 @@ class _SparseMetric(ABC):
                 raise NotImplementedError(msg)
 
 
-def _get_graph(
+def _graph_and_vals(
     adata: AnnData,
+    use: GraphAcc | str | None,
     *,
-    use_graph: str | None = None,
-    neighbors_key: str | None = None,
-) -> CSRBase:
-    if use_graph is not None:
-        if neighbors_key is not None:
-            msg = "Cannot specify both `use_graph` and `neighbors_key`."
+    vals: _Vals | ArrAcc | VecRef | None,
+    use_graph: str | None,
+    neighbors_key: str | None,
+    use_raw: bool,
+    layer: str | None,
+    obsm: str | None,
+    obsp: str | None,
+) -> tuple[CSRBase, _Vals]:
+    """Resolve the graph and values of `gearys_c`/`morans_i` called on an `AnnData`."""
+    from anndata.acc import A
+
+    g = _use_graph(adata, use, obsp=use_graph, neighbors_key=neighbors_key)
+
+    if isinstance(vals, str):
+        vals = A.resolve(vals)
+    if isinstance(vals, AdRef):
+        if use_raw or layer is not None or obsm is not None or obsp is not None:
+            msg = "`vals` cannot be combined with `layer`/`use_raw`/`obsm`/`obsp`"
             raise TypeError(msg)
-        return adata.obsp[use_graph]
-    nv = NeighborsView(adata, neighbors_key)
-    if "connectivities" not in nv:
-        msg = "Must run neighbors first."
-        raise ValueError(msg)
-    return nv["connectivities"]
+        # e.g. `.obs` columns are pandas arrays
+        return g, np.asarray(_get_vec(adata, vals, dim="obs"))
+    if vals is None or isinstance(vals, GraphAcc | LayerAcc | MultiAcc):
+        return g, _get_arr(
+            adata,
+            _resolve_obs(vals),
+            use_raw=use_raw,
+            layer=layer,
+            obsm=obsm,
+            obsp=obsp,
+        ).T
+    return g, vals
 
 
 @overload
@@ -90,10 +117,12 @@ def _resolve_vals[T: NDArray | DaskArray](val: T) -> T: ...
 def _resolve_vals(val: SpBase) -> CSRBase: ...
 @overload
 def _resolve_vals(val: pd.DataFrame | pd.Series) -> NDArray: ...
+@overload
+def _resolve_vals(val: HasArrayNamespace) -> NDArray: ...
 
 
 @singledispatch
-def _resolve_vals(val: object) -> NoReturn:
+def _resolve_vals(val: object):
     msg = f"Unsupported type {type(val)}"
     raise TypeError(msg)
 
@@ -120,6 +149,12 @@ def _(val: SpBase) -> CSRBase:
 @_resolve_vals.register(pd.Series)
 def _(val: pd.DataFrame | pd.Series) -> NDArray:
     return val.to_numpy()
+
+
+@_resolve_vals.register(HasArrayNamespace)
+def _resolve_vals_array_api(val: HasArrayNamespace) -> NDArray:
+    # Moran's I / Geary's C use numba kernels, so convert at the boundary
+    return np.asarray(val)
 
 
 def _vals_heterogeneous[V: NDArray | CSRBase](

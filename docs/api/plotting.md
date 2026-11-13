@@ -9,7 +9,7 @@
 ```
 
 The plotting module {mod}`scanpy.pl` largely parallels the `tl.*` and a few of the `pp.*` functions.
-For most tools and for some preprocessing functions, you'll find a plotting function with the same name.
+For most tools and for some preprocessing functions, you’ll find a plotting function with the same name.
 
 See {doc}`/tutorials/plotting/core` for an overview of how to use these functions.
 
@@ -37,7 +37,6 @@ Functions with both backends:
    pl.stacked_violin
    pl.matrixplot
    pl.ranking
-
 ```
 
 Helper for computing dot areas, e.g. for {func}`~scanpy.pl.dotplot`:
@@ -48,7 +47,6 @@ Helper for computing dot areas, e.g. for {func}`~scanpy.pl.dotplot`:
    :toctree: generated/
 
    pl.dot_area
-
 ```
 
 Legacy (matplotlib) only:
@@ -60,7 +58,6 @@ Legacy (matplotlib) only:
 
    pl.clustermap
    pl.dendrogram
-
 ```
 
 ## Classes
@@ -75,7 +72,6 @@ These classes allow fine tuning of visual parameters.
    pl.DotPlot
    pl.MatrixPlot
    pl.StackedViolin
-
 ```
 
 ## Preprocessing
@@ -91,13 +87,12 @@ Methods for visualizing quality control and results of preprocessing functions.
    pl.highest_expr_genes
    pl.highly_variable_genes
    pl.scrublet_score_distribution
-
 ```
 
 ## Tools
 
 Methods that extract and visualize tool-specific annotation in an
-{class}`~anndata.AnnData` object.  For any method in module `tl`, there is
+{class}`~anndata.AnnData` object. For any method in module `tl`, there is
 a method with the same name in `pl`.
 
 ### PCA

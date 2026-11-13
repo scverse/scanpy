@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from typing import Literal
 
 
-__all__ = ["ArrayType", "DaskArray", "Numpy", "ScipySparse", "parse"]
+__all__ = ["ArrayApi", "ArrayType", "DaskArray", "Numpy", "ScipySparse", "parse"]
 
 
 class ArrayType(ABC):
@@ -33,6 +33,16 @@ class Numpy(ArrayType):
 
 
 @dataclass(unsafe_hash=True, frozen=True)
+class ArrayApi(ArrayType):
+    def __str__(self) -> str:  # pragma: no cover
+        return "array-api"
+
+    def rst(self, *, short: bool = False) -> str:  # pragma: no cover
+        # No single class to link to, so link to the standard itself
+        return "`Array API <https://data-apis.org/array-api/latest/>`__"
+
+
+@dataclass(unsafe_hash=True, frozen=True)
 class ScipySparse(ArrayType):
     format: Literal["csr", "csc"]
 
@@ -46,7 +56,7 @@ class ScipySparse(ArrayType):
         )
 
 
-type Inner = Numpy | ScipySparse
+type Inner = Numpy | ScipySparse | ArrayApi
 
 
 @dataclass(unsafe_hash=True, frozen=True)
@@ -79,7 +89,8 @@ def parse(
         yield from (t for t in parse(include) if t not in excluded)
         return
 
-    inner_includes = [i for i in include if not i.startswith("da")]
+    # bare `da` doesn’t imply `da[xp]`, as dask doesn’t support array API chunks yet
+    inner_includes = [i for i in include if not i.startswith(("da", "xp"))]
     for t in include:
         if (
             match := re.fullmatch(r"([^\[]+)(?:\[(.+)\])?", t)
@@ -114,6 +125,11 @@ def _parse_mod(
         case "da":
             for chunk in parse(tags if tags else inner_includes, inner=True):
                 yield DaskArray(chunk=chunk)
+        case "xp":
+            if tags:  # pragma: no cover
+                msg = f"`xp` takes no tags {tags!r}"
+                raise ValueError(msg)
+            yield ArrayApi()
         case _:  # pragma: no cover
             msg = f"invalid module {mod!r}"
             raise ValueError(msg)

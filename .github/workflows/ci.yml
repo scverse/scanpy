@@ -11,6 +11,8 @@ env:
   PYTEST_ADDOPTS: "-v --color=yes -n auto --internet-tests --junitxml=test-data/test-results.xml"
   FORCE_COLOR: "1"
   MPLBACKEND: agg
+  # ubuntu-26.04’s system Python is 3.14.4, whose incremental GC (reverted in 3.14.5) lets garbage pile up until the runner OOMs
+  UV_PYTHON_PREFERENCE: only-managed
   # It’s impossible to ignore SyntaxWarnings for a single module,
   # so because leidenalg 0.10.0 has them, we pre-compile things: https://github.com/vtraag/leidenalg/issues/173
   UV_COMPILE_BYTECODE: "1"
@@ -31,7 +33,7 @@ jobs:
           filter: blob:none
           persist-credentials: false
       - &setup-uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
       - id: get-envs
@@ -54,7 +56,7 @@ jobs:
       matrix:
         env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
     permissions:
-      id-token: write  # for codecov OIDC
+      id-token: write # for codecov OIDC
     env:
       UV_PYTHON: ${{ matrix.env.python }}
     steps:

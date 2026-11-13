@@ -4,8 +4,10 @@ from contextlib import nullcontext
 from functools import partial
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 import pytest
+from anndata import AnnData
 from sklearn.metrics.cluster import normalized_mutual_info_score
 
 import scanpy as sc
@@ -15,7 +17,7 @@ from testing.scanpy._pytest.marks import needs
 if TYPE_CHECKING:
     from typing import Literal
 
-    from anndata import AnnData
+    from pytest_mock import MockerFixture
 
 
 @pytest.fixture
@@ -23,13 +25,22 @@ def adata_neighbors() -> AnnData:
     return pbmc68k_reduced()
 
 
+def _leiden_copy(adata: AnnData, **kwargs) -> AnnData:
+    adata = adata.copy()
+    sc.tl.leiden(adata, **kwargs)
+    return adata
+
+
 @pytest.fixture(
     params=[
         pytest.param("igraph", marks=needs.igraph),
         pytest.param("leidenalg", marks=needs.leidenalg),
+        pytest.param("networkit", marks=needs.networkit),
     ]
 )
-def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
+def flavor(
+    request: pytest.FixtureRequest,
+) -> Literal["igraph", "leidenalg", "networkit"]:
     return request.param
 
 
@@ -39,15 +50,16 @@ def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
 @pytest.mark.parametrize("n_iterations", [-1, 3])
 def test_leiden_basic(
     adata_neighbors: AnnData,
-    flavor: Literal["igraph", "leidenalg"],
+    flavor: Literal["igraph", "leidenalg", "networkit"],
     resolution: float,
     n_iterations: int,
 ) -> None:
     with (
         nullcontext()
-        if flavor == "igraph"
+        if flavor in {"igraph", "networkit"}
         else pytest.warns(
-            UserWarning, match=r"The `igraph` implementation of leiden clustering"
+            UserWarning,
+            match=r"The `igraph` and `networkit` implementations of leiden clustering",
         )
     ):
         sc.tl.leiden(
@@ -56,12 +68,10 @@ def test_leiden_basic(
             resolution=resolution,
             n_iterations=n_iterations,
             directed=(flavor == "leidenalg"),
-            key_added="leiden_custom",
         )
-    assert adata_neighbors.uns["leiden_custom"]["params"]["resolution"] == resolution
-    assert (
-        adata_neighbors.uns["leiden_custom"]["params"]["n_iterations"] == n_iterations
-    )
+    assert "leiden" in adata_neighbors.obs
+    assert adata_neighbors.uns["leiden"]["params"]["resolution"] == resolution
+    assert adata_neighbors.uns["leiden"]["params"]["n_iterations"] == n_iterations
 
 
 @needs.leidenalg
@@ -70,21 +80,21 @@ def test_leiden_basic(
 def test_leiden_random_state(
     subtests: pytest.Subtests,
     adata_neighbors: AnnData,
-    flavor: Literal["igraph", "leidenalg"],
+    flavor: Literal["igraph", "leidenalg", "networkit"],
     rng_arg: Literal["rng", "random_state"],
 ) -> None:
     is_leiden_alg = flavor == "leidenalg"
     n_iterations = 2 if is_leiden_alg else -1
     adata_1, adata_1_again, adata_2 = (
-        sc.tl.leiden(
+        _leiden_copy(
             adata_neighbors,
             flavor=flavor,
-            copy=True,
             directed=is_leiden_alg,
             n_iterations=n_iterations,
             **{rng_arg: seed},
         )
-        for seed in (1, 1, 42)
+        # some seeds give the same partition as 1 for some flavor, 8 differs for all
+        for seed in (1, 1, 8)
     )
     with subtests.test("reproducible"):
         pd.testing.assert_series_equal(
@@ -102,10 +112,80 @@ def test_leiden_random_state(
         )
 
 
+@needs.anndata_acc
 @needs.igraph
-def test_leiden_igraph_directed(adata_neighbors):
-    with pytest.raises(ValueError, match=r"Cannot use igraph’s leiden.*directed"):
-        sc.tl.leiden(adata_neighbors, flavor="igraph", directed=True)
+@needs.leidenalg
+def test_leiden_igraph_directed():
+    from anndata.acc import A
+
+    graph = np.array([
+        [0, 0, 0, 3, 0, 0, 0, 2],
+        [0, 0, 1, 0, 0, 0, 3, 0],
+        [2, 0, 0, 1, 2, 0, 1, 2],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 1, 1, 0, 1, 0, 0],
+        [1, 0, 0, 0, 0, 0, 1, 0],
+    ])
+    adata = AnnData(np.zeros((8, 1)), obsp=dict(graph=graph))
+    kw = dict(use=A.obsp["graph"], directed=True, out=True)
+    igraph = sc.tl.leiden(adata, flavor="igraph", **kw)
+    leidenalg = sc.tl.leiden(adata, flavor="leidenalg", **kw)
+    assert normalized_mutual_info_score(igraph, leidenalg) == 1
+
+
+@needs.networkit
+@pytest.mark.parametrize(
+    ("kwargs", "expected"),
+    [
+        pytest.param({}, 1, id="default"),
+        pytest.param({"rng": 0}, 1, id="seeded"),
+        pytest.param({"rng": None}, 3, id="unseeded"),
+        pytest.param({"rng": 0, "n_jobs": 2}, 2, id="explicit"),
+    ],
+)
+def test_leiden_networkit_n_jobs(
+    mocker: MockerFixture,
+    adata_neighbors: AnnData,
+    kwargs: dict[str, int | None],
+    expected: int,
+) -> None:
+    import networkit
+
+    sc.settings.n_jobs = 3
+    spy = mocker.spy(networkit, "setNumberOfThreads")
+    sc.tl.leiden(adata_neighbors, flavor="networkit", **kwargs)
+    assert spy.call_args_list[0].args == (expected,)
+
+
+@needs.networkit
+def test_leiden_networkit_directed(adata_neighbors):
+    with pytest.raises(ValueError, match=r"Cannot use NetworKit's leiden.*directed"):
+        sc.tl.leiden(adata_neighbors, flavor="networkit", directed=True)
+
+
+@pytest.mark.parametrize("flavor", ["igraph", "leidenalg", "networkit"])
+@pytest.mark.parametrize(
+    ("preset", "directed_flavors"),
+    [
+        pytest.param(sc.Preset.ScanpyV1, {"leidenalg"}, id="v1"),
+        pytest.param(
+            sc.Preset.ScanpyV2Preview,
+            {"igraph", "leidenalg"},
+            marks=needs.scanpy2,
+            id="v2",
+        ),
+    ],
+)
+def test_leiden_directed_default(
+    preset: sc.Preset, directed_flavors: set[str], flavor: str
+) -> None:
+    from scanpy._settings import Default
+    from scanpy.tools._leiden import _resolve_directed
+
+    sc.settings.preset = preset
+    assert _resolve_directed(Default(), flavor=flavor) is (flavor in directed_flavors)
 
 
 @needs.igraph
@@ -127,37 +207,49 @@ def test_leiden_igraph_partition_type(adata_neighbors):
         )
 
 
+@pytest.fixture(
+    params=[
+        pytest.param("igraph", marks=needs.igraph),
+        pytest.param("networkit", marks=needs.networkit),
+    ]
+)
+def fast_flavor(request: pytest.FixtureRequest) -> Literal["igraph", "networkit"]:
+    return request.param
+
+
 @needs.leidenalg
-@needs.igraph
-def test_leiden_equal_defaults_same_args(adata_neighbors):
-    """Ensure the two implementations are the same for the same args."""
-    leiden_alg_clustered = sc.tl.leiden(
-        adata_neighbors, flavor="leidenalg", copy=True, n_iterations=2
+def test_leiden_equal_defaults_same_args(
+    adata_neighbors: AnnData, fast_flavor: Literal["igraph", "networkit"]
+) -> None:
+    """Ensure the implementations are the same for the same args."""
+    leiden_alg_clustered = _leiden_copy(
+        adata_neighbors, flavor="leidenalg", n_iterations=2
     )
-    igraph_clustered = sc.tl.leiden(
-        adata_neighbors, flavor="igraph", copy=True, directed=False, n_iterations=2
+    fast_clustered = _leiden_copy(
+        adata_neighbors, flavor=fast_flavor, directed=False, n_iterations=2
     )
     assert (
         normalized_mutual_info_score(
-            leiden_alg_clustered.obs["leiden"], igraph_clustered.obs["leiden"]
+            leiden_alg_clustered.obs["leiden"], fast_clustered.obs["leiden"]
         )
         > 0.9
     )
 
 
 @needs.leidenalg
-@needs.igraph
-def test_leiden_equal_defaults(adata_neighbors):
+def test_leiden_equal_defaults(
+    adata_neighbors: AnnData, fast_flavor: Literal["igraph", "networkit"]
+) -> None:
     """Ensure that the old leidenalg defaults are close enough to the current default outputs."""
-    leiden_alg_clustered = sc.tl.leiden(
-        adata_neighbors, flavor="leidenalg", directed=True, copy=True
+    leiden_alg_clustered = _leiden_copy(
+        adata_neighbors, flavor="leidenalg", directed=True
     )
-    igraph_clustered = sc.tl.leiden(
-        adata_neighbors, flavor="igraph", copy=True, n_iterations=2, directed=False
+    fast_clustered = _leiden_copy(
+        adata_neighbors, flavor=fast_flavor, n_iterations=2, directed=False
     )
     assert (
         normalized_mutual_info_score(
-            leiden_alg_clustered.obs["leiden"], igraph_clustered.obs["leiden"]
+            leiden_alg_clustered.obs["leiden"], fast_clustered.obs["leiden"]
         )
         > 0.9
     )
@@ -174,6 +266,7 @@ def test_leiden_objective_function(adata_neighbors):
     )
 
 
+@needs.anndata_acc
 @needs.igraph
 @pytest.mark.parametrize(
     ("clustering", "key"),
@@ -187,7 +280,9 @@ def test_leiden_objective_function(adata_neighbors):
     ],
 )
 def test_clustering_subset(adata_neighbors, clustering, key):
-    clustering(adata_neighbors, key_added=key)
+    from anndata.acc import A
+
+    clustering(adata_neighbors, out=A.obs[key])
 
     for c in adata_neighbors.obs[key].unique():
         print("Analyzing cluster ", c)
@@ -197,7 +292,7 @@ def test_clustering_subset(adata_neighbors, clustering, key):
         clustering(
             adata_neighbors,
             restrict_to=(key, [c]),
-            key_added=key_sub,
+            out=A.obs[key_sub],
         )
         # Get new clustering labels
         new_partition = adata_neighbors.obs[key_sub]
@@ -213,6 +308,7 @@ def test_clustering_subset(adata_neighbors, clustering, key):
         assert len(common_cat) == 0
 
 
+@needs.anndata_acc
 @pytest.mark.parametrize(
     ("clustering", "default_key", "default_res", "custom_resolutions"),
     [
@@ -229,14 +325,65 @@ def test_clustering_subset(adata_neighbors, clustering, key):
 def test_clustering_custom_key(
     adata_neighbors, clustering, default_key, default_res, custom_resolutions
 ):
+    from anndata.acc import A
+
     custom_keys = [f"{default_key}_{res}" for res in custom_resolutions]
 
     # Run clustering with default key, then custom keys
     clustering(adata_neighbors, resolution=default_res)
     for key, res in zip(custom_keys, custom_resolutions, strict=True):
-        clustering(adata_neighbors, resolution=res, key_added=key)
+        clustering(adata_neighbors, resolution=res, out=A.obs[key])
 
     # ensure that all clustering parameters are added to user provided keys and not overwritten
     assert adata_neighbors.uns[default_key]["params"]["resolution"] == default_res
     for key, res in zip(custom_keys, custom_resolutions, strict=True):
         assert adata_neighbors.uns[key]["params"]["resolution"] == res
+
+
+@needs.anndata_acc
+@needs.igraph
+def test_leiden_out_acc(adata_neighbors: AnnData) -> None:
+    """An accessor `out` names the column, and `.uns` follows it."""
+    from anndata.acc import A
+
+    sc.tl.leiden(adata_neighbors, flavor="igraph", out=A.obs["mine"])
+    assert "mine" in adata_neighbors.obs
+    assert "modularity" in adata_neighbors.uns["mine"]
+    assert "leiden" not in adata_neighbors.uns
+    # an explicit accessor isn’t renamed when restricting
+    sc.tl.leiden(
+        adata_neighbors, flavor="igraph", restrict_to=("mine", ["0"]), out="obs.leiden"
+    )
+    assert "leiden" in adata_neighbors.obs
+    assert "leiden_R" not in adata_neighbors.obs
+
+
+@needs.igraph
+def test_leiden_out_true(adata_neighbors: AnnData) -> None:
+    """`out=True` returns the labels and writes nothing."""
+    obs_before, uns_before = adata_neighbors.obs.copy(), set(adata_neighbors.uns)
+    labels = sc.tl.leiden(adata_neighbors, flavor="igraph", out=True)
+    assert isinstance(labels, pd.Categorical)
+    assert len(labels) == adata_neighbors.n_obs
+    pd.testing.assert_frame_equal(adata_neighbors.obs, obs_before)
+    assert set(adata_neighbors.uns) == uns_before
+
+
+@needs.anndata_acc
+@needs.igraph
+@pytest.mark.parametrize("restrict", [False, True], ids=["plain", "restrict"])
+def test_leiden_key_added_deprecated(
+    adata_neighbors: AnnData, *, restrict: bool
+) -> None:
+    """`key_added='k'` is `out=A.obs['k']`, except for the `_R` suffix for the default."""
+    from anndata.acc import A
+
+    kw = dict(flavor="igraph", restrict_to=("louvain", ["0"]) if restrict else None)
+    key = "leiden_R" if restrict else "leiden"
+    expected = adata_neighbors.copy()
+    sc.tl.leiden(expected, out=A.obs[key], **kw)
+    with pytest.warns(FutureWarning, match=r"argument key_added is deprecated"):
+        sc.tl.leiden(adata_neighbors, key_added="leiden", **kw)
+    assert key in adata_neighbors.obs
+    assert adata_neighbors.obs.keys().equals(expected.obs.keys())
+    assert adata_neighbors.uns.keys() == expected.uns.keys()

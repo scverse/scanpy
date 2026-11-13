@@ -123,3 +123,13 @@ def test_moved_to_io(name: str) -> None:
 def test_read_loom_deprecated() -> None:
     with pytest.warns(FutureWarning, match=r"`read_loom` is deprecated"):
         assert sc.read_loom is anndata.io.read_loom
+
+
+@pytest.mark.parametrize(
+    "name", ["read", "write", "_check_datafile_present_and_download"]
+)
+def test_readwrite_deprecated(name: str) -> None:
+    import scanpy.readwrite
+
+    with pytest.warns(FutureWarning, match=r"`scanpy\.readwrite` is private"):
+        getattr(scanpy.readwrite, name)

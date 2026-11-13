@@ -19,7 +19,7 @@ from scanpy._compat import CSRBase
 from testing.scanpy._helpers import _check_check_values_warnings
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import ARRAY_TYPES
+from testing.scanpy._pytest.params import ARRAY_TYPES, as_dense_jax_array
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -29,6 +29,13 @@ FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
 FILE_V3_BATCH = Path(__file__).parent / Path("_scripts/seurat_hvg_v3_batch.csv")
 FILE_CELL_RANGER = Path(__file__).parent / "_scripts/cell_ranger_hvg.csv"
+
+# most tests use the deprecated `batch_key`, so they also run without `anndata.acc`
+pytestmark = [
+    pytest.mark.filterwarnings(
+        "ignore:.*argument batch_key is deprecated:FutureWarning"
+    )
+]
 
 
 @pytest.fixture(scope="session")
@@ -58,6 +65,7 @@ def test_supports_batch(adata):
     assert "highly_variable_intersection" in adata.var.columns
 
 
+@needs.anndata_acc
 def test_supports_layers(adata_sess):
     def execute(layer: str | None) -> AnnData:
         gen = np.random.default_rng(0)
@@ -70,7 +78,10 @@ def test_supports_layers(adata_sess):
             gen.binomial(4, 0.5, size=adata.n_obs), dtype="category"
         )
         sc.pp.highly_variable_genes(
-            adata, batch_key="batch", n_top_genes=3, layer=layer
+            adata,
+            batch_key="batch",
+            n_top_genes=3,
+            **({} if layer is None else dict(use=f"layers.{layer}")),
         )
         assert "highly_variable_nbatches" in adata.var.columns
         assert adata.var["highly_variable"].sum() == 3
@@ -107,9 +118,7 @@ def test_no_inplace(adata, array_type, batch_key):
         if batch_key is None
         else {"highly_variable_nbatches", "highly_variable_intersection"}
     )
-    hvg_df = sc.pp.highly_variable_genes(
-        adata, batch_key=batch_key, n_bins=3, inplace=False
-    )
+    hvg_df = sc.pp.highly_variable_genes(adata, batch_key=batch_key, n_bins=3, out=True)
     assert isinstance(hvg_df, pd.DataFrame)
     assert colnames == set(hvg_df.columns)
 
@@ -220,11 +229,10 @@ def test_pearson_residuals_general(
     del adata.var
 
     # compute reference output
-    residuals_res = sc.experimental.pp.normalize_pearson_residuals(
-        adata, clip=clip, theta=theta, inplace=False
+    residuals = sc.experimental.pp.normalize_pearson_residuals(
+        adata, clip=clip, theta=theta, out=True
     )
-    assert isinstance(residuals_res, dict)
-    residual_variances_reference = np.var(residuals_res["X"], axis=0)
+    residual_variances_reference = np.var(residuals, axis=0)
 
     if subset:
         # lazyly sort by residual variance and take top N
@@ -238,7 +246,7 @@ def test_pearson_residuals_general(
         flavor="pearson_residuals",
         n_top_genes=n_top_genes,
         subset=subset,
-        inplace=False,
+        out=True,
         clip=clip,
         theta=theta,
     )
@@ -249,7 +257,7 @@ def test_pearson_residuals_general(
         flavor="pearson_residuals",
         n_top_genes=n_top_genes,
         subset=subset,
-        inplace=True,
+        out=False,
         clip=clip,
         theta=theta,
     )
@@ -310,7 +318,7 @@ def test_pearson_residuals_batch(
         n_top_genes=n_top_genes,
         batch_key="batch",
         subset=subset,
-        inplace=False,
+        out=True,
     )
     assert output_df is not None
 
@@ -320,7 +328,7 @@ def test_pearson_residuals_batch(
         n_top_genes=n_top_genes,
         batch_key="batch",
         subset=subset,
-        inplace=True,
+        out=False,
     )
 
     # compare inplace=True and inplace=False output
@@ -378,7 +386,6 @@ def test_pearson_residuals_batch(
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_compare_to_upstream(
     *,
-    request: pytest.FixtureRequest,
     flavor: Literal["seurat", "cell_ranger"],
     params: Any,
     ref_path: Path,
@@ -393,7 +400,7 @@ def test_compare_to_upstream(
     sc.pp.filter_cells(pbmc, min_counts=1)
     sc.pp.normalize_total(pbmc, target_sum=1e4)
     sc.pp.log1p(pbmc)
-    sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
+    sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, out=False)
 
     np.testing.assert_array_equal(
         hvg_info["highly_variable"], pbmc.var["highly_variable"]
@@ -466,7 +473,7 @@ def test_compare_to_seurat_v3():
         n_top_genes=2000,
         flavor="seurat_v3_paper",
         batch_key="dummy_tech",
-        inplace=False,
+        out=True,
     )
 
     seurat_v3 = sc.pp.highly_variable_genes(
@@ -474,7 +481,7 @@ def test_compare_to_seurat_v3():
         n_top_genes=2000,
         flavor="seurat_v3",
         batch_key="dummy_tech",
-        inplace=False,
+        out=True,
     )
 
     seurat_hvg_info_batch = pd.read_csv(FILE_V3_BATCH)
@@ -488,6 +495,60 @@ def test_compare_to_seurat_v3():
     )
     assert len(gene_intersection_paper) / 2000 > 0.95
     assert len(gene_intersection_impl) / 2000 < 0.95
+
+
+@pytest.mark.filterwarnings("ignore:Variable names are not unique:UserWarning")
+@pytest.mark.parametrize(
+    "flavor",
+    [
+        "seurat",
+        "cell_ranger",
+        pytest.param("seurat_v3", marks=needs.skmisc),
+        pytest.param("seurat_v3_paper", marks=needs.skmisc),
+    ],
+)
+@pytest.mark.parametrize("batch_key", [None, "batch"])
+@pytest.mark.parametrize("inplace", [False, True], ids=["copy", "inplace"])
+@pytest.mark.parametrize("subset", [False, True], ids=["all", "subset"])
+def test_duplicate_var_names(
+    flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"],
+    batch_key: Literal["batch"] | None,
+    *,
+    inplace: bool,
+    subset: bool,
+) -> None:
+    """Genes sharing a name are still separate genes (#4432)."""
+    rng = np.random.default_rng(0)
+    x = rng.negative_binomial(3, 0.3, (300, 120)).astype(np.float32)
+    x[:150, 0] = 0  # unexpressed in batch "a", so filtered out there
+    adata = AnnData(x)
+    adata.obs["batch"] = pd.Categorical(np.repeat(["a", "b"], 150))
+    if flavor == "seurat":
+        sc.pp.log1p(adata)
+    adata_dup = adata.copy()
+    duplicate_names = pd.Index([f"g{i % 100}" for i in range(adata.n_vars)])
+    adata_dup.var_names = duplicate_names
+
+    results = [
+        sc.pp.highly_variable_genes(
+            a,
+            flavor=flavor,
+            n_top_genes=30,
+            batch_key=batch_key,
+            out=not inplace,
+            subset=subset,
+        )
+        for a in [adata, adata_dup]
+    ]
+    expected, result = (adata.var, adata_dup.var) if inplace else results
+    assert isinstance(expected, pd.DataFrame)
+    assert isinstance(result, pd.DataFrame)
+    assert result["highly_variable"].sum() == 30
+
+    expected.index = duplicate_names[expected.index.astype(int)]
+    if "gene_name" in expected.columns:
+        expected["gene_name"] = expected.index
+    assert_frame_equal(result, expected)
 
 
 @needs.skmisc
@@ -528,11 +589,11 @@ def test_batches() -> None:
     sc.pp.filter_genes(adata_1, min_cells=1)
     sc.pp.filter_genes(adata_2, min_cells=1)
     hvg1 = sc.pp.highly_variable_genes(
-        adata_1, flavor="cell_ranger", n_top_genes=200, inplace=False
+        adata_1, flavor="cell_ranger", n_top_genes=200, out=True
     )
     assert hvg1 is not None
     hvg2 = sc.pp.highly_variable_genes(
-        adata_2, flavor="cell_ranger", n_top_genes=200, inplace=False
+        adata_2, flavor="cell_ranger", n_top_genes=200, out=True
     )
     assert hvg2 is not None
 
@@ -589,7 +650,7 @@ def test_seurat_v3_mean_var_output_with_batchkey():
     true_mean, true_var = stats.mean_var(pbmc.X, axis=0, correction=1)
 
     result_df = sc.pp.highly_variable_genes(
-        pbmc, batch_key="batch", flavor="seurat_v3", n_top_genes=4000, inplace=False
+        pbmc, batch_key="batch", flavor="seurat_v3", n_top_genes=4000, out=True
     )
     np.testing.assert_allclose(true_mean, result_df["means"], rtol=2e-05, atol=2e-05)
     np.testing.assert_allclose(true_var, result_df["variances"], rtol=2e-05, atol=2e-05)
@@ -607,6 +668,21 @@ def test_cellranger_n_top_genes_warning():
         match="`n_top_genes`.*> number of normalized dispersions.*returning all genes with normalized dispersions.",
     ):
         sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
+
+
+def test_cellranger_n_top_genes_inf_dispersion():
+    """Genes with infinite normalized dispersion rank highest (#4415)."""
+    rng = np.random.default_rng(0)
+    x = rng.poisson(rng.lognormal(-1, 1.2, 2000), (300, 2000)).astype(np.float32)
+    x[:, rng.random(2000) < 0.09] = 0
+    adata = AnnData(x)
+    sc.pp.normalize_total(adata, target_sum=1e4)
+
+    sc.pp.highly_variable_genes(adata, flavor="cell_ranger", n_top_genes=5)
+
+    is_inf = np.isposinf(adata.var["dispersions_norm"])
+    assert is_inf.sum() > 5
+    assert (adata.var["highly_variable"] == is_inf).all()
 
 
 def test_cutoff_info():
@@ -650,6 +726,7 @@ def test_seurat_v3_bad_chunking(adata, array_type, flavor):
 )
 @pytest.mark.parametrize("batch_key", [None, "batch"])
 def test_subset_inplace_consistency(
+    request: pytest.FixtureRequest,
     subtests: pytest.Subtests,
     flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"],
     array_type,
@@ -662,6 +739,16 @@ def test_subset_inplace_consistency(
     - for dask arrays and non-dask arrays
     - for both with and without batch_key
     """
+    if (
+        array_type is as_dense_jax_array
+        and flavor in {"seurat_v3", "seurat_v3_paper"}
+        and batch_key is not None
+    ):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="batched seurat_v3 not jax compatible (sc.get.aggregate)"
+            )
+        )
     rng = np.random.default_rng(0)
     adata = (
         sc.datasets.blobs(n_observations=20, n_variables=80, rng=rng)
@@ -689,7 +776,7 @@ def test_subset_inplace_consistency(
             n_top_genes=15,
             batch_key=batch_key,
             subset=subset,
-            inplace=inplace,
+            out=not inplace,
         )
 
         with subtests.test(subset=subset, inplace=inplace):
@@ -711,11 +798,11 @@ def test_subset_inplace_consistency(
                 assert subset not in dfs
                 dfs[subset] = output_df
 
-    with subtests.test("consistency", inplace=True):
+    with subtests.test("consistency", out=False):
         adata_subset = adatas[False][:, adatas[False].var["highly_variable"]]
         assert adata_subset.var_names.equals(adatas[True].var_names)
 
-    with subtests.test("consistency", inplace=False):
+    with subtests.test("consistency", out=True):
         df_subset = dfs[False][dfs[False]["highly_variable"]]
         assert df_subset.index.equals(dfs[True].index)
 
@@ -756,9 +843,7 @@ def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
         else nullcontext()
     ):
         output_mem, output_dask = (
-            sc.pp.highly_variable_genes(
-                ad, flavor=flavor, n_top_genes=15, inplace=False
-            )
+            sc.pp.highly_variable_genes(ad, flavor=flavor, n_top_genes=15, out=True)
             for ad in [adata, adata_dask]
         )
 
@@ -769,3 +854,42 @@ def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     assert_index_equal(adata.var_names, output_dask.index, check_names=False)
 
     assert_frame_equal(output_mem, output_dask, atol=1e-4)
+
+
+@pytest.mark.parametrize(
+    "flavor", ["seurat", pytest.param("seurat_v3", marks=needs.skmisc)]
+)
+def test_hvg_out(flavor: str) -> None:
+    """`out=True` returns the table, `out=False` writes the `.var` columns."""
+    adata = pbmc3k()
+    sc.pp.filter_genes(adata, min_cells=3)
+    if flavor == "seurat":
+        sc.pp.log1p(adata)
+    var_before = set(adata.var)
+    df = sc.pp.highly_variable_genes(adata, flavor=flavor, n_top_genes=100, out=True)
+    assert set(adata.var) == var_before
+    assert "hvg" not in adata.uns
+
+    sc.pp.highly_variable_genes(adata, flavor=flavor, n_top_genes=100)
+    np.testing.assert_array_equal(adata.var["highly_variable"], df["highly_variable"])
+    assert adata.uns["hvg"]["flavor"] == flavor
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize(
+    "flavor", ["seurat", pytest.param("seurat_v3", marks=needs.skmisc)]
+)
+def test_hvg_batch(flavor: str) -> None:
+    """`batch` takes references (or resolvable strings) instead of `batch_key`’s column names."""
+    from anndata.acc import A
+
+    adata = pbmc3k()
+    sc.pp.filter_genes(adata, min_cells=3)
+    adata.obs["batch"] = np.tile(["a", "b"], adata.n_obs // 2 + 1)[: adata.n_obs]
+    if flavor == "seurat":
+        sc.pp.log1p(adata)
+    kw = dict(flavor=flavor, n_top_genes=100, out=True)
+    expected = sc.pp.highly_variable_genes(adata, batch_key="batch", **kw)
+    for batch in [A.obs["batch"], "obs.batch"]:
+        res = sc.pp.highly_variable_genes(adata, batch=batch, **kw)
+        pd.testing.assert_frame_equal(res, expected)

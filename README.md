@@ -17,15 +17,14 @@ The Python-based implementation efficiently deals with datasets of more than one
 For datasets too large to fit into memory, [many scanpy functions][] are now compatible with [dask][] (**warning: experimental**).
 
 Discuss usage on the scverse [Discourse][]. Read the [documentation][].
-If you'd like to contribute by opening an issue or creating a pull request, please take a look at our [contribution guide][].
+If you’d like to contribute by opening an issue or creating a pull request, please take a look at our [contribution guide][].
 
 [anndata]: https://anndata.scverse.org/
 [dask]: https://docs.dask.org/
 [discourse]: https://discourse.scverse.org/
 [documentation]: https://scanpy.scverse.org/
 [many scanpy functions]: https://github.com/scverse/scanpy/issues/2578
-
-[//]: # (numfocus-fiscal-sponsor-attribution)
+[//]: # "numfocus-fiscal-sponsor-attribution"
 
 scanpy is part of the scverse® project ([website](https://scverse.org), [governance](https://scverse.org/about/roles)) and is fiscally sponsored by [NumFOCUS](https://numfocus.org/).
 If you like scverse® and want to support our mission, please consider making a tax-deductible [donation](https://numfocus.org/donate-to-scverse) to help the project pay for developer time, professional services, travel, workshops, and a variety of other needs.
@@ -35,14 +34,14 @@ If you like scverse® and want to support our mission, please consider making a 
   <img
     src="https://raw.githubusercontent.com/numfocus/templates/master/images/numfocus-logo.png"
     width="200"
-  >
+>
 </a>
 </div>
 
 ## Public API
 
 Our public API is documented in the [API section][] of these docs.
-We cannot guarantee the stability of our internal APIs, whether it's the location of a function, its arguments, or something else.
+We cannot guarantee the stability of our internal APIs, whether it’s the location of a function, its arguments, or something else.
 In other words, we do not officially support (or encourage users to do) something like `from scanpy.logging import debug` as `logging` is not documented, even though it does not contain a [leading underscore][].
 However, we are aware that many users do use these internal APIs and thus encourage them to [open an issue][] or migrate to the public API.
 That is, if something is missing from our public API as documented, for example a feature you wish to be exported publicly, please open an issue.
@@ -50,8 +49,6 @@ That is, if something is missing from our public API as documented, for example 
 [api section]: https://scanpy.scverse.org/page/api/
 [leading underscore]: https://peps.python.org/pep-0008/#public-and-internal-interfaces
 [open an issue]: https://github.com/scverse/scanpy/issues/new/choose
-
-
 
 ## Citation
 
@@ -61,7 +58,7 @@ If you use `scanpy` in your work, please cite the `scanpy` publication as follow
 >
 > F. Alexander Wolf, Philipp Angerer, Fabian J. Theis
 >
-> _Genome Biology_ 2018 Feb 06. doi: [10.1186/s13059-017-1382-0](https://doi.org/10.1186/s13059-017-1382-0).
+> *Genome Biology* 2018 Feb 06. doi: [10.1186/s13059-017-1382-0](https://doi.org/10.1186/s13059-017-1382-0).
 
 You can cite the scverse publication as follows:
 
@@ -69,7 +66,6 @@ You can cite the scverse publication as follows:
 >
 > Isaac Virshup, Danila Bredikhin, Lukas Heumos, Giovanni Palla, Gregor Sturm, Adam Gayoso, Ilia Kats, Mikaela Koutrouli, Scverse Community, Bonnie Berger, Dana Pe’er, Aviv Regev, Sarah A. Teichmann, Francesca Finotello, F. Alexander Wolf, Nir Yosef, Oliver Stegle & Fabian J. Theis
 >
-> _Nat Biotechnol._ 2023 Apr 10. doi: [10.1038/s41587-023-01733-8](https://doi.org/10.1038/s41587-023-01733-8).
-
+> *Nat Biotechnol.* 2023 Apr 10. doi: [10.1038/s41587-023-01733-8](https://doi.org/10.1038/s41587-023-01733-8).
 
 [contribution guide]: CONTRIBUTING.md
