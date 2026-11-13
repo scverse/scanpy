@@ -33,9 +33,12 @@ def _leiden_copy(adata: AnnData, **kwargs) -> AnnData:
     params=[
         pytest.param("igraph", marks=needs.igraph),
         pytest.param("leidenalg", marks=needs.leidenalg),
+        pytest.param("graspologic", marks=needs.graspologic_native),
     ]
 )
-def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
+def flavor(
+    request: pytest.FixtureRequest,
+) -> Literal["igraph", "leidenalg", "graspologic"]:
     return request.param
 
 
@@ -45,13 +48,13 @@ def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
 @pytest.mark.parametrize("n_iterations", [-1, 3])
 def test_leiden_basic(
     adata_neighbors: AnnData,
-    flavor: Literal["igraph", "leidenalg"],
+    flavor: Literal["igraph", "leidenalg", "graspologic"],
     resolution: float,
     n_iterations: int,
 ) -> None:
     with (
         nullcontext()
-        if flavor == "igraph"
+        if flavor != "leidenalg"
         else pytest.warns(
             UserWarning, match=r"The `igraph` implementation of leiden clustering"
         )
@@ -74,7 +77,7 @@ def test_leiden_basic(
 def test_leiden_random_state(
     subtests: pytest.Subtests,
     adata_neighbors: AnnData,
-    flavor: Literal["igraph", "leidenalg"],
+    flavor: Literal["igraph", "leidenalg", "graspologic"],
     rng_arg: Literal["rng", "random_state"],
 ) -> None:
     is_leiden_alg = flavor == "leidenalg"
@@ -128,6 +131,55 @@ def test_leiden_igraph_directed():
     assert normalized_mutual_info_score(igraph, leidenalg) == 1
 
 
+@needs.anndata_acc
+@needs.igraph
+@needs.leidenalg
+@pytest.mark.parametrize(
+    "preset",
+    [sc.Preset.ScanpyV1, pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2)],
+)
+@pytest.mark.parametrize(
+    ("layer_weights", "resolution", "expected"),
+    [
+        pytest.param([1, 0], [1, 50], "a", id="first"),
+        pytest.param([0, 1], [50, 1], "b", id="second"),
+    ],
+)
+def test_leiden_multiplex(
+    preset: sc.Preset,
+    layer_weights: list[float],
+    resolution: list[float],
+    expected: Literal["a", "b"],
+) -> None:
+    from anndata.acc import A
+
+    # two graphs of cliques with different groupings
+    groups = dict(a=np.arange(40) // 20, b=np.arange(40) % 2)
+    obsp = {k: (g[:, None] == g) & ~np.eye(40, dtype=bool) for k, g in groups.items()}
+    adata = AnnData(
+        np.zeros((40, 1)), obsp={k: v.astype(float) for k, v in obsp.items()}
+    )
+    with sc.settings.override(preset=preset):
+        labels = sc.tl.leiden(
+            adata,
+            resolution,
+            use=[A.obsp["a"], A.obsp["b"]],
+            layer_weights=layer_weights,
+            out=True,
+        )
+    assert normalized_mutual_info_score(labels, groups[expected]) == 1
+
+
+@needs.anndata_acc
+@needs.igraph
+def test_leiden_multiplex_igraph(adata_neighbors):
+    from anndata.acc import A
+
+    use = [A.obsp["connectivities"]] * 2
+    with pytest.raises(ValueError, match=r"several graphs.*flavor='leidenalg'"):
+        sc.tl.leiden(adata_neighbors, flavor="igraph", use=use)
+
+
 @needs.igraph
 def test_leiden_wrong_flavor(adata_neighbors):
     with pytest.raises(ValueError, match=r"flavor must be.*'igraph'.*'leidenalg'.*but"):
@@ -149,17 +201,20 @@ def test_leiden_igraph_partition_type(adata_neighbors):
 
 @needs.leidenalg
 @needs.igraph
-def test_leiden_equal_defaults_same_args(adata_neighbors):
-    """Ensure the two implementations are the same for the same args."""
+@pytest.mark.parametrize(
+    "other", ["igraph", pytest.param("graspologic", marks=needs.graspologic_native)]
+)
+def test_leiden_equal_defaults_same_args(adata_neighbors, other):
+    """Ensure the implementations are the same for the same args."""
     leiden_alg_clustered = _leiden_copy(
         adata_neighbors, flavor="leidenalg", n_iterations=2
     )
-    igraph_clustered = _leiden_copy(
-        adata_neighbors, flavor="igraph", directed=False, n_iterations=2
+    other_clustered = _leiden_copy(
+        adata_neighbors, flavor=other, directed=False, n_iterations=2
     )
     assert (
         normalized_mutual_info_score(
-            leiden_alg_clustered.obs["leiden"], igraph_clustered.obs["leiden"]
+            leiden_alg_clustered.obs["leiden"], other_clustered.obs["leiden"]
         )
         > 0.9
     )
