@@ -479,7 +479,7 @@ def _export_paga_to_spring(adata, paga_coords, outpath) -> None:
 @deprecated(
     Deprecation(
         "1.13.0",
-        "Use `cb.scanpyToCellbrowser <https://cellbrowser.readthedocs.io/en/master/scanpy.html#convert-a-scanpy-object>`_ directly.",
+        "Use :doc:`cb.scanpyToCellbrowser <cellbrowser:scanpy>` directly.",
     )
 )
 def cellbrowser(  # noqa: PLR0913

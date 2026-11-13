@@ -2,7 +2,7 @@
 
 ## Plotting tests
 
-A frequent frustration in testing is the reproducibility of the plots and `matplotlib`'s behaviour in different environments.
+A frequent frustration in testing is the reproducibility of the plots and `matplotlib`’s behaviour in different environments.
 We have some tooling to help with this.
 
 (viewing-plots-from-failed-tests)=
@@ -41,4 +41,4 @@ If the actual image is the correct one, you can copy it over the reference image
 
 ### Misc
 
-{func}`matplotlib.testing.setup` tries to establish a consistent environment for creating plots. Make sure it's active!
+{func}`matplotlib.testing.setup` tries to establish a consistent environment for creating plots. Make sure it’s active!

@@ -16,7 +16,7 @@ It can take a while to run the whole test suite. There are a few ways to cut dow
    This can be done by specifying paths or test name patterns using the `-k` argument (e.g. `hatch test test_plotting.py` or `hatch test -k "test_umap*"`)
 2. Run the tests in parallel using the `-n` argument (e.g. `hatch test -n 8`).
 
-[pytest]: https://docs.pytest.org/en/stable/
+[pytest]: https://docs.pytest.org/
 
 ### Miscellaneous tips
 
@@ -26,7 +26,7 @@ It can take a while to run the whole test suite. There are a few ways to cut dow
 ## Writing tests
 
 You can refer to the [existing test suite][] for examples.
-If you haven't written tests before, Software Carpentry has an [in-depth testing guide][].
+If you haven’t written tests before, Software Carpentry has an [in-depth testing guide][].
 
 We highly recommend using [Test-Driven Development][] when contributing code.
 This not only ensures you have tests written, it often makes implementation easier since you start out with a specification for your function.
@@ -37,11 +37,11 @@ You can read more about [fixtures][] in pytest’s documentation, but we’d als
 [existing test suite]: https://github.com/scverse/scanpy/tree/main/tests
 [in-depth testing guide]: https://katyhuff.github.io/2016-07-11-scipy/testing/
 [test-driven development]: https://en.wikipedia.org/wiki/Test-driven_development
-[fixtures]: https://docs.pytest.org/en/stable/fixture.html
+[fixtures]: https://docs.pytest.org/page/fixture.html
 
 ### What to test
 
-If you're not sure what to tests about your function, some ideas include:
+If you’re not sure what to tests about your function, some ideas include:
 
 - Are there arguments which conflict with each other? Check that if they are both passed, the function throws an error (see [`pytest.raises`][] docs).
 - Are there input values which should cause your function to error?
@@ -51,21 +51,21 @@ If you're not sure what to tests about your function, some ideas include:
 - Do you have arguments which should have orthogonal effects on the output? Check that they are independent. For example, if there is a flag for extended output, the base output should remain the same either way.
 - Are you optimizing a method? Check that it's results are the same as a gold standard implementation.
 
-[`pytest.raises`]: https://docs.pytest.org/en/stable/assert.html#assertions-about-expected-exceptions
+[`pytest.raises`]: https://docs.pytest.org/page/assert.html#assertions-about-expected-exceptions
 
 ### Performance
 
-It's more important that you're accurately testing the code works than it is that test suite runs quickly.
-That said, it's nice when the test suite runs fast.
+It’s more important that you’re accurately testing the code works than it is that test suite runs quickly.
+That said, it’s nice when the test suite runs fast.
 
 You can check how long tests take to run by passing `--durations=0` argument to `pytest`.
-Hopefully your new tests won't show up on top!
+Hopefully your new tests won’t show up on top!
 Some approaches to this include:
 
 - Is there a common setup/ computation happening in each test? Consider caching these in a [scoped test fixture][].
 - Is the behaviour you're testing for dependent on the size of the data? If not, consider reducing it.
 
-[scoped test fixture]: https://docs.pytest.org/en/stable/fixture.html#sharing-test-data
+[scoped test fixture]: https://docs.pytest.org/page/fixture.html#sharing-test-data
 
 (plotting-tests)=
 
@@ -82,6 +82,6 @@ These files are compared, and if the `actual` plot differs from the reference pl
 Paths for all these files will be reported when a test fails, and images for failed plots on CI can be retrieved as described in {ref}`viewing-plots-from-failed-tests`.
 
 A common gotcha here is that plots often change slightly on different machines/ OSs and between `matplotlib` versions.
-`scanpy`'s test suite sets a number of environment variables to ensure as similar of plots as possible.
+`scanpy`’s test suite sets a number of environment variables to ensure as similar of plots as possible.
 When adding new reference plots, the recommended workflow is to write the test as though an expected result already exists,
 run it once to generate the `actual.png`, then rename that file to `expected.png` if it looks correct.

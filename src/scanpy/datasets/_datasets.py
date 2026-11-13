@@ -14,7 +14,7 @@ from scverse_misc import Deprecation, deprecated
 from .. import _utils
 from .._compat import pkg_version
 from .._docs import doc_rng
-from .._settings import Verbosity, settings
+from .._settings import Preset, Verbosity, settings
 from .._utils import _doc_params
 from .._utils._doctests import doctest_internet, doctest_needs, doctest_skipif
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
@@ -119,6 +119,7 @@ def blobs(
     return AnnData(x, obs=dict(blobs=y.astype(str)))
 
 
+@deprecated(Deprecation("1.13.0"))
 @_doctest_skipif_old_anndata
 @doctest_internet
 def burczynski06() -> AnnData:
@@ -136,6 +137,8 @@ def burczynski06() -> AnnData:
     --------
     >>> import scanpy as sc
     >>> sc.datasets.burczynski06()
+    FutureWarning: The function burczynski06 is deprecated and will be removed in the future.
+        sc.datasets.burczynski06()
     UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
         ...
     AnnData object with n_obs × n_vars = 127 × 22283
@@ -159,6 +162,9 @@ def krumsiek11() -> AnnData:
 
     Simulate via :func:`~scanpy.tl.sim`.
 
+    The observation names are simulation time steps, which repeat across branches.
+    With :attr:`~scanpy.Preset.ScanpyV2Preview`, they are made unique.
+
     Returns
     -------
     Annotated data matrix.
@@ -175,8 +181,13 @@ def krumsiek11() -> AnnData:
         layers: None (.X)
 
     """  # noqa: D401
-    with settings.override(verbosity=Verbosity.error):  # suppress output...
+    v2 = settings.preset is Preset.ScanpyV2Preview
+    with settings.override(verbosity=Verbosity.error), warnings.catch_warnings():
+        if v2:  # obs names are time steps, repeated per branch
+            warnings.filterwarnings("ignore", "Observation names are not unique")
         adata = read(HERE / "krumsiek11.txt", first_column_names=True)
+    if v2:
+        adata.obs_names_make_unique()
     adata.uns["iroot"] = 0
     fate_labels = {0: "Stem", 159: "Mo", 319: "Ery", 459: "Mk", 619: "Neu"}
     adata.uns["highlights"] = fate_labels
@@ -304,6 +315,7 @@ def paul15() -> AnnData:
     return adata
 
 
+@deprecated(Deprecation("1.13.0"))
 @_doctest_skipif_old_anndata
 def toggleswitch() -> AnnData:
     """Simulated toggleswitch.
@@ -320,6 +332,8 @@ def toggleswitch() -> AnnData:
     --------
     >>> import scanpy as sc
     >>> sc.datasets.toggleswitch()  # doctest: +ELLIPSIS
+    FutureWarning: The function toggleswitch is deprecated and will be removed in the future.
+        sc.datasets.toggleswitch()  # doctest: +ELLIPSIS
     UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
         ...
     AnnData object with n_obs × n_vars = 200 × 2
