@@ -113,6 +113,7 @@ class ScoreGenesPreset(NamedTuple):
 
 class LeidenPreset(NamedTuple):
     flavor: LeidenFlavor
+    directed: bool | None
 
 
 preset_postprocessors: list[Callable[[], None]] = []
@@ -289,10 +290,10 @@ class Preset(enum.StrEnum):
 
     @preset_property
     def leiden() -> Mapping[Preset, LeidenPreset]:
-        """Flavor for :func:`~scanpy.tl.leiden`."""
+        """Settings for :func:`~scanpy.tl.leiden`."""  # noqa: D401
         return {
-            Preset.ScanpyV1: LeidenPreset(flavor="leidenalg"),
-            Preset.ScanpyV2Preview: LeidenPreset(flavor="igraph"),
+            Preset.ScanpyV1: LeidenPreset(flavor="leidenalg", directed=None),
+            Preset.ScanpyV2Preview: LeidenPreset(flavor="igraph", directed=True),
         }
 
     @contextmanager
