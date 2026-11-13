@@ -72,6 +72,7 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
     jax = auto()
     leidenalg = auto()
     louvain = auto()
+    networkit = auto()
     openpyxl = auto()
     igraph = auto()
     pybiomart = auto()

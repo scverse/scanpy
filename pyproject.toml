@@ -89,6 +89,7 @@ dask = [ "anndata[dask]", "dask[array]>=2024.10" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
 leiden = [ "igraph>=1", "leidenalg>=0.11" ]
+networkit = [ "networkit>=11.3" ]
 louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ]
 magic = [ "magic-impute>=2.0.4" ]
 paga = [ "igraph" ]
@@ -120,6 +121,7 @@ test = [
     "scanpy[dask]",
     "scanpy[illico]",
     "scanpy[leiden]",
+    "scanpy[networkit]",
     "scanpy[plotting]",
     "scanpy[scrublet]",
     "scanpy[skmisc]",
@@ -290,8 +292,8 @@ filterwarnings = [
     "default::numba.core.errors.NumbaPerformanceWarning",
     # we should set init=obsm["X_pca"] or so
     "default:.*TSNE.*random.*to.*pca:FutureWarning",
-    # igraph vs leidenalg warning
-    "ignore:The `igraph` implementation of leiden clustering:UserWarning",
+    # igraph/networkit vs leidenalg warning
+    "ignore:The `igraph` and `networkit` implementations of leiden clustering:UserWarning",
     # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …
     "ignore:Consolidated metadata is currently not part:UserWarning",
     # joblib fallback to serial mode in restricted multiprocessing environments
