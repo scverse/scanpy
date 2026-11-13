@@ -585,34 +585,27 @@ def get_resid(
     return data
 
 
-def numpy_regress_out(
-    data: np.ndarray,
-    regressor: np.ndarray,
-    gram: np.ndarray,
-) -> np.ndarray:
-    coeff = np.linalg.solve(gram, regressor.T @ data)
-    return get_resid(data, regressor, coeff)
+@dataclass
+class _NormalizedRegressors:
+    regressors: np.ndarray
+    gram: np.ndarray = field(init=False)
 
+    def __post_init__(self) -> None:
+        self.regressors = self.regressors.astype(np.float64, copy=True)
+        self.regressors[:, 1:] -= self.regressors[:, 1:].mean(axis=0)
+        norms = np.linalg.norm(self.regressors, axis=0)
+        self.regressors /= np.where(norms > 0, norms, 1.0)
+        self.gram = self.regressors.T @ self.regressors
 
-def _normalize_regressors(regressors: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    regressors = regressors.astype(np.float64, copy=True)
-    regressors[:, 1:] -= regressors[:, 1:].mean(axis=0)
-    norms = np.linalg.norm(regressors, axis=0)
-    regressors /= np.where(norms > 0, norms, 1.0)
-    return regressors, regressors.T @ regressors
-
-
-def _regress_out_numpy(
-    data: np.ndarray | CSBase,
-    regressors: np.ndarray,
-    gram: np.ndarray,
-) -> np.ndarray:
-    if np.issubdtype(data.dtype, np.integer):
-        target_dtype = np.float32 if data.dtype.itemsize <= 4 else np.float64
-        kwargs = {"order": "C"} if isinstance(data, np.ndarray) else {}
-        data = data.astype(target_dtype, **kwargs)
-    data = to_dense(data, order="C") if isinstance(data, CSBase) else data
-    return numpy_regress_out(data, regressors, gram)
+    def regress_out(self, data: np.ndarray | CSBase) -> np.ndarray:
+        """Regress out via linear least squares."""
+        # `get_resid` updates `data` in place, so it needs to be floating point.
+        data = to_dense(data, order="C") if isinstance(data, CSBase) else data
+        if np.issubdtype(data.dtype, np.integer):
+            target_dtype = np.float32 if data.dtype.itemsize <= 4 else np.float64
+            data = data.astype(target_dtype, order="C")
+        coeff = np.linalg.solve(self.gram, self.regressors.T @ data)
+        return get_resid(data, self.regressors, coeff)
 
 
 @_doc_params(
@@ -725,12 +718,12 @@ def regress_out(
         # add column of ones at index 0 (first column)
         covariates.insert(0, "ones", 1.0)
         regressors = covariates.to_numpy()
-        normalized_regressors, gram = _normalize_regressors(regressors)
+        normalized = _NormalizedRegressors(regressors)
 
     # if the regressors are not categorical and the matrix is not singular
     # use the shortcut numpy_regress_out
-    if not variable_is_categorical and np.linalg.det(gram) != 0:
-        res = _regress_out_numpy(x, normalized_regressors, gram)
+    if not variable_is_categorical and np.linalg.det(normalized.gram) != 0:
+        res = normalized.regress_out(x)
 
     # for a categorical variable or if the above checks failed,
     # we fall back to the GLM implemetation of regression.
