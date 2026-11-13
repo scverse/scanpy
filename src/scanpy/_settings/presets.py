@@ -113,7 +113,8 @@ class ScoreGenesPreset(NamedTuple):
 
 class LeidenPreset(NamedTuple):
     flavor: LeidenFlavor
-    directed: bool | None
+    directed: bool | frozenset[LeidenFlavor] | None
+    """A set means “directed for these flavors”."""
 
 
 preset_postprocessors: list[Callable[[], None]] = []
@@ -293,7 +294,9 @@ class Preset(enum.StrEnum):
         """Settings for :func:`~scanpy.tl.leiden`."""  # noqa: D401
         return {
             Preset.ScanpyV1: LeidenPreset(flavor="leidenalg", directed=None),
-            Preset.ScanpyV2Preview: LeidenPreset(flavor="igraph", directed=True),
+            Preset.ScanpyV2Preview: LeidenPreset(
+                flavor="igraph", directed=frozenset({"igraph", "leidenalg"})
+            ),
         }
 
     @contextmanager

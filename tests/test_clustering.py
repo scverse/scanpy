@@ -139,6 +139,32 @@ def test_leiden_networkit_directed(adata_neighbors):
         sc.tl.leiden(adata_neighbors, flavor="networkit", directed=True)
 
 
+@pytest.mark.parametrize("flavor", ["igraph", "leidenalg", "networkit"])
+@pytest.mark.parametrize(
+    ("preset", "directed_flavors"),
+    [
+        pytest.param(sc.Preset.ScanpyV1, {"leidenalg"}, id="v1"),
+        pytest.param(
+            sc.Preset.ScanpyV2Preview,
+            {"igraph", "leidenalg"},
+            marks=needs.scanpy2,
+            id="v2",
+        ),
+    ],
+)
+def test_leiden_directed_default(
+    monkeypatch: pytest.MonkeyPatch,
+    preset: sc.Preset,
+    directed_flavors: set[str],
+    flavor: str,
+) -> None:
+    from scanpy._settings import Default
+    from scanpy.tools._leiden import _resolve_directed
+
+    monkeypatch.setattr(sc.settings, "preset", preset)
+    assert _resolve_directed(Default(), flavor=flavor) is (flavor in directed_flavors)
+
+
 @needs.igraph
 def test_leiden_wrong_flavor(adata_neighbors):
     with pytest.raises(ValueError, match=r"flavor must be.*'igraph'.*'leidenalg'.*but"):

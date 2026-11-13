@@ -22,7 +22,6 @@ from .._docs import (
     doc_rng,
 )
 from .._settings import Default
-from .._settings.presets import LeidenPreset
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng, _set_igraph_rng
 from ..get._out import _out_key, deprecated_copy
@@ -87,7 +86,9 @@ def leiden(  # noqa: PLR0913
     *,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     rng: SeedLike | RNGLike | None = None,
-    directed: bool | Default | None = Default(preset=("leiden", "directed")),
+    directed: bool | Default | None = Default(
+        repr="None (in 2.0: True for 'igraph' and 'leidenalg')"
+    ),
     use_weights: bool = True,
     n_iterations: int = -1,
     partition_type: type[MutableVertexPartition] | None = None,
@@ -362,21 +363,19 @@ def _validate_flavor(
     *,
     partition_type: object | None,
     directed: bool | Default | None,
-) -> LeidenPreset:
+) -> tuple[LeidenFlavor, bool]:
     from scanpy import settings
 
     if was_default := (flavor is None or isinstance(flavor, Default)):
         flavor = settings.preset.leiden.flavor
-    if isinstance(directed, Default):
-        # networkit only supports undirected graphs, so don’t take the preset’s `directed`
-        directed = None if flavor == "networkit" else settings.preset.leiden.directed
+    is_directed = _resolve_directed(directed, flavor=flavor)
     match flavor:
         case "igraph":
             if partition_type is not None:
                 msg = "Do not pass in partition_type argument when using igraph."
                 raise ValueError(msg)
         case "networkit":
-            if directed:
+            if is_directed:
                 msg = "Cannot use NetworKit's leiden implementation with a directed graph."
                 raise ValueError(msg)
             if partition_type is not None:
@@ -403,9 +402,18 @@ def _validate_flavor(
         case _:
             msg = f"flavor must be either 'igraph', 'leidenalg', or 'networkit', but {flavor!r} was passed."
             raise ValueError(msg)
-    if directed is None:
-        directed = flavor == "leidenalg"
-    return LeidenPreset(flavor, directed)
+    return flavor, is_directed
+
+
+def _resolve_directed(directed: bool | Default | None, *, flavor: str) -> bool:  # noqa: FBT001
+    from scanpy import settings
+
+    resolved = (
+        settings.preset.leiden.directed if isinstance(directed, Default) else directed
+    )
+    if isinstance(resolved, frozenset):
+        return flavor in resolved
+    return flavor == "leidenalg" if resolved is None else resolved
 
 
 def _maybe_suggest_networkit(g: Graph) -> None:
