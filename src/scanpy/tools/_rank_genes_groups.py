@@ -186,6 +186,31 @@ def _apply_expm1_preserving_sparsity(x, expm1_func):
     return expm1_func(x)
 
 
+def _ln_log2_mean(
+    mean: NDArray[np.floating],
+    var: NDArray[np.floating],
+    frac_detected: NDArray[np.floating],
+    n: int,
+) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
+    """LN's estimate of a group's log2 mean and its variance.
+
+    It splits the mean into the detection rate and the mean of the non-zero values,
+    and takes these from the group's moments, so it needs no pass over the cells.
+    A gene detected in no cell counts as one detection of value 1.
+    """
+    detected = frac_detected > 0
+    a = np.where(detected, np.rint(frac_detected * n), 1.0)
+    mean_pos = np.where(detected, mean * n / a, 1.0)
+    # Sum of squared deviations of the non-zero values, from the group's moments
+    ss_pos = var * (n - 1) + n * mean**2 - a * mean_pos**2
+    var_pos = np.where(a > 1, np.maximum(ss_pos, 0.0) / np.maximum(a - 1, 1.0), 0.0)
+    var_log_mean_pos = np.log1p(var_pos / (a * mean_pos**2))
+    return (
+        np.log2(a / n * mean_pos),
+        (1 / a - 1 / n + var_log_mean_pos) / np.log(2) ** 2,
+    )
+
+
 @numba.njit  # noqa: TID251  (inner kernel called from _vars_rest's nopython loop)
 def _chan_accumulate(
     group_counts: NDArray[np.float64],
@@ -331,6 +356,7 @@ class _RankGenes:
         self.vars = None
         self.means_rest = None
         self.vars_rest = None
+        self.lfcs: dict[int, NDArray[np.floating]] = {}  # for t-test_ln only
 
         self.comp_pts = comp_pts
         self.pts = None
@@ -528,6 +554,51 @@ class _RankGenes:
 
             yield group_index, scores, pvals
 
+    def t_test_ln(self) -> Generator[_TestResult]:
+        from scipy import stats
+
+        for group_index, (mask_obs, mean, var, pts) in enumerate(
+            zip(self.groups_masks_obs, self.means, self.vars, self.pts, strict=True)
+        ):
+            if group_index == self.ireference:
+                continue
+
+            n = np.count_nonzero(mask_obs)
+            if self.ireference is None:
+                mean_rest = self.means_rest[group_index]
+                var_rest = self.vars_rest[group_index]
+                pts_rest = self.pts_rest[group_index]
+                n_rest = self.X.shape[0] - n
+            else:
+                mean_rest = self.means[self.ireference]
+                var_rest = self.vars[self.ireference]
+                pts_rest = self.pts[self.ireference]
+                n_rest = np.count_nonzero(self.groups_masks_obs[self.ireference])
+
+            log2_mean, var_log2 = _ln_log2_mean(mean, var, pts, n)
+            log2_mean_rest, var_log2_rest = _ln_log2_mean(
+                mean_rest, var_rest, pts_rest, n_rest
+            )
+            lfcs = log2_mean - log2_mean_rest
+            var_lfc = var_log2 + var_log2_rest
+            with np.errstate(divide="ignore", invalid="ignore"):
+                scores = lfcs / np.sqrt(var_lfc)
+                df = var_lfc**2 / (
+                    var_log2**2 / (n - 1) + var_log2_rest**2 / (n_rest - 1)
+                )
+                pvals = 2 * stats.t.sf(np.abs(scores), df)
+
+            # No variance in either group: as in `t_test`, a difference is certain.
+            pvals[np.isinf(scores)] = 0
+            # Not detected in either group: nothing to test.
+            absent = mean + mean_rest == 0
+            lfcs[absent] = 0
+            scores[absent | np.isnan(scores)] = 0
+            pvals[absent | np.isnan(pvals)] = 1
+
+            self.lfcs[group_index] = lfcs
+            yield group_index, scores, pvals
+
     def wilcoxon(self, *, tie_correct: bool) -> Generator[_TestResult]:
         from scipy import stats
 
@@ -685,6 +756,9 @@ class _RankGenes:
             generate_test_results = list(self.t_test(method))
             if not mean_in_log_space:
                 self._basic_stats(exponentiate_values=True)
+        elif method == "t-test_ln":
+            self._basic_stats(exponentiate_values=True, need_var=True)
+            generate_test_results = self.t_test_ln()
         elif "wilcoxon" in method:
             generate_test_results = (
                 self.illico(tie_correct=tie_correct)
@@ -747,7 +821,9 @@ def _build_stats_dataframe(
                 pvals_adj = np.minimum(pvals * n_genes_total, 1.0)
             cols[group_name, "pvals_adj"] = pvals_adj[global_indices]
 
-        if rg.means is not None:
+        if group_index in rg.lfcs:
+            cols[group_name, "logfoldchanges"] = rg.lfcs[group_index][global_indices]
+        elif rg.means is not None:
             mean_group = rg.means[group_index]
             mean_rest = (
                 rg.means_rest[group_index]
@@ -855,6 +931,8 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     method
         The default method is `'t-test'`,
         `'t-test_overestim_var'` overestimates variance of each group,
+        `'t-test_ln'` uses LN's t-test :cite:p:`Kviman2026`, which tests the log ratio
+        of the linear-scale means,
         `'wilcoxon'` uses Wilcoxon rank-sum,
         `'logreg'` uses logistic regression. See :cite:t:`Ntranos2019`,
         `here <https://github.com/scverse/scanpy/issues/95>`__ and `here
@@ -862,7 +940,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         for why this is meaningful.
     corr_method
         p-value correction method.
-        Used only for `'t-test'`, `'t-test_overestim_var'`, and `'wilcoxon'`.
+        Used only for `'t-test'`, `'t-test_overestim_var'`, `'t-test_ln'`, and `'wilcoxon'`.
     tie_correct
         Use tie correction for `'wilcoxon'` scores.
         Used only for `'wilcoxon'`.
@@ -876,6 +954,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         or :math:`\log(e^{{\operatorname{{mean}}(x)}})` (`True`).
         The former is accurate, while the latter is a faster approximation
         that underestimates this accurate result in the presence of many outliers.
+        Not used by `'t-test_ln'`, which reports its own estimate of the fold change.
     kwds
         Are passed to test methods. Currently this affects only parameters that
         are passed to :class:`sklearn.linear_model.LogisticRegression`.
@@ -1010,7 +1089,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         use_raw=use_raw,
         use=use,
         layer=layer,
-        comp_pts=pts,
+        comp_pts=pts or method == "t-test_ln",
     )
 
     if check_nonnegative_integers(test_obj.X) and method != "logreg":
@@ -1040,12 +1119,12 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
             **kwds,
         )
 
-    if test_obj.pts is not None:
+    if pts and test_obj.pts is not None:
         groups_names = [str(name) for name in test_obj.groups_order]
         res["pts"] = pd.DataFrame(
             test_obj.pts.T, index=test_obj.var_names, columns=groups_names
         )
-    if test_obj.pts_rest is not None:
+    if pts and test_obj.pts_rest is not None:
         res["pts_rest"] = pd.DataFrame(
             test_obj.pts_rest.T, index=test_obj.var_names, columns=groups_names
         )
@@ -1080,7 +1159,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
                 "    'logfoldchanges', sorted np.recarray to be indexed by group ids\n"
                 "    'pvals', sorted np.recarray to be indexed by group ids\n"
                 "    'pvals_adj', sorted np.recarray to be indexed by group ids"
-                if method in {"t-test", "t-test_overestim_var", "wilcoxon"}
+                if method in {"t-test", "t-test_overestim_var", "t-test_ln", "wilcoxon"}
                 else ""
             )
         ),

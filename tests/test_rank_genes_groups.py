@@ -547,12 +547,15 @@ def test_pts_vs_reference() -> None:
         "t-test",
         "t-test_overestim_var",
         pytest.param("wilcoxon_illico", marks=needs.scanpy2),
+        "t-test_ln",
     ],
 )
 @pytest.mark.parametrize("base", [None, 2], ids=["base_e", "base_2"])
 def test_mean_in_log_space(
     expected_logfc: float,
-    method: Literal["wilcoxon", "wilcoxon_illico", "t-test", "t-test_overestim_var"],
+    method: Literal[
+        "wilcoxon", "wilcoxon_illico", "t-test", "t-test_overestim_var", "t-test_ln"
+    ],
     base: float | None,
     *,
     mean_in_log_space: bool,
@@ -588,7 +591,102 @@ def test_mean_in_log_space(
             mean_in_log_space=mean_in_log_space,
         )
     logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
-    np.testing.assert_equal(logfcs, expected_logfc)
+    # `t-test_ln` reports its own estimate, on linear-scale means
+    np.testing.assert_equal(logfcs, -1.0 if method == "t-test_ln" else expected_logfc)
+
+
+@needs.ln_ttest
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("reference", ["rest", "CD14+ Monocyte"])
+def test_t_test_ln_matches_package(
+    array_type: Callable[[np.ndarray], Any], reference: str
+) -> None:
+    from lntest import get_LN_lfcs
+
+    pbmc = pbmc68k_reduced()
+    log1p = pbmc.raw.X.toarray()
+    adata = AnnData(
+        array_type(log1p), obs=pbmc.obs[["bulk_labels"]], var=pbmc.raw.var[[]]
+    )
+    rank_genes_groups(
+        adata,
+        "bulk_labels",
+        groups=["Dendritic"],
+        reference=reference,
+        method="t-test_ln",
+    )
+
+    assert "pts" not in adata.uns["rank_genes_groups"]
+
+    labels = adata.obs["bulk_labels"].to_numpy()
+    group = labels == "Dendritic"
+    rest = ~group if reference == "rest" else labels == reference
+    lfcs, pvals, scores = get_LN_lfcs(
+        np.expm1(log1p[group]),
+        np.expm1(log1p[rest]),
+        normalize=False,
+        return_statistic=True,
+    )
+    result = rank_genes_groups_df(adata, "Dendritic").set_index("names")
+    result = result.loc[adata.var_names]
+    np.testing.assert_allclose(result["logfoldchanges"], lfcs, rtol=1e-5)
+    np.testing.assert_allclose(result["scores"], scores, rtol=1e-5)
+    np.testing.assert_allclose(result["pvals"], pvals, rtol=1e-5)
+
+
+def test_t_test_ln_calibrated() -> None:
+    """With equal means and unequal variances, no gene is differentially expressed."""
+    rng = np.random.default_rng(0)
+    # Negative binomials of mean 5 and variance 10 or 50
+    low_var = rng.negative_binomial(5, 1 / 2, (1000, 500))
+    high_var = rng.negative_binomial(5 / 9, 1 / 10, (1000, 500))
+    adata = AnnData(
+        np.log1p(np.vstack([low_var, high_var])),
+        obs={"group": ["low"] * 1000 + ["high"] * 1000},
+    )
+
+    def fpr(method: str) -> float:
+        rank_genes_groups(
+            adata, "group", groups=["high"], reference="low", method=method
+        )
+        return (adata.uns["rank_genes_groups"]["pvals"]["high"] < 0.05).mean()
+
+    assert fpr("t-test") > 0.9
+    assert fpr("t-test_ln") < 0.1
+
+
+def test_t_test_ln_gene_absent_from_both_groups() -> None:
+    x = np.zeros((2020, 2))
+    x[:, 1] = np.log1p(np.random.default_rng(0).poisson(5, 2020))
+    adata = AnnData(
+        x,
+        obs={"group": ["small"] * 20 + ["large"] * 2000},
+        var=pd.DataFrame(index=["absent", "present"]),
+    )
+    rank_genes_groups(
+        adata, "group", groups=["small"], reference="large", method="t-test_ln"
+    )
+    absent = rank_genes_groups_df(adata, "small").set_index("names").loc["absent"]
+    assert absent["logfoldchanges"] == 0
+    assert absent["scores"] == 0
+    assert absent["pvals"] == 1
+
+
+def test_t_test_ln_without_variance() -> None:
+    """As with `t-test`, a difference in means without variance is certain."""
+    adata = AnnData(
+        np.log1p([[3, 4]] * 10 + [[5, 4]] * 10),
+        obs={"group": ["a"] * 10 + ["b"] * 10},
+        var=pd.DataFrame(index=["differs", "equal"]),
+    )
+    rank_genes_groups(adata, "group", groups=["a"], reference="b", method="t-test_ln")
+    result = rank_genes_groups_df(adata, "a").set_index("names")
+    np.testing.assert_allclose(result.loc["differs", "logfoldchanges"], np.log2(3 / 5))
+    assert result.loc["differs", "scores"] < -1e6
+    assert result.loc["differs", "pvals"] < 1e-10
+    assert result.loc["equal", "logfoldchanges"] == 0
+    assert result.loc["equal", "scores"] == 0
+    assert result.loc["equal", "pvals"] == 1
 
 
 @pytest.mark.parametrize("method", ["t-test", "t-test_overestim_var"])
