@@ -585,18 +585,27 @@ def get_resid(
     return data
 
 
-def numpy_regress_out(
-    data: np.ndarray,
-    regressor: np.ndarray,
-) -> np.ndarray:
-    """Numba kernel for regress out unwanted sorces of variantion.
+@dataclass
+class _NormalizedRegressors:
+    regressors: np.ndarray
+    gram: np.ndarray = field(init=False)
 
-    Finding coefficient using Linear regression (Linear Least Squares).
-    """
-    inv_gram_matrix = np.linalg.inv(regressor.T @ regressor)
-    coeff = inv_gram_matrix @ (regressor.T @ data)
-    data = get_resid(data, regressor, coeff)
-    return data
+    def __post_init__(self) -> None:
+        self.regressors = self.regressors.astype(np.float64, copy=True)
+        self.regressors[:, 1:] -= self.regressors[:, 1:].mean(axis=0)
+        norms = np.linalg.norm(self.regressors, axis=0)
+        self.regressors /= np.where(norms > 0, norms, 1.0)
+        self.gram = self.regressors.T @ self.regressors
+
+    def regress_out(self, data: np.ndarray | CSBase) -> np.ndarray:
+        """Regress out via linear least squares."""
+        # `get_resid` updates `data` in place, so it needs to be floating point.
+        data = to_dense(data, order="C") if isinstance(data, CSBase) else data
+        if np.issubdtype(data.dtype, np.integer):
+            target_dtype = np.float32 if data.dtype.itemsize <= 4 else np.float64
+            data = data.astype(target_dtype, order="C")
+        coeff = np.linalg.solve(self.gram, self.regressors.T @ data)
+        return get_resid(data, self.regressors, coeff)
 
 
 @_doc_params(
@@ -607,7 +616,7 @@ def numpy_regress_out(
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
 @deprecated_arg("keys", Deprecation("1.13.0", "Use `covariates` instead."))
 @deprecated_copy
-def regress_out(  # noqa: PLR0912, PLR0915
+def regress_out(
     adata: AnnData,
     covariates: AdRef | str | Sequence[AdRef | str] | None = None,
     *,
@@ -709,24 +718,12 @@ def regress_out(  # noqa: PLR0912, PLR0915
         # add column of ones at index 0 (first column)
         covariates.insert(0, "ones", 1.0)
         regressors = covariates.to_numpy()
+        normalized = _NormalizedRegressors(regressors)
 
-    # if the regressors are not categorical and the matrix is not singular
-    # use the shortcut numpy_regress_out
-    if not variable_is_categorical and np.linalg.det(regressors.T @ regressors) != 0:
-        # Because we update `X` in `numpy_regress_out`, it needs to be floating point to match
-        # the incoming values.
-        if np.issubdtype(x.dtype, np.integer):
-            target_dtype = np.float32 if x.dtype.itemsize <= 4 else np.float64
-            kwargs = {}
-            if isinstance(x, np.ndarray):
-                kwargs["order"] = "C"
-            x = x.astype(target_dtype, **kwargs)
-        x = to_dense(x, order="C") if isinstance(x, CSBase) else x
-        res = numpy_regress_out(x, regressors)
-
-    # for a categorical variable or if the above checks failed,
-    # we fall back to the GLM implemetation of regression.
-    else:
+    # non-categorical regressors & non-singular matrix → shortcut
+    if not variable_is_categorical and np.linalg.det(normalized.gram) != 0:
+        res = normalized.regress_out(x)
+    else:  # GLM implemetation
         # split the adata.X matrix by columns in chunks of size n_chunk
         # (the last chunk could be of smaller size than the others)
         len_chunk = int(np.ceil(min(1000, x.shape[1]) / n_jobs))
