@@ -150,6 +150,36 @@ def test_leiden_igraph_partition_type(adata_neighbors):
         )
 
 
+@needs.graspologic_native
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        pytest.param(
+            dict(partition_type=object),
+            r"Do not pass in partition_type",
+            id="partition_type",
+        ),
+        pytest.param(dict(directed=True), r"only supports undirected", id="directed"),
+    ],
+)
+def test_leiden_graspologic_invalid(
+    adata_neighbors: AnnData, kwargs: dict[str, object], match: str
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        sc.tl.leiden(adata_neighbors, flavor="graspologic", **kwargs)
+
+
+@needs.anndata_acc
+@needs.graspologic_native
+def test_leiden_graspologic_no_edges() -> None:
+    """Without edges, each observation is its own cluster."""
+    from anndata.acc import A
+
+    adata = AnnData(np.zeros((5, 1)), obsp=dict(g=np.zeros((5, 5))))
+    labels = sc.tl.leiden(adata, flavor="graspologic", use=A.obsp["g"], out=True)
+    assert len(set(labels)) == 5
+
+
 @needs.leidenalg
 @needs.igraph
 @pytest.mark.parametrize(
