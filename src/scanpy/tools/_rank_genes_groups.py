@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from fast_array_utils.numba import njit
+from fast_array_utils.types import HasArrayNamespace
 from scipy import sparse
 from scverse_misc import Deprecation, deprecated_arg
 
@@ -310,6 +311,8 @@ class _RankGenes:
                 adata_comp = adata.raw
             x = adata_comp.X
         raise_not_implemented_error_if_backed_type(x, "rank_genes_groups")
+        if isinstance(x, HasArrayNamespace) and not isinstance(x, np.ndarray):
+            x = np.asarray(x)
 
         # for correct getnnz calculation
         if isinstance(x, CSBase):

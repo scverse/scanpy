@@ -52,7 +52,8 @@ classifiers = [
 dynamic = [ "version" ]
 dependencies = [
     "anndata>=0.12.14",
-    "fast-array-utils[accel,sparse]>=1.4",
+    "array-api-compat",
+    "fast-array-utils[accel,sparse]>=1.5",
     "h5py>=3.12.1",
     "joblib",
     "matplotlib>=3.10",
@@ -109,10 +110,12 @@ scanpy2 = [
 
 [dependency-groups]
 dev = [
-    "scipy-stubs", # static typing and IDE support
-    "towncrier",   # release note management
+    "scipy-stubs",     # static typing and IDE support
+    "towncrier",       # release note management
+    "types-array-api",
 ]
 test = [
+    "jax",                          # Array API tests
     "scanpy[dask-ml]",
     "scanpy[dask]",
     "scanpy[illico]",

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numba
 import numpy as np
+from array_api_compat import array_namespace
 from fast_array_utils import conv, stats
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
@@ -28,6 +29,7 @@ from ._simple import log1p
 
 if TYPE_CHECKING:
     from anndata import AnnData
+    from fast_array_utils.types import HasArrayNamespace
 
     from ..get._out import OutKind
     from ..get._types import RepAcc, VecRef
@@ -58,12 +60,16 @@ NORMALIZE_TOTAL_KINDS: NormalizeTotalResult[set[OutKind], set[OutKind]] = (
 """Where `out` can write the outputs of `pp.normalize_total`."""
 
 
-def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
+def _compute_nnz_median(
+    counts: np.ndarray | DaskArray | HasArrayNamespace,
+) -> np.floating:
     """Given a 1D array of counts, compute the median of the non-zero counts."""
     if isinstance(counts, DaskArray):
         counts = counts.compute()
+
+    xp = array_namespace(counts)
     counts_greater_than_zero = counts[counts > 0]
-    median = np.median(counts_greater_than_zero)
+    median = xp.median(counts_greater_than_zero)
     return median
 
 
