@@ -23,7 +23,11 @@ from testing.scanpy._helpers import (
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
+from testing.scanpy._pytest.params import (
+    ARRAY_TYPES,
+    ARRAY_TYPES_SPARSE,
+    as_dense_jax_array,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -753,6 +757,9 @@ def test_filter_cells(array_type, arg: str) -> None:
 
 
 @needs.jax
+@pytest.mark.skipif(
+    as_dense_jax_array is None, reason="anndata version doesn’t support jax arrays"
+)
 @pytest.mark.parametrize(
     "func",
     [
@@ -769,7 +776,7 @@ def test_array_api_type_preserved(func: Callable[[AnnData], None]) -> None:
     import jax
 
     x = np.random.default_rng(0).negative_binomial(2, 0.3, (50, 20)).astype("float32")
-    adata = AnnData(jax.numpy.asarray(x))
+    adata = AnnData(as_dense_jax_array(x))
     func(adata)
     assert isinstance(adata.X, jax.Array), type(adata.X)
 
