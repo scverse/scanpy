@@ -23,6 +23,7 @@ from ..._utils import (
     _doc_params,
     check_use_raw,
     get_literal_vals,
+    own_deprecations,
     sanitize_anndata,
 )
 from . import _utils, mpl_settings
@@ -874,7 +875,10 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
         raise ValueError(msg)
 
     if groupby is not None:
-        obs_df = get.obs_df(adata, keys=[groupby, *keys], layer=layer, use_raw=use_raw)
+        with own_deprecations():  # `anndata.acc` is optional, so no `use`
+            obs_df = get.obs_df(
+                adata, keys=[groupby, *keys], layer=layer, use_raw=use_raw
+            )
         if kwds.get("palette") is None:
             if not isinstance(adata.obs[groupby].dtype, CategoricalDtype):
                 msg = (
@@ -884,6 +888,8 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
                 raise ValueError(msg)
             _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
             kwds["hue"] = groupby
+            # hue == x, seaborn wrongly detects need for dodging with pandas 3
+            kwds.setdefault("dodge", False)
             kwds["palette"] = dict(
                 zip(
                     obs_df[groupby].cat.categories,
@@ -892,7 +898,8 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
                 )
             )
     else:
-        obs_df = get.obs_df(adata, keys=keys, layer=layer, use_raw=use_raw)
+        with own_deprecations():  # `anndata.acc` is optional, so no `use`
+            obs_df = get.obs_df(adata, keys=keys, layer=layer, use_raw=use_raw)
     if groupby is None:
         obs_tidy = pd.melt(obs_df, value_vars=keys)
         x = "variable"
@@ -1048,7 +1055,8 @@ def clustermap(
     ..  exec-jupyter::
 
         import scanpy as sc
-        adata = sc.datasets.krumsiek11()
+        with sc.settings.override(preset=sc.Preset.ScanpyV2Preview):  # unique obs names
+            adata = sc.datasets.krumsiek11()
         sc.pl.clustermap(adata)
 
     ..  exec-jupyter::
@@ -1988,7 +1996,10 @@ def _prepare_dataframe(  # noqa: PLR0912
     adata
         Annotated data matrix.
     var_names
-        `var_names` should be a valid subset of  `adata.var_names`.
+        `var_names` should be a valid subset of `adata.var_names`
+        or, when `gene_symbols` is set, of the `adata.var[gene_symbols]`
+        column. When `use_raw` is in effect, `adata.raw.var` is used
+        instead of `adata.var`.
     groupby
         The key of the observation grouping to consider. It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
@@ -2047,9 +2058,10 @@ def _prepare_dataframe(  # noqa: PLR0912
         groupby = groupby.copy()  # copy to not modify user passed parameter
         groupby.remove(groupby_index)
     keys = list(groupby) + list(np.unique(var_names))
-    obs_tidy = get.obs_df(
-        adata, keys=keys, layer=layer, use_raw=use_raw, gene_symbols=gene_symbols
-    )
+    with own_deprecations():  # `anndata.acc` is optional, so no `use`
+        obs_tidy = get.obs_df(
+            adata, keys=keys, layer=layer, use_raw=use_raw, gene_symbols=gene_symbols
+        )
     assert np.all(np.array(keys) == np.array(obs_tidy.columns))
 
     if groupby_index is not None:
@@ -2067,22 +2079,21 @@ def _prepare_dataframe(  # noqa: PLR0912
         categorical = obs_tidy[groupby[0]].astype("category")
         categorical.name = groupby[0]
     else:
-        # join the groupby values  using "_" to make a new 'category'
-        categorical = obs_tidy[groupby].apply("_".join, axis=1).astype("category")
-        categorical.name = "_".join(groupby)
-
-        # preserve category order
+        # join the groupby values using "_" to make a new 'category';
+        # rows missing any value stay NaN, `object` needed as `1` would get turned into `"1.0"`
+        parts = [
+            obs_tidy[g].map(str, na_action="ignore").astype(object) for g in groupby
+        ]
+        # categories in product order of each column's categories (NaN-free, sorted if possible)
         from itertools import product
 
-        order = {
-            "_".join(k): idx
-            for idx, k in enumerate(
-                product(*(obs_tidy[g].cat.categories for g in groupby))
-            )
-        }
-        categorical = categorical.cat.reorder_categories(
-            sorted(categorical.cat.categories, key=lambda x: order[x])
-        )
+        levels = [obs_tidy[g].astype("category").cat.categories for g in groupby]
+        all_cats = list(dict.fromkeys("_".join(map(str, k)) for k in product(*levels)))
+        categorical = pd.Series(
+            pd.Categorical(parts[0].str.cat(parts[1:], sep="_"), categories=all_cats),
+            index=obs_tidy.index,
+            name="_".join(groupby),
+        ).cat.remove_unused_categories()
     obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
 
@@ -2341,7 +2352,8 @@ def _get_dendrogram_key(
             "Running `sc.tl.dendrogram` with default parameters. For fine "
             "tuning it is recommended to run `sc.tl.dendrogram` independently."
         )
-        dendrogram(adata, groupby, key_added=dendrogram_key)
+        with own_deprecations():  # `anndata.acc` is optional, so no `out`
+            dendrogram(adata, groupby, key_added=dendrogram_key)
 
     if "dendrogram_info" not in adata.uns[dendrogram_key]:
         msg = (

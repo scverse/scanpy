@@ -6,6 +6,7 @@ from itertools import combinations
 from string import ascii_letters
 from typing import TYPE_CHECKING
 
+import anndata
 import numpy as np
 import pandas as pd
 import pytest
@@ -20,7 +21,10 @@ from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
+
+if TYPE_CHECKING or hasattr(anndata, "acc"):
+    from anndata.acc import A
 
 
 @pytest.fixture(scope="session", params=[sc.metrics.gearys_c, sc.metrics.morans_i])
@@ -29,7 +33,7 @@ def metric(request: pytest.FixtureRequest):
 
 
 @pytest.fixture(params=["single-threaded", "multi-threaded"])
-def _threading(request: pytest.FixtureRequest) -> Generator[None, None, None]:
+def _threading(request: pytest.FixtureRequest) -> Generator[None]:
     if request.param == "single-threaded":
         with threadpoolctl.threadpool_limits(limits=1):
             yield
@@ -40,7 +44,6 @@ def _threading(request: pytest.FixtureRequest) -> Generator[None, None, None]:
 @pytest.mark.usefixtures("_threading")
 def test_consistency(metric) -> None:
     pbmc = pbmc68k_reduced()
-    pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
     equality_check = partial(np.testing.assert_allclose, atol=1e-11)
 
@@ -49,32 +52,47 @@ def test_consistency(metric) -> None:
         metric(g, pbmc.obs["percent_mito"]),
         metric(g, pbmc.obs["percent_mito"]),
     )
-    equality_check(
-        metric(g, pbmc.obs["percent_mito"]),
-        metric(pbmc, vals=pbmc.obs["percent_mito"]),
-    )
-
     equality_check(  # Test that series and vectors return same value
         metric(g, pbmc.obs["percent_mito"]),
         metric(g, pbmc.obs["percent_mito"].values),
     )
 
+
+@needs.anndata_acc
+@pytest.mark.usefixtures("_threading")
+def test_consistency_use(metric) -> None:
+    """Selecting `vals` via an accessor matches passing the same array directly."""
+    pbmc = pbmc68k_reduced()
+    pbmc.layers["raw"] = pbmc.raw.X.copy()
+    g = pbmc.obsp["connectivities"]
+    equality_check = partial(np.testing.assert_allclose, atol=1e-11)
+
     equality_check(
-        metric(pbmc, obsm="X_pca"),
+        metric(pbmc, "obsm.X_pca"),
         metric(g, pbmc.obsm["X_pca"].T),
     )
-
-    all_genes = metric(pbmc, layer="raw")
-    first_gene = metric(
-        pbmc, vals=pbmc[:, pbmc.var_names[0]].layers["raw"].toarray().ravel()
+    equality_check(
+        metric(pbmc, A.obs["percent_mito"]),
+        metric(g, pbmc.obs["percent_mito"]),
     )
+
+    all_genes = metric(pbmc, "layers.raw")
+    first_gene = metric(pbmc, A.layers["raw"][:, pbmc.var_names[0]])
     np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
 
     # Test that results are similar for sparse and dense reps of same data
     equality_check(
-        metric(pbmc, layer="raw"),
-        metric(pbmc, vals=pbmc.layers["raw"].T.toarray()),
+        metric(pbmc, "layers.raw"),
+        metric(g, pbmc.layers["raw"].T.toarray()),
     )
+
+
+@needs.anndata_acc
+def test_vals_array(metric) -> None:
+    """Passing `vals` as an array with an `AnnData` matches passing an accessor."""
+    pbmc = pbmc68k_reduced()
+    expected = metric(pbmc, A.obs["percent_mito"])
+    np.testing.assert_allclose(metric(pbmc, pbmc.obs["percent_mito"]), expected)
 
 
 @pytest.mark.parametrize(
@@ -151,41 +169,65 @@ def test_graph_metrics_w_constant_values(
     equality_check(results_full[non_const_mask], results_const_zeros[non_const_mask])
 
 
+@needs.anndata_acc
 @pytest.mark.parametrize(
-    ("neigh_params", "metric_params"),
+    ("graph", "deprecated"),
     [
-        pytest.param(
-            dict(key_added="foo"), dict(use_graph="foo_connectivities"), id="use_graph"
-        ),
-        pytest.param(
-            dict(key_added="bar"), dict(neighbors_key="bar"), id="neighbors_key"
-        ),
+        pytest.param("foo", "use_graph", id="use_graph"),
+        pytest.param("foo", "neighbors_key", id="neighbors_key"),
     ],
 )
-def test_metrics_graph_params(metric, neigh_params, metric_params) -> None:
+def test_metrics_graph(metric, graph: str, deprecated: str) -> None:
+    """`use` picks the graph, like the deprecated `use_graph`/`neighbors_key`."""
     rng = np.random.default_rng()
     adata = AnnData(rng.normal(size=(10, 20)))
-    sc.pp.neighbors(adata, **neigh_params)
-    if "use_graph" in metric_params:  # make sure no extra stuff is there
-        adata = AnnData(adata.X, obsp=adata.obsp)
-    metric(adata, **metric_params)
+    sc.pp.neighbors(adata, out=A.obsp["foo"])  # also writes `.uns['foo']`
+    expected = metric(adata, use=A.obsp["foo"])
+    with pytest.warns(FutureWarning, match=rf"argument {deprecated} is deprecated"):
+        res = metric(adata, **{deprecated: graph})
+    np.testing.assert_allclose(res, expected)
+    # only the graph is needed
+    adata = AnnData(adata.X, obsp=dict(bar=adata.obsp["foo"]))
+    metric(adata, use="obsp.bar")
 
 
+@needs.anndata_acc
+@pytest.mark.filterwarnings("ignore:.*argument (use_graph|neighbors_key) is deprecated")
 @pytest.mark.parametrize(
     ("params", "err_cls", "pattern"),
     [
         pytest.param(
-            dict(use_graph="foo", neighbors_key="bar"), TypeError, r"both", id="both"
+            lambda: dict(use_graph="foo", neighbors_key="bar"),
+            TypeError,
+            r"both",
+            id="both",
         ),
-        pytest.param(dict(use_graph="foo"), KeyError, r"foo", id="no_graph"),
-        pytest.param(dict(neighbors_key="bar"), KeyError, r"bar", id="no_key"),
-        pytest.param({}, KeyError, r"neighbors.*uns", id="nothing"),
+        pytest.param(
+            lambda: dict(use=A.obsp["foo"], use_graph="foo"),
+            TypeError,
+            r"only one",
+            id="both_use",
+        ),
+        pytest.param(lambda: dict(use_graph="foo"), KeyError, r"foo", id="no_graph"),
+        pytest.param(
+            lambda: dict(neighbors_key="bar"),
+            ValueError,
+            r"pp\.neighbors",
+            id="no_key",
+        ),
+        pytest.param(dict, ValueError, r"pp\.neighbors", id="nothing"),
+        pytest.param(lambda: dict(use=A.X), TypeError, r"obsp", id="not_graph"),
     ],
 )
-def test_metrics_graph_params_errors(metric, params, err_cls, pattern) -> None:
+def test_metrics_graph_params_errors(
+    metric,
+    params: Callable[[], dict[str, object]],
+    err_cls: type[Exception],
+    pattern: str,
+) -> None:
     adata = AnnData(shape=(10, 20))
     with pytest.raises(err_cls, match=pattern):
-        metric(adata, **params)
+        metric(adata, **params())
 
 
 def test_confusion_matrix():

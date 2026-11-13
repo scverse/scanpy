@@ -1,6 +1,6 @@
 """Benchmark tool operations in Scanpy.
 
-API documentation: <https://scanpy.readthedocs.io/en/stable/api/tools.html>.
+API documentation: <https://scanpy.scverse.org/page/api/tools.html>.
 """
 
 from __future__ import annotations
@@ -44,10 +44,10 @@ class ToolsSuite:  # noqa: D101
         sc.tl.leiden(self.adata, flavor="igraph")
 
     def time_combat(self, *_) -> None:
-        sc.pp.combat(self.adata, key="bulk_labels")
+        sc.pp.combat(self.adata, "bulk_labels")
 
     def peakmem_combat(self, *_) -> None:
-        sc.pp.combat(self.adata, key="bulk_labels")
+        sc.pp.combat(self.adata, "bulk_labels")
 
 
 class ScoreGenesSuite:

@@ -3,7 +3,6 @@
 To use `scanpy` from another project, install it using your favourite environment manager:
 
 ::::{tab-set}
-
 :::{tab-item} Hatch (recommended)
 :sync: hatch
 
@@ -39,15 +38,13 @@ $ pip install scanpy
 [miniconda]: https://docs.anaconda.com/miniconda/miniconda-install/
 [from pypi]: https://pypi.org/project/scanpy
 :::
-
 ::::
 
 If you use Hatch or pip, the extra `[leiden]` installs two packages that are needed for popular
-parts of scanpy but aren't requirements: [igraph][] {cite:p}`Csardi2006` and [leiden][] {cite:p}`Traag2019`.
+parts of scanpy but aren’t requirements: [igraph][] {cite:p}`Csardi2006` and {doc}`leiden <leidenalg:index>` {cite:p}`Traag2019`.
 If you use conda, you should to add these dependencies to your environment individually.
 
-[igraph]: https://python.igraph.org/en/stable/
-[leiden]: https://leidenalg.readthedocs.io
+[igraph]: https://python.igraph.org/
 
 (dev-install-instructions)=
 
@@ -61,7 +58,6 @@ $ cd scanpy
 ```
 
 ::::{tab-set}
-
 :::{tab-item} Hatch (recommended)
 :sync: hatch
 
@@ -104,7 +100,6 @@ $ pip install --group=dev --group=test --group=doc -e .
 
 For instructions on how to work with the code, see the {ref}`contribution guide <contribution-guide>`.
 :::
-
 ::::
 
 [on github]: https://github.com/scverse/scanpy
@@ -114,11 +109,11 @@ For instructions on how to work with the code, see the {ref}`contribution guide 
 If you have a GPU, consider [rapids-singlecell][], which mirrors the scanpy API with order-of-magnitude speedups.
 See its [documentation][rapids-singlecell] for installation and usage instructions.
 
-[rapids-singlecell]: https://rapids-singlecell.readthedocs.io
+[rapids-singlecell]: https://rapids-singlecell.scverse.org/
 
 ## Docker
 
-If you're using [Docker][], you can use e.g. the image [gcfntnu/scanpy][] from Docker Hub.
+If you’re using [Docker][], you can use e.g. the image [gcfntnu/scanpy][] from Docker Hub.
 
 [docker]: https://en.wikipedia.org/wiki/Docker_(software)
 [gcfntnu/scanpy]: https://hub.docker.com/r/gcfntnu/scanpy
