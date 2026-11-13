@@ -33,9 +33,12 @@ def _leiden_copy(adata: AnnData, **kwargs) -> AnnData:
     params=[
         pytest.param("igraph", marks=needs.igraph),
         pytest.param("leidenalg", marks=needs.leidenalg),
+        pytest.param("graspologic", marks=needs.graspologic_native),
     ]
 )
-def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
+def flavor(
+    request: pytest.FixtureRequest,
+) -> Literal["igraph", "leidenalg", "graspologic"]:
     return request.param
 
 
@@ -45,13 +48,13 @@ def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
 @pytest.mark.parametrize("n_iterations", [-1, 3])
 def test_leiden_basic(
     adata_neighbors: AnnData,
-    flavor: Literal["igraph", "leidenalg"],
+    flavor: Literal["igraph", "leidenalg", "graspologic"],
     resolution: float,
     n_iterations: int,
 ) -> None:
     with (
         nullcontext()
-        if flavor == "igraph"
+        if flavor != "leidenalg"
         else pytest.warns(
             UserWarning, match=r"The `igraph` implementation of leiden clustering"
         )
@@ -74,7 +77,7 @@ def test_leiden_basic(
 def test_leiden_random_state(
     subtests: pytest.Subtests,
     adata_neighbors: AnnData,
-    flavor: Literal["igraph", "leidenalg"],
+    flavor: Literal["igraph", "leidenalg", "graspologic"],
     rng_arg: Literal["rng", "random_state"],
 ) -> None:
     is_leiden_alg = flavor == "leidenalg"
@@ -147,19 +150,52 @@ def test_leiden_igraph_partition_type(adata_neighbors):
         )
 
 
+@needs.graspologic_native
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        pytest.param(
+            dict(partition_type=object),
+            r"Do not pass in partition_type",
+            id="partition_type",
+        ),
+        pytest.param(dict(directed=True), r"only supports undirected", id="directed"),
+    ],
+)
+def test_leiden_graspologic_invalid(
+    adata_neighbors: AnnData, kwargs: dict[str, object], match: str
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        sc.tl.leiden(adata_neighbors, flavor="graspologic", **kwargs)
+
+
+@needs.anndata_acc
+@needs.graspologic_native
+def test_leiden_graspologic_no_edges() -> None:
+    """Without edges, each observation is its own cluster."""
+    from anndata.acc import A
+
+    adata = AnnData(np.zeros((5, 1)), obsp=dict(g=np.zeros((5, 5))))
+    labels = sc.tl.leiden(adata, flavor="graspologic", use=A.obsp["g"], out=True)
+    assert len(set(labels)) == 5
+
+
 @needs.leidenalg
 @needs.igraph
-def test_leiden_equal_defaults_same_args(adata_neighbors):
-    """Ensure the two implementations are the same for the same args."""
+@pytest.mark.parametrize(
+    "other", ["igraph", pytest.param("graspologic", marks=needs.graspologic_native)]
+)
+def test_leiden_equal_defaults_same_args(adata_neighbors, other):
+    """Ensure the implementations are the same for the same args."""
     leiden_alg_clustered = _leiden_copy(
         adata_neighbors, flavor="leidenalg", n_iterations=2
     )
-    igraph_clustered = _leiden_copy(
-        adata_neighbors, flavor="igraph", directed=False, n_iterations=2
+    other_clustered = _leiden_copy(
+        adata_neighbors, flavor=other, directed=False, n_iterations=2
     )
     assert (
         normalized_mutual_info_score(
-            leiden_alg_clustered.obs["leiden"], igraph_clustered.obs["leiden"]
+            leiden_alg_clustered.obs["leiden"], other_clustered.obs["leiden"]
         )
         > 0.9
     )

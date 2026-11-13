@@ -87,6 +87,7 @@ bbknn = [ "bbknn" ]
 dask = [ "anndata[dask]", "dask[array]>=2024.10" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
+graspologic = [ "graspologic-native>=1.3" ]
 leiden = [ "igraph>=1", "leidenalg>=0.11" ]
 louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ]
 magic = [ "magic-impute>=2.0.4" ]
@@ -115,6 +116,7 @@ dev = [
 test = [
     "scanpy[dask-ml]",
     "scanpy[dask]",
+    "scanpy[graspologic]",
     "scanpy[illico]",
     "scanpy[leiden]",
     "scanpy[plotting]",
