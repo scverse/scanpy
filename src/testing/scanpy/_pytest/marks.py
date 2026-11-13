@@ -80,6 +80,7 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
     illico = auto()
     # external
     bbknn = auto()
+    cellbrowser = auto()
     harmony = "harmonyTS"
     harmonypy = auto()
     magic = "magic-impute"
