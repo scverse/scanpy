@@ -4,6 +4,7 @@ This section contains short examples on how to perform specific tasks with scanp
 
 ```{toctree}
 cell-cycle
+legacy-recipes
 knn-transformers
 plotting-with-marsilea
 ```

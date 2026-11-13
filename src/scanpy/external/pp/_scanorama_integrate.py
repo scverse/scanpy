@@ -90,7 +90,16 @@ def scanorama_integrate(
     >>> import scanpy as sc
     >>> import scanpy.external as sce
     >>> adata = sc.datasets.pbmc3k()
-    >>> sc.pp.recipe_zheng17(adata)
+    >>> sc.pp.filter_genes(adata, min_counts=1)
+    >>> sc.pp.normalize_total(
+    ...     adata, out={"normalized": "X", "norm_factor": "obs.n_counts_all"}
+    ... )
+    >>> sc.pp.log1p(adata)
+    >>> hvg = sc.pp.highly_variable_genes(
+    ...     adata, flavor="cell_ranger", n_top_genes=1000, out=True
+    ... )
+    >>> adata = adata[:, hvg["highly_variable"]].copy()
+    >>> sc.pp.scale(adata, zero_center=True)
     >>> sc.pp.pca(adata)
 
     We now arbitrarily assign a batch metadata variable to each cell
