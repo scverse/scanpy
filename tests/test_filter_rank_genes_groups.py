@@ -148,6 +148,22 @@ def test_filter_rank_genes_groups_missing_genes() -> None:
         filter_rank_genes_groups(adata)
 
 
+def test_filter_rank_genes_groups_missing_genes_cached() -> None:
+    """With cached fractions and fold changes, removed genes do not raise.
+
+    Nothing is recomputed from `adata` in that case, so the stored values
+    (valid for the data that was ranked) are filtered as usual.
+    """
+    adata = pbmc68k_reduced().raw.to_adata()
+    rank_genes_groups(adata, "bulk_labels", method="wilcoxon", n_genes=5, pts=True)
+    expected = filter_rank_genes_groups(adata, out=True)["names"]
+    removed = list(adata.uns["rank_genes_groups"]["names"]["CD14+ Monocyte"][:3])
+    adata = adata[:, ~adata.var_names.isin(removed)].copy()
+
+    res = filter_rank_genes_groups(adata, out=True)["names"]
+    pd.testing.assert_frame_equal(pd.DataFrame(expected), pd.DataFrame(res))
+
+
 @pytest.mark.parametrize("pts", [False, True], ids=["computed", "cached_pts"])
 def test_filter_rank_genes_groups_refilter(*, pts: bool) -> None:
     """Filtering an already filtered result (with NaN names) still works.

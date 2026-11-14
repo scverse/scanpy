@@ -1100,10 +1100,10 @@ def _get_var_idx(
     """Get positions of ranked genes, raising if any are missing (see #1487).
 
     `get_indexer` returns -1 for missing names, which would silently select
-    the last gene. NaN names (from an already filtered result) are skipped.
+    the last gene. `var_names` must not contain NaN (see `_expand`).
     """
     var_idx = (adata.raw if use_raw else adata).var_names.get_indexer(var_names)
-    if not (missing := (var_idx < 0) & pd.notna(var_names)).any():
+    if not (missing := var_idx < 0).any():
         return var_idx
     msg = (
         f"Genes {list(var_names[missing][:5])!r} from `adata.uns[{key!r}]` "
@@ -1115,17 +1115,16 @@ def _get_var_idx(
     raise KeyError(msg)
 
 
-def _get_cached_frac(
-    pts: pd.DataFrame, group: str, var_names: pd.api.extensions.ExtensionArray
+def _expand(
+    values: NDArray[np.number], present: NDArray[np.bool]
 ) -> NDArray[np.floating]:
-    """Look up cached `pts`/`pts_rest` fractions for ranked genes.
+    """Put `values` at the `present` positions and NaN elsewhere.
 
     NaN names (from an already filtered result) get NaN, so they stay filtered out.
     """
-    frac = np.full(len(var_names), np.nan)
-    present = pd.notna(var_names)
-    frac[present] = pts[group].loc[var_names[present]].to_numpy()
-    return frac
+    out = np.full(len(present), np.nan)
+    out[present] = values
+    return out
 
 
 @_doc_params(
@@ -1294,35 +1293,41 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     for cluster in gene_names.columns:
         # iterate per column
         var_names = gene_names[cluster].array
+        # names are NaN where a previous filter removed them
+        present = pd.notna(var_names)
 
         if not use_logfolds or not use_fraction:
-            var_idx = _get_var_idx(
-                adata, var_names, key=key, group=cluster, use_raw=use_raw
-            )
-            sub_x = x[:, var_idx]
+            sub_x = x[
+                :,
+                _get_var_idx(
+                    adata, var_names[present], key=key, group=cluster, use_raw=use_raw
+                ),
+            ]
             in_group = (adata.obs[groupby] == cluster).to_numpy()
             x_in = sub_x[in_group]
             x_out = sub_x[~in_group]
 
         if use_fraction:
-            fraction_in_cluster_matrix.loc[:, cluster] = _get_cached_frac(
-                adata.uns[key]["pts"], cluster, var_names
-            )
-            fraction_out_cluster_matrix.loc[:, cluster] = _get_cached_frac(
-                adata.uns[key]["pts_rest"], cluster, var_names
+            frac_in, frac_out = (
+                adata.uns[key][k][cluster].loc[var_names[present]]
+                for k in ("pts", "pts_rest")
             )
         else:
-            fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac(x_in)
-            fraction_out_cluster_matrix.loc[:, cluster] = _calc_frac(x_out)
+            frac_in, frac_out = _calc_frac(x_in), _calc_frac(x_out)
+        fraction_in_cluster_matrix.loc[:, cluster] = _expand(frac_in, present)
+        fraction_out_cluster_matrix.loc[:, cluster] = _expand(frac_out, present)
 
         if not use_logfolds:
             # compute mean value
             mean_in_cluster = np.ravel(x_in.mean(0))
             mean_out_cluster = np.ravel(x_out.mean(0))
             # compute fold change
-            fold_change_matrix.loc[:, cluster] = np.log2(
-                (expm1_func(mean_in_cluster) + 1e-9)
-                / (expm1_func(mean_out_cluster) + 1e-9)
+            fold_change_matrix.loc[:, cluster] = _expand(
+                np.log2(
+                    (expm1_func(mean_in_cluster) + 1e-9)
+                    / (expm1_func(mean_out_cluster) + 1e-9)
+                ),
+                present,
             )
 
     if compare_abs:
