@@ -421,8 +421,9 @@ def pbmc68k_reduced() -> AnnData:
 
     if settings.preset is Preset.ScanpyV2Preview:
         adata.layers["log_counts"] = log_counts
-        adata.obsm = {k.removeprefix("X_"): v for k, v in adata.obsm.items()}
     else:
+        adata.obsm = {f"X_{k}": v for k, v in adata.obsm.items()}
+        del adata.obs["leiden"], adata.uns["leiden"]
         # matches the precision of the original, pre-2.0 shipped `.raw`
         log_counts.data = np.round(log_counts.data, 3)
         # tie-break rounding boundary like the original did
@@ -499,6 +500,10 @@ def pbmc3k_processed() -> AnnData:
     As analysis steps, the embeddings :func:`~scanpy.tl.tsne` and :func:`~scanpy.tl.umap` are performed.
     Communities are identified using :func:`~scanpy.tl.louvain` and marker genes using :func:`~scanpy.tl.rank_genes_groups`.
 
+    With :attr:`~scanpy.Preset.ScanpyV2Preview`, the cell type annotations are in `.obs["cell_type"]`
+    (instead of `.obs["louvain"]`), :func:`~scanpy.tl.leiden` clusters are in `.obs["leiden"]`,
+    and :attr:`~anndata.AnnData.obsm` keys have no `X_` prefix.
+
     Returns
     -------
     Annotated data matrix.
@@ -517,6 +522,10 @@ def pbmc3k_processed() -> AnnData:
         layers: None (.X)
 
     """  # noqa: D401
+    if settings.preset is Preset.ScanpyV2Preview:
+        path = fetch_dataset("pbmc3k_processed_v2")
+        with zarr.storage.ZipStore(path, mode="r") as store:
+            return read_zarr(zarr.open_group(store=store, mode="r"))
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=OldFormatWarning)
         warnings.filterwarnings("ignore", r"Moving.*from.*uns.*to.*obsp", FutureWarning)

@@ -70,11 +70,24 @@ def test_pbmc3k():
 
 
 @pytest.mark.internet
-def test_pbmc3k_processed():
-    with warnings.catch_warnings(record=True) as records:
+@pytest.mark.parametrize(
+    "preset",
+    [sc.Preset.ScanpyV1, pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2)],
+)
+def test_pbmc3k_processed(preset: sc.Preset):
+    with (
+        sc.settings.override(preset=preset),
+        warnings.catch_warnings(record=True) as records,
+    ):
         adata = sc.datasets.pbmc3k_processed()
     assert adata.shape == (2638, 1838)
     assert adata.raw.shape == (2638, 13714)
+    if preset is sc.Preset.ScanpyV1:
+        assert "louvain" in adata.obs
+        assert set(adata.obsm) == {"X_pca", "X_tsne", "X_umap", "X_draw_graph_fr"}
+    else:
+        assert {"cell_type", "leiden"} <= set(adata.obs)
+        assert set(adata.obsm) == {"pca", "tsne", "umap", "draw_graph_fr"}
 
     assert len(records) == 0
 

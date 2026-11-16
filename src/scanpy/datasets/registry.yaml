@@ -52,3 +52,11 @@ datasets:
         sha256: 0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38
         fallback_urls:
           - https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad
+
+  # generated from `pbmc3k_processed` by `ci/scripts/datasets-v2.py`
+  pbmc3k_processed_v2:
+    type: scanpy
+    files:
+      - name: pbmc3k_processed.zarr.zip
+        s3_key: pbmc3k_processed.zarr.zip
+        sha256: 51cce11b9598e34a8a0d53e02e72aadf1f630befa659bd71765d493e29d432d3
