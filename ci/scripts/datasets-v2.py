@@ -57,6 +57,9 @@ import zarr.storage
 import scanpy as sc
 from scanpy._compat import CSRBase
 
+# write strings as `string-array`: older anndata refuses to write back `nullable-string-array`
+pd.set_option("future.infer_string", False)  # noqa: FBT003
+
 
 def pbmc3k_processed(adata: ad.AnnData) -> ad.AnnData:
     """Apply changes specific to `pbmc3k_processed`."""
