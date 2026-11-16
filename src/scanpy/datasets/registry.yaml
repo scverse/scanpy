@@ -44,19 +44,10 @@ datasets:
         fallback_urls:
           - https://falexwolf.de/data/pbmc3k_raw.h5ad
 
+  # generated from S3 key `scanpy/pbmc3k.h5ad` by `ci/scripts/datasets-v2.py`
   pbmc3k_processed:
-    type: scanpy
-    files:
-      - name: pbmc3k_processed.h5ad
-        s3_key: pbmc3k.h5ad
-        sha256: 0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38
-        fallback_urls:
-          - https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad
-
-  # generated from `pbmc3k_processed` by `ci/scripts/datasets-v2.py`
-  pbmc3k_processed_v2:
     type: scanpy
     files:
       - name: pbmc3k_processed.zarr.zip
         s3_key: pbmc3k_processed.zarr.zip
-        sha256: 89b6e402700215c8e68463698a552e90896c9fe8243585717404fe6bee9484a9
+        sha256: ed79d332aec118f02da531fac338af97c311638ecdc7317a93f2261df334c59c

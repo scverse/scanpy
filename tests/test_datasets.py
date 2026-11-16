@@ -90,7 +90,9 @@ def test_pbmc3k_processed(preset: sc.Preset):
         assert adata.raw is None
         assert adata.var["highly_variable"].sum() == 1838
         assert {"cell_type", "leiden"} <= set(adata.obs)
-        assert set(adata.obsm) == {"pca", "tsne", "umap", "draw_graph_fr"}
+        assert set(adata.obsm) == {"pca", "tsne", "umap", "graph_fr"}
+        assert set(adata.varm) == {"pca"}
+        assert "graph_fr" in adata.uns
 
     assert len(records) == 0
 

@@ -18,14 +18,15 @@
 
 For all datasets:
 - zipped zarr v3 instead of h5ad
-- `obsm` keys without `X_` prefix (`scanpy.datasets` adds them back for the v1 preset)
+- v2 embedding keys (`scanpy.datasets` restores v1’s for the v1 preset): `obsm` keys without
+  `X_` prefix, `varm["PCs"]` → `varm["pca"]`, `draw_graph_fr`/`uns["draw_graph"]` → `graph_fr`
 - `uns["neighbors"]` names its graph keys
 - new `obs["leiden"]` clustering on the existing neighbors graph
 
 `pbmc3k-processed` (from S3 key `scanpy/pbmc3k.h5ad`):
 - current on-disk format: categorical `obs` columns, adjacency graphs in `obsp`
 - `obs["louvain"]` → `obs["cell_type"]` (it holds cell type annotations, not clusters)
-- `.raw` (log-normalized, all genes) → `X`, with `var["highly_variable"]` marking v1’s genes;
+- `.raw` (log1p of the counts, all genes) → `X`, with `var["highly_variable"]` marking v1’s genes;
   v1’s scaled `X` is dropped, `varm["PCs"]` is zero outside the mask like `pp.pca(mask=…)`
 - `uns["rank_genes_groups"]` recomputed (v1’s was stale: groups named "0"…"7")
 
@@ -69,7 +70,7 @@ def pbmc3k_processed(adata: ad.AnnData) -> ad.AnnData:
     adata.uns["cell_type_colors"] = adata.uns.pop("louvain_colors")
     del adata.uns["louvain"]  # clustering params don’t describe a manual annotation
 
-    # `.raw` (log-normalized, all genes) becomes `X`; the scaled HVG `X` is dropped.
+    # `.raw` (log1p of the counts, all genes) becomes `X`; the scaled HVG `X` is dropped.
     assert adata.raw is not None
     idx = adata.raw.var_names.get_indexer(adata.var_names)
     assert (idx >= 0).all()
@@ -135,8 +136,13 @@ def convert(name: str, src: Path, dst: Path) -> None:
     adata = DATASETS[name](adata)
     assert adata.raw is None
 
+    # v2 key defaults, see `scanpy._keys._embedding_keys`
     for k in list(adata.obsm):
         adata.obsm[k.removeprefix("X_")] = adata.obsm.pop(k)
+    adata.varm["pca"] = adata.varm.pop("PCs")
+    if "draw_graph_fr" in adata.obsm:
+        adata.obsm["graph_fr"] = adata.obsm.pop("draw_graph_fr")
+        adata.uns["graph_fr"] = adata.uns.pop("draw_graph")
 
     adata.uns["neighbors"] |= dict(
         connectivities_key="connectivities", distances_key="distances"
