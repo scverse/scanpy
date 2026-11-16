@@ -409,6 +409,30 @@ def test_aggregate_examples(
     assert_equal(expected, result)
 
 
+def test_aggregate_group_label_collision() -> None:
+    adata = ad.AnnData(
+        X=np.array([[1.0], [2.0]]),
+        obs=pd.DataFrame(
+            {
+                "first": ["a_b", "a"],
+                "second": ["c", "b_c"],
+            },
+            index=["cell_1", "cell_2"],
+        ),
+    )
+
+    result = sc.get.aggregate(adata, by=["first", "second"], func="sum")
+    actual = {
+        tuple(group): result.layers["sum"][i, 0]
+        for i, group in enumerate(
+            result.obs[["first", "second"]].itertuples(index=False, name=None)
+        )
+    }
+
+    assert actual == {("a_b", "c"): 1, ("a", "b_c"): 2}
+    assert result.obs_names.is_unique
+
+
 @pytest.mark.parametrize(
     ("label_cols", "expected"),
     [

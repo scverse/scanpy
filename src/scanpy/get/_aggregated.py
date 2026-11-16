@@ -717,9 +717,21 @@ def _combine_categories(label_df: pd.DataFrame) -> tuple[pd.Categorical, pd.Data
     # It's like np.concatenate([x for x in product(*[range(n) for n in n_categories])])
     code_combinations = np.indices(n_categories).reshape(len(n_categories), -1)
     result_categories = pd.Index([
-        "_".join(map(str, x))
-        for x in product(*[df[c].cat.categories for c in label_df.columns])
+        "_".join(map(str, combination))
+        for combination in product(*[df[c].cat.categories for c in label_df.columns])
     ])
+    if not result_categories.is_unique:
+        labels = result_categories.to_list()
+        duplicated = result_categories.duplicated(keep=False)
+        marker = "__scanpy_group__"
+        while any(marker in label for label in labels):
+            marker += "_"
+        result_categories = pd.Index([
+            f"{label}{marker}{i}" if is_duplicate else label
+            for i, (label, is_duplicate) in enumerate(
+                zip(labels, duplicated, strict=True)
+            )
+        ])
 
     # Dataframe with unique combination of categories for each row
     new_label_df = pd.DataFrame(
