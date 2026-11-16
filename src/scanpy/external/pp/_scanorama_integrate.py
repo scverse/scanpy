@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+from scverse_misc import Deprecation, deprecated
 
 from ..._utils._doctests import doctest_needs
 
@@ -12,6 +13,12 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use `snapatac2.pp.scanorama_integrate <https://scverse.org/SnapATAC2/api/_autosummary/snapatac2.pp.scanorama_integrate.html>`_ instead.",
+    )
+)
 @doctest_needs("scanorama")
 def scanorama_integrate(
     adata: AnnData,
@@ -97,6 +104,8 @@ def scanorama_integrate(
     ``adata.obsm`` containing the Scanorama embeddings.
 
     >>> sce.pp.scanorama_integrate(adata, "batch", verbose=1)
+    FutureWarning: The function scanorama_integrate is deprecated and will be removed in the future. Use `snapatac2.pp.scanorama_integrate <https://scverse.org/SnapATAC2/api/_autosummary/snapatac2.pp.scanorama_integrate.html>`_ instead.
+        sce.pp.scanorama_integrate(adata, "batch", verbose=1)
     Processing datasets a <=> b
     >>> "X_scanorama" in adata.obsm
     True

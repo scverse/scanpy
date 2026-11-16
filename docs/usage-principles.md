@@ -24,7 +24,7 @@ sc.pl.umap(adata, **plotting_params)
 ```
 
 If you pass `show=False`, a {class}`~matplotlib.axes.Axes` instance is returned
-and you have all of matplotlib's detailed configuration possibilities.
+and you have all of matplotlib’s detailed configuration possibilities.
 
 To facilitate writing memory-efficient pipelines, by default,
 Scanpy tools operate *inplace* on `adata` and return `None` –
@@ -56,9 +56,10 @@ to initialize an {class}`~anndata.AnnData` object. Possibly add further annotati
 
 ```python
 import pandas as pd
+
 anno = pd.read_csv(filename_sample_annotation)
-adata.obs['cell_groups'] = anno['cell_groups']  # categorical annotation of type pandas.Categorical
-adata.obs['time'] = anno['time']                # numerical annotation of type float
+# annotations of types pandas.Categorical and float
+adata.obs[["cell_groups", "time"]] = anno[["cell_groups", "time"]]
 # alternatively, you could also set the whole dataframe
 # adata.obs = anno
 ```

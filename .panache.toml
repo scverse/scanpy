@@ -1,0 +1,13 @@
+#:schema https://panache.bz/panache.schema.json
+flavor = "myst"
+
+[format]
+wrap = "preserve"
+smart-punctuation = "unicode"
+
+# MyST syntax extensions from `scverse_doc.config.MYST_ENABLE_EXTENSIONS`
+[extensions]
+myst-colon-fence = true  # colon_fence
+definition-lists = true  # deflist
+tex-math-dollars = true  # dollarmath, amsmath
+raw-html = true          # html_image, html_admonition

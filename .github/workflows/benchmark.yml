@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.13"]
+        python: ["3.14"]
         os: [ubuntu-latest]
 
     env:
@@ -35,10 +35,10 @@ jobs:
         if: ${{ github.ref_name != 'main' }}
 
       - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
-          cache: 'pip'
+          cache: "pip"
 
       - name: Cache datasets
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -57,4 +57,4 @@ jobs:
 
       - name: Quick benchmark run
         working-directory: ${{ env.ASV_DIR }}
-        run: asv run --dry-run --quick --show-stderr --verbose HEAD^!
+        run: asv run --dry-run --quick --show-stderr --verbose --launch-method=forkserver HEAD^!

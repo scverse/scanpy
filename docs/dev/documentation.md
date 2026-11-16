@@ -8,27 +8,25 @@ To build the docs, run `hatch run docs:build`.
 Afterwards, you can run `hatch run docs:open` to open {file}`docs/_build/html/index.html`.
 
 Your browser and Sphinx cache docs which have been built previously.
-Sometimes these caches are not invalidated when you've updated the docs.
-If docs are not updating the way you expect, first try "force reloading" your browser page – e.g. reload the page without using the cache.
+Sometimes these caches are not invalidated when you’ve updated the docs.
+If docs are not updating the way you expect, first try “force reloading” your browser page – e.g. reload the page without using the cache.
 Next, if problems persist, clear the sphinx cache (`hatch run docs:clean`) and try building them again.
 
 (adding-to-the-docs)=
 
 ## Adding to the docs
 
-For any user-visible changes, please make sure a note has been added to the release notes using [`hatch run towncrier:create`][towncrier create].
+For any user-visible changes, please make sure a note has been added to the release notes using `hatch run towncrier:create` (see towncrier’s {doc}`towncrier:tutorial`).
 When asked for “Issue number (`+` if none)”, enter the *PR number* instead.
 
-Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
+Once you’ve added a new function to the documentation, you’ll need to make sure there is a link somewhere in the documentation site pointing to it.
 This should be added to `docs/api.md` under a relevant heading.
-
-[towncrier create]: https://towncrier.readthedocs.io/en/stable/tutorial.html#creating-news-fragments
 
 ## docstrings format
 
 We use the numpydoc style for writing docstrings.
-We'd primarily suggest looking at existing docstrings for examples, but the [napolean guide to numpy style docstrings][] is also a great source.
-If you're unfamiliar with the reStructuredText (rST) markup format, check out the [Sphinx rST primer][].
+We’d primarily suggest looking at existing docstrings for examples, but napoleon’s {doc}`napoleon:example_numpy` page is also a great source.
+If you’re unfamiliar with the reStructuredText (rST) markup format, check out the [Sphinx rST primer][].
 
 Some key points:
 
@@ -39,7 +37,6 @@ Some key points:
 
 Look at [`sc.tl.leiden`’s docstring][] as an example for everything mentioned here.
 
-[napolean guide to numpy style docstrings]: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy
 [sphinx rst primer]: https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
 [`sc.tl.leiden`’s docstring]: https://github.com/scverse/scanpy/blob/350c3424d2f96c4a3a7bb3b7d0428d38d842ebe8/src/scanpy/tools/_leiden.py#L49-L120
 
@@ -47,7 +44,7 @@ Look at [`sc.tl.leiden`’s docstring][] as an example for everything mentioned 
 
 One of the most useful things you can include in a docstring is examples of how the function should be used.
 These are a great way to demonstrate intended usage and give users a template they can copy and modify.
-We're able to include the plots produced by these snippets in the rendered docs using [matplotlib's plot directive][].
+We’re able to include the plots produced by these snippets in the rendered docs using [matplotlib's plot directive][].
 For examples of this, see the `Examples` sections of {func}`~scanpy.pl.dotplot` or {func}`~scanpy.pp.calculate_qc_metrics`.
 
 Note that anything in these sections will need to be run when the docs are built, so please keep them computationally light.
@@ -78,7 +75,7 @@ There are three types of return sections – prose, tuple, and a mix of both.
 
 1. Prose is for simple cases.
 2. Tuple return sections are formatted like parameters. Other than in numpydoc, each tuple is first characterized by the identifier and *not* by its type. Provide type annotation in the function header.
-3. Mix of prose and tuple is relevant in complicated cases, e.g. when you want to describe that you *added something as annotation to an \`AnnData\` object*.
+3. Mix of prose and tuple is relevant in complicated cases, e.g. when you want to describe that you *added something as annotation to an `AnnData` object*.
 
 #### Examples
 

@@ -9,10 +9,17 @@ import numpy as np
 import pandas as pd
 from matplotlib import colormaps, rcParams
 from matplotlib import pyplot as plt
+from scverse_misc import Deprecation, deprecated
 
 from .... import logging as logg
 from ...._settings import Default, settings
-from ...._utils import _doc_params, _get_basis_key, sanitize_anndata, with_cat_dtype
+from ...._utils import (
+    _doc_params,
+    _get_basis_key,
+    own_deprecations,
+    sanitize_anndata,
+    with_cat_dtype,
+)
 from ...._utils.random import _LegacyRng
 from ....get import obs_df, rank_genes_groups_df
 from .._anndata import ranking
@@ -406,6 +413,8 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     reference = str(adata.uns[key]["params"]["reference"])
     group_names = adata.uns[key]["names"].dtype.names if groups is None else groups
+    if isinstance(group_names, str):
+        group_names = [group_names]
     # one panel for each group
     # set up the figure
     n_panels_x = min(n_panels_per_row, len(group_names))
@@ -544,6 +553,8 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
     if groupby is None:
         groupby = str(adata.uns[key]["params"]["groupby"])
     group_names = adata.uns[key]["names"].dtype.names if groups is None else groups
+    if isinstance(group_names, str):
+        group_names = [group_names]
 
     if var_names is not None:
         if isinstance(var_names, Mapping):
@@ -564,13 +575,14 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
         var_names = {}
         var_names_list = []
         for group in group_names:
-            df = rank_genes_groups_df(
-                adata,
-                group,
-                key=key,
-                gene_symbols=gene_symbols,
-                log2fc_min=min_logfoldchange,
-            )
+            with own_deprecations():
+                df = rank_genes_groups_df(
+                    adata,
+                    group,
+                    key=key,
+                    gene_symbols=gene_symbols,
+                    log2fc_min=min_logfoldchange,
+                )
 
             if gene_symbols is not None:
                 df["names"] = df[gene_symbols]
@@ -1220,7 +1232,8 @@ def rank_genes_groups_violin(  # noqa: PLR0913
             _gene_names = gene_names
         if isinstance(_gene_names, np.ndarray):
             _gene_names = _gene_names.tolist()
-        df = obs_df(adata, _gene_names, use_raw=use_raw, gene_symbols=gene_symbols)
+        with own_deprecations():  # `anndata.acc` is optional, so no `use`
+            df = obs_df(adata, _gene_names, use_raw=use_raw, gene_symbols=gene_symbols)
         new_gene_names = df.columns
         df["hue"] = adata.obs[groups_key].astype(str).array
         if reference == "rest":
@@ -1276,6 +1289,7 @@ def rank_genes_groups_violin(  # noqa: PLR0913
     return axs
 
 
+@deprecated(Deprecation("1.13.0"))
 def sim(
     adata: AnnData,
     *,
@@ -1426,7 +1440,7 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
         sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.umap(adata)
-        sc.tl.embedding_density(adata, basis='umap', groupby='phase')
+        sc.tl.embedding_density(adata, 'umap', groupby='phase')
 
     Plot all categories be default
 
@@ -1692,7 +1706,10 @@ def _get_values_to_plot(
     if values_to_plot is not None:
         df_list = []
         for group in groups:
-            df = rank_genes_groups_df(adata, group, key=key, gene_symbols=gene_symbols)
+            with own_deprecations():
+                df = rank_genes_groups_df(
+                    adata, group, key=key, gene_symbols=gene_symbols
+                )
             if gene_symbols is not None:
                 df["names"] = df[gene_symbols]
             # check that all genes are present in the df as sc.tl.rank_genes_groups

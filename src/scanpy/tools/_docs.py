@@ -32,3 +32,24 @@ obsp
     Use .obsp[obsp] as adjacency. You can't specify both
     `obsp` and `neighbors_key` at the same time.\
 """
+
+
+def doc_use_neighbors(*, meta: bool = False, extra: str = "") -> str:
+    """Docs for a `use` parameter choosing a neighborhood graph.
+
+    With `meta`, the function also uses what :func:`~scanpy.pp.neighbors` stored alongside it.
+    `extra` is appended as a separate paragraph.
+    """
+    meta_doc = (
+        "\n    Distances and parameters are used from where :func:`~scanpy.pp.neighbors` "
+        "stored them alongside it, if they exist."
+        if meta
+        else ""
+    )
+    return f"""\
+use
+    The neighborhood graph (connectivities) to use, e.g. `A.obsp['k']`
+    after `sc.pp.neighbors(adata, out=A.obsp['k'])`, or any other graph.
+    :class:`str`\\ s are :meth:`~anndata.acc.AdAcc.resolve`\\ d, e.g. `'obsp.k'`.
+    If :data:`None`, the one :func:`~scanpy.pp.neighbors` wrote by default.{meta_doc}{extra}\
+"""

@@ -40,41 +40,63 @@ Find a bug? Interested in improving scanpy? Checkout our GitHub for the latest d
 :::
 
 :::{grid-item-card} GPU acceleration {octicon}`rocket;1em;`
-:link: https://rapids-singlecell.readthedocs.io
+:link: https://rapids-singlecell.scverse.org/
 
 Working with millions of cells and have a GPU available?
 [rapids-singlecell][rsc] mirrors the scanpy API with order-of-magnitude speedups on core preprocessing, neighbors, embedding, and clustering steps.
 :::
 ::::
 
-[rsc]: https://rapids-singlecell.readthedocs.io
+[rsc]: https://rapids-singlecell.scverse.org/
 
 **Other resources**
 
-* Follow changes in the {ref}`release notes <release-notes>`.
-* Discover tools that build on or complement scanpy in the [scverse ecosystem](https://scverse.org/packages/#ecosystem), and follow scverse-wide news at [scverse.org/blog](https://scverse.org/blog/).
-* Check out our {ref}`contribution guide <contribution-guide>` for development practices.
-* Consider citing [Genome Biology (2018)] along with original {doc}`references <references>`.
-
-% put references first so all references are resolved
-
-% NO! there is a particular meaning to this sequence
+- Follow changes in the {ref}`release notes <release-notes>`.
+- Discover tools that build on or complement scanpy in the [scverse ecosystem](https://scverse.org/packages/#ecosystem), and follow scverse-wide news at [scverse.org/blog](https://scverse.org/blog/).
+- Check out our {ref}`contribution guide <contribution-guide>` for development practices.
+- Consider citing [Genome Biology (2018)] along with original {doc}`references <references>`.
 
 ```{toctree}
+:caption: Getting started
 :hidden: true
 :maxdepth: 1
 
 installation
+quickstart
+```
+
+```{toctree}
+:caption: Guides
+:hidden: true
+:maxdepth: 1
+
 tutorials/index
-usage-principles
 how-to/index
+```
+
+```{toctree}
+:caption: Reference
+:hidden: true
+:maxdepth: 1
+
 api/index
 external/index
+usage-principles
+```
+
+```{toctree}
+:caption: Project
+:hidden: true
+:maxdepth: 1
+
 release-notes/index
-community
 dev/index
-contributors
+citation
 references
+community
+contributors
+GitHub <https://github.com/scverse/scanpy>
+Discourse <https://discourse.scverse.org/c/help/scanpy/37>
 ```
 
 [contribution guide]: dev/index.md

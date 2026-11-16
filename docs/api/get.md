@@ -21,5 +21,4 @@ useful formats.
    get.pca
    get.rank_genes_groups_df
    get.aggregate
-
 ```

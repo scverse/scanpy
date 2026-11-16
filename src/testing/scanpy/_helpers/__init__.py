@@ -19,7 +19,7 @@ from anndata.tests.helpers import asarray, assert_equal
 import scanpy as sc
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Generator, Iterable
 
     from numpy.typing import NDArray
 
@@ -35,18 +35,30 @@ if TYPE_CHECKING:
 # These functions can be used to check that functions are correctly using arugments like `layers`, `obsm`, etc.
 
 
+@contextmanager
+def _ignore_rep_deprecations() -> Generator[None]:
+    """Silence the `layer`/`obsm`/`copy` deprecations these helpers deliberately exercise."""
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r".*argument (layer|obsm|copy) is deprecated", FutureWarning
+        )
+        yield
+
+
 def check_rep_mutation(func, x, *, fields=("layer", "obsm"), **kwargs) -> None:
     """Check that only the array meant to be modified is modified."""
     adata_in = AnnData(x.copy())
 
     for field in fields:
-        sc.get._set_obs_rep(adata_in, x, **{field: field})
+        sc.get._set_arr(adata_in, x, **{field: field})
     x_array = asarray(x)
 
-    adata_out = func(adata_in, copy=True, **kwargs)
-    adatas_proc = {
-        field: func(adata_in, copy=True, **{field: field}, **kwargs) for field in fields
-    }
+    with _ignore_rep_deprecations():
+        adata_out = func(adata_in, copy=True, **kwargs)
+        adatas_proc = {
+            field: func(adata_in, copy=True, **{field: field}, **kwargs)
+            for field in fields
+        }
 
     # Modified fields
     for field in fields:
@@ -82,17 +94,18 @@ def check_rep_results(func, x, *, fields: Iterable[str] = ("layer", "obsm"), **k
     adatas_proc = {}
     for field in fields:
         cur = adata_empty.copy()
-        sc.get._set_obs_rep(cur, x.copy(), **{field: field})
+        sc.get._set_arr(cur, x.copy(), **{field: field})
         adatas_proc[field] = cur
 
     # Apply function
     func(adata, **kwargs)
-    for field in fields:
-        func(adatas_proc[field], **{field: field}, **kwargs)
+    with _ignore_rep_deprecations():
+        for field in fields:
+            func(adatas_proc[field], **{field: field}, **kwargs)
     # Reset X
     adata.X = empty_x.copy()
     for field in fields:
-        sc.get._set_obs_rep(adatas_proc[field], empty_x.copy(), **{field: field})
+        sc.get._set_arr(adatas_proc[field], empty_x.copy(), **{field: field})
 
     for field_a, field_b in permutations(fields, 2):
         assert_equal(adatas_proc[field_a], adatas_proc[field_b])

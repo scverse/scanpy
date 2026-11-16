@@ -17,6 +17,11 @@ from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
+from testing.scanpy._pytest.params import (
+    ARRAY_TYPES_MEM,
+    as_dense_jax_array,
+    param_with,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -28,7 +33,14 @@ if TYPE_CHECKING:
     from scanpy._compat import CSRBase
 
 VALID_ARRAY_TYPES = [
-    at
+    param_with(
+        at,
+        marks=[
+            pytest.mark.xfail(reason="aggregate not implemented for array-api arrays")
+        ],
+    )
+    if at.id == "jax_array"
+    else at
     for at in ARRAY_TYPES_ALL
     if at.id
     not in {
@@ -162,6 +174,9 @@ def test_aggregate_axis(
     assert_equal(expected, actual)
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
+)
 def test_aggregate_entry() -> None:
     args = ("blobs", ["mean", "var", "count_nonzero"])
 
@@ -473,6 +488,9 @@ def test_aggregate_arraytype(
     )
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
+)
 def test_aggregate_obsm_varm() -> None:
     adata_obsm = sc.datasets.blobs()
     adata_obsm.obs["blobs"] = adata_obsm.obs["blobs"].astype(str)
@@ -512,10 +530,10 @@ def test_aggregate_obsp_varp() -> None:
     adata_varp = adata_obsp.T.copy()
 
     result_obsp = sc.get.aggregate(
-        adata_obsp, A.obs["blobs"], "sum", acc=A.obsp["test"]
+        adata_obsp, A.obs["blobs"], "sum", use=A.obsp["test"]
     )
     result_varp = sc.get.aggregate(
-        adata_varp, A.var["blobs"], "sum", acc=A.varp["test"]
+        adata_varp, A.var["blobs"], "sum", use=A.varp["test"]
     )
 
     assert_equal(result_obsp, result_varp.T)
@@ -530,6 +548,9 @@ def test_aggregate_obsp_varp() -> None:
     assert_equal(adata_obsp.obs_names, result_obsp.var_names)
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
+)
 def test_aggregate_obsm_labels() -> None:
     from itertools import chain, repeat
 
@@ -578,11 +599,16 @@ def test_aggregate_obsm_labels() -> None:
 @pytest.mark.parametrize("axis", ["obs", "var"])
 @pytest.mark.parametrize("attr", [pytest.param(None, id="x"), "layers", "obsm", "varm"])
 @pytest.mark.parametrize("by", ["blobs", ["blobs", "extra"]], ids=["single", "multi"])
+@pytest.mark.parametrize("use_str", [False, True], ids=["acc", "str"])
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
+)
 def test_acc_api(
     *,
     axis: Literal["obs", "var"],
     attr: Literal["obsm", "varm", "layers"] | None,
     by: str | list[str],
+    use_str: bool,
 ) -> None:
     if (attr == "obsm" and axis == "var") or (attr == "varm" and axis == "obs"):
         pytest.skip()
@@ -606,9 +632,10 @@ def test_acc_api(
         axis=axis,
         **({} if attr is None else {attr.removesuffix("s"): "test"}),
     )
+    use = A.X if attr is None else getattr(A, attr)["test"]
     new = sc.get.aggregate(
         *(adata, getattr(A, axis)[by], ["sum", "mean"]),
-        **({} if attr is None else dict(acc=getattr(A, attr)["test"])),
+        use=("X" if attr is None else f"{attr}.test") if use_str else use,
     )
 
     assert_equal(old, new)
@@ -624,14 +651,14 @@ def test_acc_api(
         pytest.param(
             lambda _: dict(layer="x"),
             TypeError,
-            r"acc.*cannot be combined.*layer",
+            r"use.*cannot be combined.*layer",
             id="layer",
         ),
         pytest.param(
-            lambda a: dict(acc=a.obsm["test"][:, 0]),
+            lambda a: dict(use=a.obsm["test"][:, 0]),
             TypeError,
-            r"`acc` must be a `LayerAcc`.*or.*`MultiAcc`",
-            id="acc-type",
+            r"`use` must be a `LayerAcc`.*or.*`MultiAcc`",
+            id="use-type",
         ),
         pytest.param(
             lambda a: dict(by=[a.obs["blobs"], a.var.index]),
@@ -640,12 +667,15 @@ def test_acc_api(
             id="by-dims",
         ),
         pytest.param(
-            lambda a: dict(acc=a.varm["test"]),
+            lambda a: dict(use=a.varm["test"]),
             ValueError,
-            r"`dim`.*'obs'.*`acc`.*'var'",
-            id="acc-dim",
+            r"`dim`.*'obs'.*`use`.*.var.",
+            id="use-dim",
         ),
     ],
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
 )
 def test_acc_api_errors(
     mk_args: Callable[[AdAcc], dict], exc_cls: type[Exception], pat: str
@@ -683,6 +713,9 @@ def test_acc_api_errors(
         ),
         pytest.param(dict(axis="foo"), r"was 'foo'", id="bad-axis-value"),
     ],
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*argument (layer|obsm|varm) is deprecated:FutureWarning"
 )
 def test_old_api_errors(kwargs: dict, match: str) -> None:
     adata = sc.datasets.blobs()
@@ -754,7 +787,7 @@ def test_nan() -> None:
     adata = ad.AnnData(x, obs=obs)
 
     adata_agg = sc.get.aggregate(
-        adata, by=["sample_id", "patient_type", "cell_type"], func="sum", layer=None
+        adata, by=["sample_id", "patient_type", "cell_type"], func="sum"
     )
 
     assert adata_agg.obs.index.tolist() == [
@@ -765,15 +798,19 @@ def test_nan() -> None:
     assert adata_agg.obs["n_obs_aggregated"].tolist() == [1, 2, 1]
 
 
-@pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
-def test_var_no_catastrophic_cancellation(array_type) -> None:
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+def test_var_no_catastrophic_cancellation(
+    request: pytest.FixtureRequest, array_type
+) -> None:
     # Values of the form `offset + tiny_noise` make the textbook two-pass
     # formula sum(x**2)/n - (sum(x)/n)**2 lose ~all precision: both terms are
     # ~n*offset**2 ≈ 1e19 in float64 (precision ~1e3) but their difference is
     # the variance ~1e-3, far below the rounding noise. Welford's online
-    # algorithm and Chan's parallel combine (per chunk in dask, and for the
-    # zero-block merge in sparse paths) avoid the subtraction entirely.
-
+    # algorithm avoids the subtraction entirely.
+    if array_type is as_dense_jax_array:
+        request.applymarker(
+            pytest.mark.xfail(reason="aggregate not implemented for jax arrays")
+        )
     n_per_group, n_features = 1000, 4
     offset, std = 1e8, 1e-3
     groups = ["a", "b"]

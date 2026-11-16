@@ -19,8 +19,6 @@ import pytest
 import threadpoolctl
 
 import scanpy as sc
-from scanpy._compat import pkg_version
-from testing.scanpy._pytest import context
 from testing.scanpy._pytest.marks import needs
 
 HERE = Path(__file__).parent
@@ -78,12 +76,14 @@ def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
     adata = adata[adata.obs["n_genes"] < 2500, :]
     adata = adata[adata.obs["percent_mito"] < 0.05, :]
 
-    adata.raw = sc.pp.log1p(adata, copy=True)
+    logged = adata.copy()
+    sc.pp.log1p(logged)
+    adata.raw = logged
 
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
     filter_result = sc.pp.highly_variable_genes(
-        adata, min_mean=0.0125, max_mean=3, min_disp=0.5, inplace=False
+        adata, min_mean=0.0125, max_mean=3, min_disp=0.5, out=True
     )
     assert filter_result is not None
 
@@ -165,15 +165,25 @@ def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
 
     sc.tl.rank_genes_groups(adata, "leiden", groups=["0"], reference="1")
     with subtests.test("rank_genes_groups_3"):
-        sc.pl.rank_genes_groups(adata, groups="0", n_genes=20, show=False)
-        plot_cmp("rank_genes_groups_3")
+        # 0 and 1 are separated too little and flip based on platform differences,
+        # so we don’t do image comparison, only labels
+        axs = sc.pl.rank_genes_groups(adata, groups="0", n_genes=20, show=False)
+        assert axs is not None
+        assert len(axs) == 1
+        assert axs[0].get_title() == "0 vs. 1"
+        assert [t.get_text() for t in axs[0].texts] == list(
+            adata.uns["rank_genes_groups"]["names"]["0"][:20]
+        )
 
     with subtests.test("rank_genes_groups_4"):
-        sc.pl.rank_genes_groups_violin(adata, groups="0", n_genes=8, show=False)
-        try:
-            plot_cmp("rank_genes_groups_4")
-        except AssertionError:
-            pytest.xfail("rank_genes_groups_violin not reproducible (jitter?)")
+        # Same as above, plus the strip plot’s jitter is random.
+        axs = sc.pl.rank_genes_groups_violin(adata, groups="0", n_genes=8, show=False)
+        assert axs is not None
+        assert len(axs) == 1
+        assert axs[0].get_title() == "0 vs. 1"
+        assert [t.get_text() for t in axs[0].get_xticklabels()] == list(
+            adata.uns["rank_genes_groups"]["names"]["0"][:8]
+        )
 
     new_cluster_names = [
         *["CD4 T cells", "CD8 T cells", "B cells", "NK cells"],
@@ -185,10 +195,4 @@ def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
         sc.pl.violin(
             adata, ["CST3", "NKG7", "PPBP"], groupby="leiden", rotation=90, show=False
         )
-        # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-        with context.xfail(
-            pkg_version("pandas").major >= 3,
-            reason="seaborn violin plot is incompatible with pandas 3",
-            raises=AssertionError,
-        ):
-            plot_cmp("violin_2")
+        plot_cmp("violin_2")

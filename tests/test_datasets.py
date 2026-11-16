@@ -10,20 +10,23 @@ from textwrap import dedent
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pooch.core
 import pytest
+import requests
 from anndata.tests.helpers import assert_adata_equal
 from packaging.version import Version
 
 import scanpy as sc
 from scanpy._compat import pkg_version
+from scanpy.io._download import download
 from testing.scanpy._helpers import data
 from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Self
 
     from anndata import AnnData
+    from pooch.typing import Downloader
 
 
 @pytest.fixture(autouse=True)
@@ -37,7 +40,10 @@ def _tmp_dataset_dir(tmp_path: Path) -> None:
 
 @pytest.mark.internet
 def test_burczynski06():
-    with pytest.warns(UserWarning, match=r"Variable names are not unique"):
+    with (
+        pytest.warns(FutureWarning, match=r"burczynski06 is deprecated"),
+        pytest.warns(UserWarning, match=r"Variable names are not unique"),
+    ):
         adata = sc.datasets.burczynski06()
     assert adata.shape == (127, 22283)
     assert not (adata.X == 0).any()
@@ -78,19 +84,29 @@ def test_ebi_expression_atlas(monkeypatch: pytest.MonkeyPatch):
     from scanpy.datasets import _ebi_expression_atlas as ea_mod
 
     # make sure we use chunks when testing.
-    # This dataset has <8M entries, so 4M entries/chunk = 2 chunks
+    # This dataset has ~31k entries, so 20k entries/chunk = 2 chunks
     assert hasattr(ea_mod, "CHUNK_SIZE")
-    monkeypatch.setattr(ea_mod, "CHUNK_SIZE", int(4e6))
+    monkeypatch.setattr(ea_mod, "CHUNK_SIZE", 20_000)
 
-    adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
+    # a tiny dataset (~160kB), since EBI’s downloads can be very slow
+    adata = sc.datasets.ebi_expression_atlas("E-ENAD-19")
     # The shape changes sometimes
-    assert 2261 <= adata.shape[0] <= 2315
-    assert 23899 <= adata.shape[1] <= 24051
+    assert 24 <= adata.shape[0] <= 28
+    assert 3500 <= adata.shape[1] <= 3800
 
 
-def test_krumsiek11():
-    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
-        adata = sc.datasets.krumsiek11()
+@pytest.mark.parametrize(
+    "preset",
+    [sc.Preset.ScanpyV1, pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2)],
+)
+def test_krumsiek11(preset: sc.Preset):
+    with sc.settings.override(preset=preset):
+        if preset is sc.Preset.ScanpyV1:
+            with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+                adata = sc.datasets.krumsiek11()
+        else:
+            adata = sc.datasets.krumsiek11()
+            assert adata.obs_names.is_unique
     assert adata.shape == (640, 11)
     assert set(adata.obs["cell_type"]) == {"Ery", "Mk", "Mo", "Neu", "progenitor"}
 
@@ -104,7 +120,10 @@ def test_blobs():
 
 
 def test_toggleswitch():
-    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+    with (
+        pytest.warns(FutureWarning, match=r"toggleswitch is deprecated"),
+        pytest.warns(UserWarning, match=r"Observation names are not unique"),
+    ):
         sc.datasets.toggleswitch()
 
 
@@ -112,6 +131,14 @@ def test_pbmc68k_reduced():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         sc.datasets.pbmc68k_reduced()
+
+
+def _assert_visium_equal(a: AnnData, b: AnnData) -> None:
+    # `assert_adata_equal` densifies sparse `X`, which takes ~2.4GB here
+    # https://github.com/scverse/anndata/issues/2727
+    assert (a.X != b.X).nnz == 0
+    del a.X, b.X
+    assert_adata_equal(a, b)
 
 
 @pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
@@ -122,7 +149,7 @@ def test_visium_datasets():
         hheart = sc.datasets.visium_sge("V1_Human_Heart")
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         hheart_again = sc.datasets.visium_sge("V1_Human_Heart")
-    assert_adata_equal(hheart, hheart_again)
+    _assert_visium_equal(hheart, hheart_again)
 
 
 @pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
@@ -134,7 +161,7 @@ def test_visium_datasets_dir_change(tmp_path: Path):
     sc.settings.datasetdir = tmp_path
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         mbrain_again = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
-    assert_adata_equal(mbrain, mbrain_again)
+    _assert_visium_equal(mbrain, mbrain_again)
 
 
 @pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
@@ -169,40 +196,36 @@ def test_download_failure() -> None:
     excinfo.value.close()
 
 
-def test_download_atomic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.fixture
+def fake_downloader(monkeypatch: pytest.MonkeyPatch) -> Callable[[Downloader], None]:
+    """Let a test stand in for the downloader pooch would pick for a URL."""
+
+    def use(downloader: Downloader) -> None:
+        monkeypatch.setattr(
+            pooch.core, "choose_downloader", lambda url, progressbar=False: downloader
+        )
+
+    return use
+
+
+def test_download_atomic(
+    tmp_path: Path, fake_downloader: Callable[[Downloader], None]
+) -> None:
     """The destination must not appear until the download finished (#4097)."""
-    import io
-    import urllib.request
-
-    from scanpy.readwrite import _download
-
     content = b"0123456789" * 5_000
     dest = tmp_path / "cache" / "data.bin"
     dest.parent.mkdir()
     dest_present_during_download: list[bool] = []
 
-    class FakeResponse:
-        def __init__(self) -> None:
-            self._buf = io.BytesIO(content)
-
-        def info(self) -> dict[str, str]:
-            return {"content-length": str(len(content))}
-
-        def read(self, size: int) -> bytes:
-            chunk = self._buf.read(size)
-            if chunk:
+    def downloader(url: str, output_file: str, pooch_: object) -> None:
+        with Path(output_file).open("wb") as f:
+            for start in range(0, len(content), 1024):
                 dest_present_during_download.append(dest.exists())
-            return chunk
+                f.write(content[start : start + 1024])
 
-        def __enter__(self) -> Self:
-            return self
+    fake_downloader(downloader)
 
-        def __exit__(self, *exc: object) -> bool:
-            return False
-
-    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: FakeResponse())
-
-    _download("http://example.invalid/data.bin", dest)
+    download("http://example.invalid/data.bin", dest)
 
     assert dest.read_bytes() == content
     assert len(dest_present_during_download) > 1
@@ -210,36 +233,44 @@ def test_download_atomic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     assert list(dest.parent.iterdir()) == [dest]
 
 
-def test_download_failure_keeps_existing_file(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_download_leaves_nothing_behind_on_failure(
+    tmp_path: Path, fake_downloader: Callable[[Downloader], None]
 ) -> None:
-    """A failed download must not delete an already-present destination (#4097)."""
-    import urllib.request
+    """A failed download must not leave a partial file behind (#4097)."""
+    dest = tmp_path / "cache" / "data.bin"
+    dest.parent.mkdir()
+    attempts = 0
 
-    from scanpy.readwrite import _download
+    def downloader(url: str, output_file: str, pooch_: object) -> None:
+        nonlocal attempts
+        attempts += 1
+        Path(output_file).write_bytes(b"partial")
+        msg = "connection reset"
+        raise requests.ConnectionError(msg)
 
+    fake_downloader(downloader)
+
+    with pytest.raises(requests.ConnectionError, match="connection reset"):
+        download("http://example.invalid/data.bin", dest)
+
+    assert attempts == 4  # the initial try plus `retry_if_failed=3`
+    assert list(dest.parent.iterdir()) == []
+
+
+def test_download_keeps_existing_file(
+    tmp_path: Path, fake_downloader: Callable[[Downloader], None]
+) -> None:
+    """An already-present destination is kept as-is, not re-downloaded (#4097)."""
     dest = tmp_path / "cache" / "data.bin"
     dest.parent.mkdir()
     dest.write_bytes(b"complete")
 
-    class FailingResponse:
-        def info(self) -> dict[str, str]:
-            return {"content-length": "100"}
+    def downloader(url: str, output_file: str, pooch_: object) -> None:
+        pytest.fail("should not have been downloaded again")
 
-        def read(self, size: int) -> bytes:
-            msg = "connection reset"
-            raise OSError(msg)
+    fake_downloader(downloader)
 
-        def __enter__(self) -> Self:
-            return self
-
-        def __exit__(self, *exc: object) -> bool:
-            return False
-
-    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: FailingResponse())
-
-    with pytest.raises(OSError, match="connection reset"):
-        _download("http://example.invalid/data.bin", dest)
+    download("http://example.invalid/data.bin", dest)
 
     assert dest.read_bytes() == b"complete"
     assert list(dest.parent.iterdir()) == [dest]
@@ -282,6 +313,9 @@ def test_doc_shape(ds_name):
             "ignore", r"Unknown extension is not supported", UserWarning
         )
         warnings.filterwarnings("ignore", r".*squidpy\.(datasets|read)", FutureWarning)
+        warnings.filterwarnings(
+            "ignore", r"The function \w+ is deprecated", FutureWarning
+        )
         dataset = cached_fn()
 
     repr_ = repr(dataset)

@@ -3,78 +3,78 @@ description: Scanpy doesn’t do what it should? Please help us fix it!
 #title: ...
 type: Bug
 labels:
-- Triage 🩺
+  - Triage 🩺
 #assignees: []
 body:
-- type: checkboxes
-  id: terms
-  attributes:
-    label: Please make sure these conditions are met
-    # description: ...
-    options:
-    - label: I have checked that this issue has not already been reported.
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Please make sure these conditions are met
+      # description: ...
+      options:
+        - label: I have checked that this issue has not already been reported.
+          required: true
+        - label: I have confirmed this bug exists on the latest version of scanpy.
+          required: true
+        - label: (optional) I have confirmed this bug exists on the main branch of scanpy.
+          required: false
+  - type: markdown
+    attributes:
+      value: |
+        **Note**: Please read [this guide](https://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports) detailing how to provide the necessary information for us to reproduce your bug.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe what you tried to do, and what happened instead.
+    validations:
       required: true
-    - label: I have confirmed this bug exists on the latest version of scanpy.
+  - type: textarea
+    id: code
+    attributes:
+      label: Minimal code sample
+      description: |
+        Reproducible code sample. Must list dependencies in [inline script metadata][]. When put in a file named `issue.py` using [uv run][] i.e., `uv run issue.py`, should show the issue.
+
+        [uv run]: https://docs.astral.sh/uv/guides/scripts/#running-a-script-with-dependencies
+        [inline script metadata]: https://packaging.python.org/stable/specifications/inline-script-metadata/#example
+      render: python
+      value: |
+        ```python
+        # /// script
+        # requires-python = ">=3.13"
+        # dependencies = [
+        #   "scanpy@git+https://github.com/scverse/scanpy.git@main",
+        # ]
+        # ///
+        #
+        # This script automatically imports the development branch of scanpy to check for issues
+
+        import scanpy as sc
+        # your reproducer code
+          ```
+    validations:
       required: true
-    - label: (optional) I have confirmed this bug exists on the main branch of scanpy.
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Error output
+      description: Produced by the code above. Leave empty if the issue is unexpected behavior instead of an error.
+      render: pytb
+    validations:
       required: false
-- type: markdown
-  attributes:
-    value: |
-      **Note**: Please read [this guide](https://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports) detailing how to provide the necessary information for us to reproduce your bug.
-- type: textarea
-  id: description
-  attributes:
-    label: What happened?
-    description: Describe what you tried to do, and what happened instead.
-  validations:
-    required: true
-- type: textarea
-  id: code
-  attributes:
-    label: Minimal code sample
-    description: |
-      Reproducible code sample. Must list dependencies in [inline script metadata][]. When put in a file named `issue.py` using [uv run][] i.e., `uv run issue.py`, should show the issue.
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: Paste the output of `import scanpy; scanpy.logging.print_versions()` between the lines of backticks (\`\`\`)
+      value: |
+        <details>
 
-      [uv run]: https://docs.astral.sh/uv/guides/scripts/#running-a-script-with-dependencies
-      [inline script metadata]: https://packaging.python.org/en/latest/specifications/inline-script-metadata/#example
-    render: python
-    value: |
-      ```python
-      # /// script
-      # requires-python = ">=3.12"
-      # dependencies = [
-      #   "scanpy@git+https://github.com/scverse/scanpy.git@main",
-      # ]
-      # ///
-      #
-      # This script automatically imports the development branch of scanpy to check for issues
-
-      import scanpy as sc
-      # your reproducer code
         ```
-  validations:
-    required: true
-- type: textarea
-  id: traceback
-  attributes:
-    label: Error output
-    description: Produced by the code above. Leave empty if the issue is unexpected behavior instead of an error.
-    render: pytb
-  validations:
-    required: false
-- type: textarea
-  id: versions
-  attributes:
-    label: Versions
-    description: Paste the output of `import scanpy; scanpy.logging.print_versions()` between the lines of backticks (\`\`\`)
-    value: |
-      <details>
 
-      ```
+        ```
 
-      ```
-
-      </details>
-  validations:
-    required: true
+        </details>
+    validations:
+      required: true

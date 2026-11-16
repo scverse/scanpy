@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import contextlib
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from fast_array_utils.stats import mean
+from scverse_misc import Deprecation, deprecated_arg
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
@@ -20,21 +22,27 @@ from .._utils import (
 )
 from .._utils._doctests import doctest_skipif
 from .._utils.random import _legacy_random_state, _LegacyRng
-from ..get import _check_mask
-from ..neighbors import FlatTree
+from ..get._types import MultiAcc
+from ..get._uns import _use_from_uns
+from ..get._use import _check_mask, _mask_arg
+from ._utils import _choose_representation_compat
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import Iterable
 
     from anndata import AnnData
     from pynndescent import NNDescent
     from umap import UMAP
 
     from .._keys import _EmbeddingKeys
-    from ..neighbors import RPForestDict
+    from ..get._types import RepAcc
 
 
 @doctest_skipif(reason="illustrative short example but not runnable")
+@deprecated_arg(
+    "inplace",
+    Deprecation("1.13.0", "Copy `adata` before calling this function instead."),
+)
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
@@ -43,6 +51,7 @@ def ingest(
     embedding_method: str | Iterable[str] = ("umap", "pca"),
     labeling_method: str = "knn",
     neighbors_key: str | None = None,
+    # deprecated
     inplace: bool = True,
     **kwargs,
 ):
@@ -105,7 +114,7 @@ def ingest(
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns `None`, or a modified copy for the deprecated `inplace=False`. Sets the following fields:
 
     `adata.obs[obs]` : :class:`pandas.Series` (dtype ``category``)
         Mapped labels.
@@ -147,27 +156,6 @@ def ingest(
 
     logg.info("    finished", time=start)
     return ing.to_adata(inplace=inplace)
-
-
-def _rp_forest_generate(
-    rp_forest_dict: RPForestDict,
-) -> Generator[FlatTree, None, None]:
-    props = FlatTree._fields
-    num_trees = len(rp_forest_dict[props[0]]["start"]) - 1
-
-    for i in range(num_trees):
-        tree = []
-        for prop in props:
-            start = rp_forest_dict[prop]["start"][i]
-            end = rp_forest_dict[prop]["start"][i + 1]
-            tree.append(rp_forest_dict[prop]["data"][start:end])
-        yield FlatTree(*tree)
-
-    tree = []
-    for prop in props:
-        start = rp_forest_dict[prop]["start"][num_trees]
-        tree.append(rp_forest_dict[prop]["data"][start:])
-    yield FlatTree(*tree)
 
 
 class _DimDict(MutableMapping):
@@ -225,7 +213,7 @@ class Ingest:
     _rng: np.random.Generator | None
     # neighbors
     _rep: np.ndarray
-    _use_rep: str
+    _use_rep: RepAcc | str
     _metric: str
     _metric_kwds: dict[str, object]
     _n_neighbors: int
@@ -256,12 +244,20 @@ class Ingest:
     def _init_umap(self, adata: AnnData, keys: _EmbeddingKeys) -> None:
         from umap import UMAP
 
-        rng = self._get_rng(adata.uns[keys.uns]["params"])
+        from ._umap import _resolve_compatibility_layout, _umap_layout_kw
+
+        params = adata.uns[keys.uns]["params"]
+        rng = self._get_rng(params)
+        # transform with the pipeline that made the reference embedding
+        compat_layout = _resolve_compatibility_layout(
+            params.get("compatibility_layout", True)
+        )
         self._umap = UMAP(
+            **_umap_layout_kw(compatibility_layout=compat_layout),
             metric=self._metric,
             random_state=_legacy_random_state(rng),
-            # umap can’t be run in parallel with `random_state is not None`
-            n_jobs=-1 if rng is None else 1,
+            # the compatibility pipeline is only reproducible single-threaded
+            n_jobs=1 if rng is not None and compat_layout else -1,
         )
 
         self._umap._initial_alpha = self._umap.learning_rate
@@ -302,36 +298,30 @@ class Ingest:
             random_state=_legacy_random_state(rng),
         )
 
-        # temporary hack for the broken forest storage
-        from pynndescent.rp_trees import make_forest
-
-        current_random_state = check_random_state(self._nnd_idx.random_state)
-        self._nnd_idx._rp_forest = make_forest(
-            self._nnd_idx._raw_data,
-            self._nnd_idx.n_neighbors,
-            self._nnd_idx.n_search_trees,
-            self._nnd_idx.leaf_size,
-            self._nnd_idx.rng_state,
-            current_random_state,
-            self._nnd_idx.n_jobs,
-            self._nnd_idx._angular_trees,
-        )
-
     def _init_neighbors(self, adata: AnnData, neighbors_key: str | None) -> None:
         neighbors = NeighborsView(adata, neighbors_key)
 
         self._n_neighbors = neighbors["params"]["n_neighbors"]
 
-        if "use_rep" in neighbors["params"]:
-            self._use_rep = neighbors["params"]["use_rep"]
-            self._rep = adata.X if self._use_rep == "X" else adata.obsm[self._use_rep]
+        if (use_rep := _use_from_uns(neighbors["params"])) is not None:
+            self._use_rep = use_rep
+            self._rep = _choose_representation_compat(
+                adata, use_rep=self._use_rep, n_pcs=None
+            )
         elif "n_pcs" in neighbors["params"]:
             self._use_rep = "X_pca"
             self._n_pcs = neighbors["params"]["n_pcs"]
             self._rep = adata.obsm["X_pca"][:, : self._n_pcs]
         elif adata.n_vars > settings.N_PCS and "X_pca" in adata.obsm:
+            # Neither `use_rep` nor `n_pcs` was recorded, meaning `pp.neighbors`
+            # ran with its own `n_pcs=None` default, which uses the full stored
+            # PCA representation unsliced (see `_get_pca_or_small_x`). Slicing
+            # to `settings.N_PCS` here would silently use a different, smaller
+            # representation than the one that actually produced this
+            # neighbor graph whenever more than `settings.N_PCS` components
+            # were computed.
             self._use_rep = "X_pca"
-            self._rep = adata.obsm["X_pca"][:, : settings.N_PCS]
+            self._rep = adata.obsm["X_pca"]
             self._n_pcs = self._rep.shape[1]
 
         self._metric_kwds = neighbors["params"].get("metric_kwds", {})
@@ -342,9 +332,13 @@ class Ingest:
         )
 
     def _init_pca(self, adata: AnnData) -> None:
-        self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
+        # PCA from old scanpy versions has no `params`, use `pp.pca`’s defaults
+        params = adata.uns["pca"].get("params", {})
+        self._pca_centered = params.get("zero_center", True)
         self._pca_mask = _check_mask(
-            adata, adata.uns["pca"]["params"]["mask_var"], "var"
+            adata,
+            _mask_arg(None, params.get("mask_var"), dim="var"),
+            "var",
         )
 
         if self._pca_mask is not None:
@@ -422,10 +416,11 @@ class Ingest:
         adata = self._adata_new
         if self._n_pcs is not None:
             return self._pca(self._n_pcs)
-        if self._use_rep == "X":
-            return adata.X
-        if self._use_rep in adata.obsm:
-            return adata.obsm[self._use_rep]
+        # fall back to `.X` if the representation is missing in the new object
+        with contextlib.suppress(KeyError, ValueError):
+            return _choose_representation_compat(
+                adata, use_rep=self._use_rep, n_pcs=None
+            )
         return adata.X
 
     def fit(self, adata_new: AnnData) -> None:
@@ -558,11 +553,14 @@ class Ingest:
                     self._obsm[key],
                 ))
 
-        if self._use_rep not in ("X_pca", "X"):
-            adata.obsm[self._use_rep] = np.vstack((
-                self._adata_ref.obsm[self._use_rep],
-                self._obsm["rep"],
-            ))
+        pca_keys = _existing_preset_keys(self._adata_ref, "pca")
+        skip = {"X", pca_keys.obsm if pca_keys else "X_pca"}
+        match self._use_rep:
+            case MultiAcc(dim="obs", k=key) | str(key) if key not in skip:
+                adata.obsm[key] = np.vstack((
+                    self._adata_ref.obsm[key],
+                    self._obsm["rep"],
+                ))
 
         if keys := _existing_preset_keys(self._adata_ref, "umap"):
             adata.uns[keys.uns] = self._adata_ref.uns[keys.uns]

@@ -4,6 +4,7 @@ import random
 from collections.abc import Sequence
 from contextlib import contextmanager
 from functools import WRAPPER_ASSIGNMENTS, wraps
+from inspect import signature
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -27,6 +28,7 @@ __all__ = [
     "_accepts_legacy_random_state",
     "_if_legacy_apply_global",
     "_legacy_random_state",
+    "_rng_kwds",
     "_set_igraph_rng",
     "ith_k_tuple",
     "random_k_tuples",
@@ -51,14 +53,16 @@ class _RNGIgraph:
 
     def __init__(self, rng: SeedLike | RNGLike | None) -> None:
         self._rng = np.random.default_rng(rng)
+        # igraph calls `getrandbits` a lot, so bind the fastest source once.
+        # (`random_raw` is ~10× faster than `.integers(…)`)
+        self._raw: Callable[[], int] = (
+            self._rng.state.tomaxint
+            if isinstance(self._rng, _LegacyRng)
+            else self._rng.bit_generator.random_raw
+        )
 
     def getrandbits(self, k: int) -> int:
-        if isinstance(self._rng, _LegacyRng):
-            i = self._rng.state.tomaxint()
-        else:
-            lims = np.iinfo(np.uint64)
-            i = int(self._rng.integers(0, lims.max, dtype=np.uint64, endpoint=True))
-        return i & ((1 << k) - 1)
+        return self._raw() & ((1 << k) - 1)
 
     def randint(self, a: int, b: int) -> np.int64:
         """Can’t use `endpoint` here as _LegacyRng doesn’t support it."""
@@ -73,6 +77,9 @@ def _set_igraph_rng(rng: SeedLike | RNGLike | None) -> Generator[None]:
     ensure_igraph()
     import igraph
 
+    if rng is None:  # unseeded, so igraph’s native (and fastest) RNG is fine
+        yield None
+        return
     ig_rng = _RNGIgraph(rng)
     try:
         igraph.set_random_number_generator(ig_rng)
@@ -177,6 +184,25 @@ def _legacy_random_state(
         return rng.state if always_state else rng.arg
     [bitgen] = np.random.default_rng(rng).bit_generator.spawn(1)
     return np.random.RandomState(bitgen)
+
+
+def _rng_kwds(
+    target: Callable | type, /, rng: np.random.Generator | None
+) -> dict[str, np.random.Generator | _LegacyRandom]:
+    """Pass `rng` to `target` as whichever of `rng`/`random_state` it accepts.
+
+    Prefers `rng` if `target` accepts both,
+    converts to a legacy `random_state` if that’s all it accepts,
+    and returns `{}` if it accepts neither.
+    """
+    if rng is None:
+        return {}
+    params = signature(target).parameters
+    if "rng" in params:
+        return dict(rng=rng)
+    if "random_state" in params:
+        return dict(random_state=_legacy_random_state(rng))
+    return {}
 
 
 def _accepts_legacy_random_state[**P, R](

@@ -34,7 +34,8 @@ jobs:
       - name: Check if milestone or “no milestone” label is present
         uses: flying-sheep/check@e10bb11109d1434ab16729bd988d78d65d47e163 # v1.0.5
         with:
-          success: ${{ github.event.pull_request.user.login == 'pre-commit-ci[bot]' || github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
+          # bots add the label right after opening, so the `opened` run would fail
+          success: ${{ contains(fromJSON('["pre-commit-ci[bot]","dependabot[bot]"]'), github.event.pull_request.user.login) || github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
       - name: Check if the “Release notes” checkbox is checked and filled
         uses: kaisugi/action-regex-match@d67cd689755dc47c5362609e0a6e2e1c93fa721b # v1.0.2
         id: checked-relnotes
@@ -44,7 +45,7 @@ jobs:
           flags: m
       - name: Check PR title
         id: check-title
-        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        uses: amannn/action-semantic-pull-request@2252a14e810aa9b85c2d560bd7070c802206ecf6 # v6.1.2
         env: # Needs repo options: “Squash and merge” with commit message set to “PR title”
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
@@ -58,7 +59,8 @@ jobs:
     if: github.event.pull_request.user.login != 'pre-commit-ci[bot]' && needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(fromJSON('["style","refactor","test","build","docs","ci"]'), needs.check-milestone.outputs.type)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: { filter: 'blob:none', fetch-depth: 0, persist-credentials: false }
+        with:
+          { filter: "blob:none", fetch-depth: 0, persist-credentials: false }
       - name: Find out if a relevant release fragment is added
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: changes
