@@ -59,4 +59,4 @@ datasets:
     files:
       - name: pbmc3k_processed.zarr.zip
         s3_key: pbmc3k_processed.zarr.zip
-        sha256: 51cce11b9598e34a8a0d53e02e72aadf1f630befa659bd71765d493e29d432d3
+        sha256: f5ff7792f596d76af3d5de008c20f1db14bb936d02e5cb31de5145f99efa84a5

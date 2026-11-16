@@ -25,6 +25,8 @@ For all datasets:
 `pbmc3k-processed` (from S3 key `scanpy/pbmc3k.h5ad`):
 - current on-disk format: categorical `obs` columns, adjacency graphs in `obsp`
 - `obs["louvain"]` → `obs["cell_type"]` (it holds cell type annotations, not clusters)
+- `.raw` (log-normalized, all genes) → `X`, with `var["highly_variable"]` marking v1’s genes;
+  v1’s scaled `X` is dropped, `varm["PCs"]` is zero outside the mask like `pp.pca(mask=…)`
 - `uns["rank_genes_groups"]` recomputed (v1’s was stale: groups named "0"…"7")
 
 `pbmc68k-reduced` (from `git show 43072780^:src/scanpy/datasets/10x_pbmc68k_reduced.h5ad`):
@@ -56,7 +58,7 @@ import scanpy as sc
 from scanpy._compat import CSRBase
 
 
-def pbmc3k_processed(adata: ad.AnnData) -> None:
+def pbmc3k_processed(adata: ad.AnnData) -> ad.AnnData:
     """Apply changes specific to `pbmc3k_processed`."""
     assert isinstance(adata.obs, pd.DataFrame)
     assert isinstance(adata.obs["louvain"].dtype, pd.CategoricalDtype)
@@ -64,7 +66,29 @@ def pbmc3k_processed(adata: ad.AnnData) -> None:
     adata.uns["cell_type_colors"] = adata.uns.pop("louvain_colors")
     del adata.uns["louvain"]  # clustering params don’t describe a manual annotation
 
-    # same params as v1, see `uns["rank_genes_groups"]["params"]` there
+    # `.raw` (log-normalized, all genes) becomes `X`; the scaled HVG `X` is dropped.
+    assert adata.raw is not None
+    idx = adata.raw.var_names.get_indexer(adata.var_names)
+    assert (idx >= 0).all()
+    hvg = np.zeros(adata.raw.n_vars, dtype=bool)
+    hvg[idx] = True
+    # like `pp.pca(mask=…)`: zero loadings for genes outside the mask
+    pcs = np.zeros(
+        (adata.raw.n_vars, adata.varm["PCs"].shape[1]), adata.varm["PCs"].dtype
+    )
+    pcs[idx] = adata.varm["PCs"]
+    adata = ad.AnnData(
+        adata.raw.X,
+        obs=adata.obs,
+        var=adata.raw.var.assign(highly_variable=hvg),
+        uns=adata.uns,
+        obsm=dict(adata.obsm),
+        varm=dict(PCs=pcs),
+        obsp=dict(adata.obsp),
+    )
+    adata.uns["pca"]["params"] = dict(zero_center=True, mask_var="highly_variable")
+
+    # same params as v1 (which used `.raw`), see `uns["rank_genes_groups"]["params"]` there
     del adata.uns["rank_genes_groups"]
     sc.tl.rank_genes_groups(
         adata,
@@ -72,11 +96,11 @@ def pbmc3k_processed(adata: ad.AnnData) -> None:
         method="t-test_overestim_var",
         reference="rest",
         n_genes=100,
-        use_raw=True,
     )
+    return adata
 
 
-def pbmc68k_reduced(adata: ad.AnnData) -> None:
+def pbmc68k_reduced(adata: ad.AnnData) -> ad.AnnData:
     """Apply changes specific to `pbmc68k_reduced`."""
     assert adata.raw is not None
     assert isinstance(adata.raw.X, CSRBase)
@@ -91,6 +115,7 @@ def pbmc68k_reduced(adata: ad.AnnData) -> None:
     assert np.abs(counts.data - np.rint(counts.data)).max() < 0.25
     adata.layers["counts"] = counts.rint().astype(np.int32)
     del adata.raw
+    return adata
 
 
 DATASETS = {"pbmc3k-processed": pbmc3k_processed, "pbmc68k-reduced": pbmc68k_reduced}
@@ -104,7 +129,8 @@ def convert(name: str, src: Path, dst: Path) -> None:
         adata = ad.read_h5ad(src)
     assert {"distances", "connectivities"} <= adata.obsp.keys()
 
-    DATASETS[name](adata)
+    adata = DATASETS[name](adata)
+    assert adata.raw is None
 
     for k in list(adata.obsm):
         adata.obsm[k.removeprefix("X_")] = adata.obsm.pop(k)

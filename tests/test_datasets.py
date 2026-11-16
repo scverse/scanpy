@@ -80,12 +80,15 @@ def test_pbmc3k_processed(preset: sc.Preset):
         warnings.catch_warnings(record=True) as records,
     ):
         adata = sc.datasets.pbmc3k_processed()
-    assert adata.shape == (2638, 1838)
-    assert adata.raw.shape == (2638, 13714)
     if preset is sc.Preset.ScanpyV1:
+        assert adata.shape == (2638, 1838)
+        assert adata.raw.shape == (2638, 13714)
         assert "louvain" in adata.obs
         assert set(adata.obsm) == {"X_pca", "X_tsne", "X_umap", "X_draw_graph_fr"}
     else:
+        assert adata.shape == (2638, 13714)
+        assert adata.raw is None
+        assert adata.var["highly_variable"].sum() == 1838
         assert {"cell_type", "leiden"} <= set(adata.obs)
         assert set(adata.obsm) == {"pca", "tsne", "umap", "draw_graph_fr"}
 

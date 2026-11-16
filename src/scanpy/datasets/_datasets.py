@@ -500,9 +500,13 @@ def pbmc3k_processed() -> AnnData:
     As analysis steps, the embeddings :func:`~scanpy.tl.tsne` and :func:`~scanpy.tl.umap` are performed.
     Communities are identified using :func:`~scanpy.tl.louvain` and marker genes using :func:`~scanpy.tl.rank_genes_groups`.
 
-    With :attr:`~scanpy.Preset.ScanpyV2Preview`, the cell type annotations are in `.obs["cell_type"]`
-    (instead of `.obs["louvain"]`), :func:`~scanpy.tl.leiden` clusters are in `.obs["leiden"]`,
-    and :attr:`~anndata.AnnData.obsm` keys have no `X_` prefix.
+    With :attr:`~scanpy.Preset.ScanpyV2Preview`:
+
+    - no :attr:`~anndata.AnnData.raw`: :attr:`~anndata.AnnData.X` has all genes (logarithmized, not scaled),
+      `.var["highly_variable"]` marks the ones used for PCA
+    - no `X_` prefix for :attr:`~anndata.AnnData.obsm` keys
+    - cell types in `.obs["cell_type"]` instead of `.obs["louvain"]`
+    - :func:`~scanpy.tl.leiden` clusters in `.obs["leiden"]`
 
     Returns
     -------
