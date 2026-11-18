@@ -145,10 +145,10 @@ def test_out_acc_mapping(adata: AnnData) -> None:
 
 
 @needs.anndata_acc
-def test_pre_existing_clusters(adata: AnnData) -> None:
+def test_groupby(adata: AnnData) -> None:
     """Clustered demultiplexing equals demultiplexing each cluster on its own."""
     adata.obs["cl"] = np.where(np.arange(adata.n_obs) % 2, "a", "b")
-    sc.pp.hashsolo(adata, A.obs[HASHES], pre_existing_clusters=A.obs["cl"])
+    sc.pp.hashsolo(adata, A.obs[HASHES], groupby=A.obs["cl"])
 
     np.testing.assert_allclose(adata.obsm["hashsolo"].to_numpy().sum(axis=1), 1)
     for cluster in ("a", "b"):
@@ -161,18 +161,18 @@ def test_pre_existing_clusters(adata: AnnData) -> None:
 
 
 @needs.anndata_acc
-def test_pre_existing_clusters_missing_label(adata: AnnData) -> None:
+def test_groupby_missing_label(adata: AnnData) -> None:
     """Unlabeled cells must not silently turn into confident negatives."""
     adata.obs["cl"] = pd.Categorical(["a"] * (adata.n_obs - 10) + [None] * 10)
-    sc.pp.hashsolo(adata, A.obs[HASHES], pre_existing_clusters=A.obs["cl"])
+    sc.pp.hashsolo(adata, A.obs[HASHES], groupby=A.obs["cl"])
     np.testing.assert_allclose(adata.obsm["hashsolo"].to_numpy().sum(axis=1), 1)
 
 
 @needs.anndata_acc
-def test_pre_existing_clusters_singleton(adata: AnnData) -> None:
+def test_groupby_singleton(adata: AnnData) -> None:
     """A one-cell cluster has zero variance; it must not yield NaN probabilities."""
     adata.obs["cl"] = ["a"] * (adata.n_obs - 1) + ["b"]
-    sc.pp.hashsolo(adata, A.obs[HASHES], pre_existing_clusters=A.obs["cl"])
+    sc.pp.hashsolo(adata, A.obs[HASHES], groupby=A.obs["cl"])
     assert np.isfinite(adata.obsm["hashsolo"].to_numpy()).all()
 
 

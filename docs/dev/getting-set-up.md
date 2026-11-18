@@ -6,19 +6,19 @@ This section of the docs covers our practices for working with `git` on our code
 
 For a more complete git tutorials we recommend checking out:
 
-[Atlassian's git tutorial](https://www.atlassian.com/git/tutorials)
-: Beginner friendly introductions to the git command line interface
+[Atlassian’s git tutorial](https://www.atlassian.com/git/tutorials)
+:   Beginner friendly introductions to the git command line interface
 
 [Setting up git for GitHub](https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/set-up-git)
-: Configuring git to work with your GitHub user account
+:   Configuring git to work with your GitHub user account
 
 (forking-and-cloning)=
 
 ### Forking and cloning
 
-To get the code, and be able to push changes back to the main project, you'll need to (1) fork the repository on github and (2) clone the repository to your local machine.
+To get the code, and be able to push changes back to the main project, you’ll need to (1) fork the repository on github and (2) clone the repository to your local machine.
 
-This is very straight forward if you're using [GitHub's CLI][]:
+This is very straight forward if you’re using [GitHub's CLI][]:
 
 ```console
 $ gh repo fork scverse/scanpy --clone --remote -- --filter=blob:none
@@ -84,7 +84,7 @@ $ git switch -c {your-branch-name}  # Making and changing to the new branch
 
 ### Open a pull request
 
-When you're ready to have your code reviewed, push your changes up to your fork:
+When you’re ready to have your code reviewed, push your changes up to your fork:
 
 ```console
 $ # The first time you push the branch, you'll need to tell git where
@@ -96,13 +96,13 @@ $ git push
 And open a pull request by going to the main repo and clicking {guilabel}`New pull request`.
 GitHub is also pretty good about prompting you to open PRs for recently pushed branches.
 
-We'll try and get back to you soon!
+We’ll try and get back to you soon!
 
 (dev-environments)=
 
 ## Development environments
 
-It's recommended to do development work in an isolated environment.
+It’s recommended to do development work in an isolated environment.
 There are number of ways to do this, including virtual environments, conda environments, and virtual machines.
 
 We think the easiest is probably [Hatch environments][].

@@ -1,7 +1,7 @@
 {
     "$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
     "formatter": { "useEditorconfig": true },
-    "markdown": { "parser": { "frontmatter": true } },
+    "markdown": { "formatter": { "enabled": false } }, // handled by panache
     "overrides": [
         {
             "includes": ["./.vscode/*.json", "**/*.jsonc", "**/asv.conf.json"],

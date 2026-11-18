@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from anndata import AnnData
+from anndata.tests.helpers import asarray
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
@@ -141,7 +142,8 @@ def test_results_layers(
 ) -> None:
     adata = get_example_data(array_type, rng=_LegacyRng(1234))
     adata.layers["to_test"] = adata.X.copy()
-    x = adata.X.tolil() if isinstance(adata.X, CSBase) else adata.X
+    # zero out random entries in a writable numpy copy (jax arrays are immutable)
+    x = asarray(adata.X).copy()
     mask = np.random.default_rng().integers(0, 2, adata.shape, dtype=bool)
     x[mask] = 0
     adata.X = array_type(x)
@@ -589,6 +591,29 @@ def test_mean_in_log_space(
         )
     logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
     np.testing.assert_equal(logfcs, expected_logfc)
+
+
+@pytest.mark.parametrize("method", ["t-test", "t-test_overestim_var"])
+def test_mean_in_log_space_does_not_change_ttest(
+    method: Literal["t-test", "t-test_overestim_var"],
+):
+    """`mean_in_log_space` selects the fold change, not the values the t-test sees."""
+    pbmc = pbmc68k_reduced()
+    scores, pvals = {}, {}
+    for mean_in_log_space in (True, False):
+        rank_genes_groups(
+            pbmc,
+            groupby="bulk_labels",
+            method=method,
+            n_genes=pbmc.raw.n_vars,
+            mean_in_log_space=mean_in_log_space,
+        )
+        res = pbmc.uns["rank_genes_groups"]
+        scores[mean_in_log_space] = res["scores"]
+        pvals[mean_in_log_space] = res["pvals"]
+    for group in scores[True].dtype.names:
+        np.testing.assert_allclose(scores[True][group], scores[False][group], rtol=1e-6)
+        np.testing.assert_allclose(pvals[True][group], pvals[False][group], rtol=1e-6)
 
 
 def test_rank_genes_groups_out() -> None:

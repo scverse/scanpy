@@ -23,7 +23,11 @@ from testing.scanpy._helpers import (
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
+from testing.scanpy._pytest.params import (
+    ARRAY_TYPES,
+    ARRAY_TYPES_SPARSE,
+    as_dense_jax_array,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -723,71 +727,58 @@ def test_filter_out_acc(filter_func: Callable, attr: str, arg: str, col: str) ->
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize(
-    ("max_cells", "max_counts", "min_cells", "min_counts"),
-    [
-        (100, None, None, None),
-        (None, 100, None, None),
-        (None, None, 20, None),
-        (None, None, None, 20),
-    ],
-)
-def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
+@pytest.mark.parametrize("arg", ["max_cells", "max_counts", "min_cells", "min_counts"])
+def test_filter_genes(array_type, arg: str) -> None:
+    kw = {arg: 100 if arg.startswith("max") else 20}
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    sc.pp.filter_genes(
-        adata,
-        max_cells=max_cells,
-        max_counts=max_counts,
-        min_cells=min_cells,
-        min_counts=min_counts,
-    )
-    sc.pp.filter_genes(
-        adata_casted,
-        max_cells=max_cells,
-        max_counts=max_counts,
-        min_cells=min_cells,
-        min_counts=min_counts,
-    )
+    sc.pp.filter_genes(adata, **kw)
+    sc.pp.filter_genes(adata_casted, **kw)
     adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
     adata.X = conv.to_dense(adata.X)
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize(
-    ("max_genes", "max_counts", "min_genes", "min_counts"),
-    [
-        pytest.param(100, None, None, None, id="max_genes"),
-        pytest.param(None, 100, None, None, id="max_counts"),
-        pytest.param(None, None, 20, None, id="min_genes"),
-        pytest.param(None, None, None, 20, id="min_counts"),
-    ],
-)
-def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
+@pytest.mark.parametrize("arg", ["max_genes", "max_counts", "min_genes", "min_counts"])
+def test_filter_cells(array_type, arg: str) -> None:
+    kw = {arg: 100 if arg.startswith("max") else 20}
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    sc.pp.filter_cells(
-        adata,
-        max_genes=max_genes,
-        max_counts=max_counts,
-        min_genes=min_genes,
-        min_counts=min_counts,
-    )
-    sc.pp.filter_cells(
-        adata_casted,
-        max_genes=max_genes,
-        max_counts=max_counts,
-        min_genes=min_genes,
-        min_counts=min_counts,
-    )
+    sc.pp.filter_cells(adata, **kw)
+    sc.pp.filter_cells(adata_casted, **kw)
     adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
     adata.X = conv.to_dense(adata.X)
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
+
+
+@needs.jax
+@pytest.mark.skipif(
+    as_dense_jax_array is None, reason="anndata version doesn’t support jax arrays"
+)
+@pytest.mark.parametrize(
+    "func",
+    [
+        pytest.param(sc.pp.log1p, id="log1p"),
+        pytest.param(lambda a: sc.pp.scale(a, zero_center=True), id="scale"),
+        pytest.param(sc.pp.normalize_total, id="normalize_total"),
+        pytest.param(sc.pp.normalize_shifted_clr, id="normalize_shifted_clr"),
+        pytest.param(lambda a: sc.pp.filter_cells(a, min_genes=1), id="filter_cells"),
+        pytest.param(lambda a: sc.pp.filter_genes(a, min_cells=1), id="filter_genes"),
+    ],
+)
+def test_array_api_type_preserved(func: Callable[[AnnData], None]) -> None:
+    """Functions returning a matrix keep it in the input’s array API namespace."""
+    import jax
+
+    x = np.random.default_rng(0).negative_binomial(2, 0.3, (50, 20)).astype("float32")
+    adata = AnnData(as_dense_jax_array(x))
+    func(adata)
+    assert isinstance(adata.X, jax.Array), type(adata.X)
 
 
 @needs.anndata_acc

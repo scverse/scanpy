@@ -78,13 +78,25 @@ autodoc_default_options = {
 napoleon_custom_sections = [("Params", "Parameters")]
 todo_include_todos = False
 api_dir = HERE / "api"  # function_images
-exec_jupyter_code = """
+exec_jupyter_code = r"""
 # setup notebook backend
 import matplotlib
 matplotlib.use("module://matplotlib_inline.backend_inline")
+# kernels are forked from this process, and GNU OpenMP (numba’s default on Linux) isn’t fork-safe
+import numba
+numba.config.THREADING_LAYER = "forksafe"
 # import all slow optional imports before running code
 import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx
-del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib
+del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib, numba
+# make warnings in executed examples fail like they do in doctests
+import warnings
+warnings.simplefilter("error")
+# hv_anndata: holoviews’ `dendrogram` operation compares `str(dim)`s
+warnings.filterwarnings("default", r"Probably comparing to a dimension created from `Dimension\.name`", DeprecationWarning)
+# holoviews’ plotly backend takes log10 of HVLinePlot’s fallback [0, 1] y range under `logy`
+warnings.filterwarnings("default", "divide by zero encountered in log10", RuntimeWarning, "holoviews.plotting.plotly")
+# seaborn≤0.13.2 passes `vert` to matplotlib (same filter as in pyproject.toml)
+warnings.filterwarnings("ignore", r"vert.*bool was deprecated", module="seaborn")
 """
 holoviews_backends = ["bokeh", "matplotlib", "plotly"]
 myst_url_schemes = ("http", "https", "mailto", "ftp")
@@ -93,6 +105,9 @@ myst_ignore_mime_types = [  # from custom extension patch_myst_nb
     "application/vnd.microsoft.datawrangler.viewer.v0+json",
 ]
 nb_execution_mode = "cache"
+# holoviews’ matplotlib backend renders `Graph`s slowly (~30s for `pl.draw_graph` on RTD)
+# https://github.com/holoviz/holoviews/issues/7157
+nb_execution_timeout = 120
 nb_execution_excludepatterns = [
     f"{d}{'/*' * n}" for d in ["tutorials", "how-to"] for n in (1, 2, 3)
 ]
@@ -152,26 +167,34 @@ intersphinx_mapping = dict(
 )
 
 
-array_support: dict[str, tuple[list[str], list[str]]] = {
+# function → (included types, excluded types[, footnotes per included type])
+array_support: dict[
+    str,
+    tuple[list[str], list[str]] | tuple[list[str], list[str], dict[str, str]],
+] = {
     "experimental.pp.highly_variable_genes": (["np", "sp"], []),
     "get.aggregate": (["np", "sp", "da"], []),
-    "pp.bbknn": (["np", "sp"], []),
-    "pp.calculate_qc_metrics": (["np", "sp", "da"], []),
+    "pp.bbknn": (["np", "sp", "xp"], []),
+    "pp.calculate_qc_metrics": (["np", "sp", "da", "xp"], []),
     "pp.combat": (["np"], []),
     "pp.downsample_counts": (["np", "sp[csr]"], []),
-    "pp.filter_cells": (["np", "sp", "da"], []),
-    "pp.filter_genes": (["np", "sp", "da"], []),
+    "pp.filter_cells": (["np", "sp", "da", "xp"], []),
+    "pp.filter_genes": (["np", "sp", "da", "xp"], []),
     "pp.harmony_integrate": (["np"], []),
     "pp.hashsolo": (["np", "sp"], []),
-    "pp.highly_variable_genes": (["np", "sp", "da"], ["da[sp[csc]]"]),
-    "pp.log1p": (["np", "sp", "da"], []),
-    "pp.neighbors": (["np", "sp"], []),
-    "pp.normalize_shifted_clr": (["np", "sp", "da"], []),
-    "pp.normalize_total": (["np", "sp[csr]", "da"], []),
-    "pp.pca": (["np", "sp", "da"], ["da[sp[csc]]"]),
+    "pp.highly_variable_genes": (
+        ["np", "sp", "da", "xp"],
+        ["da[sp[csc]]"],
+        {"xp": "Except for ``flavor='seurat_v3'`` with a ``batch_key``."},
+    ),
+    "pp.log1p": (["np", "sp", "da", "xp"], []),
+    "pp.neighbors": (["np", "sp", "xp"], []),
+    "pp.normalize_shifted_clr": (["np", "sp", "da", "xp"], []),
+    "pp.normalize_total": (["np", "sp[csr]", "da", "xp"], []),
+    "pp.pca": (["np", "sp", "da", "xp"], ["da[sp[csc]]"]),
     "pp.regress_out": (["np"], []),
-    "pp.sample": (["np", "sp", "da"], []),
-    "pp.scale": (["np", "sp", "da"], []),
+    "pp.sample": (["np", "sp", "da", "xp"], []),
+    "pp.scale": (["np", "sp", "da", "xp"], []),
     "pp.scrublet": (["np", "sp"], []),
     "pp.scrublet_simulate_doublets": (["np", "sp"], []),
     "tl.dendrogram": (["np", "sp"], []),
@@ -183,8 +206,8 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
     "tl.leiden": (["np", "sp"], []),  # only uses graph in obsp
     "tl.louvain": (["np", "sp"], []),  # only uses graph in obsp
     "tl.paga": (["np", "sp"], []),
-    "tl.rank_genes_groups": (["np", "sp"], []),
-    "tl.score_genes": (["np", "sp"], []),
+    "tl.rank_genes_groups": (["np", "sp", "xp"], []),
+    "tl.score_genes": (["np", "sp", "xp"], []),
     "tl.tsne": (["np", "sp"], []),
     "tl.umap": (["np", "sp"], []),
 }

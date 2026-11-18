@@ -40,7 +40,7 @@ type DETest = Literal[
     "logreg", "t-test", "wilcoxon", "wilcoxon_illico", "t-test_overestim_var"
 ]
 type HVGFlavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
-type LeidenFlavor = Literal["leidenalg", "igraph"]
+type LeidenFlavor = Literal["leidenalg", "igraph", "networkit"]
 
 
 @dataclass
@@ -89,14 +89,18 @@ class BasicEmbeddingPreset(NamedTuple):
 
 
 # replace once they diverge
-PcaPreset = UmapPreset = TsnePreset = DiffmapPreset = DrawGraphPreset = (
-    BasicEmbeddingPreset
-)
+PcaPreset = TsnePreset = DiffmapPreset = DrawGraphPreset = BasicEmbeddingPreset
+
+
+class UmapPreset(NamedTuple):
+    key_added: str | None
+    compatibility_layout: bool
 
 
 class RankGenesGroupsPreset(NamedTuple):
     method: DETest
     mean_in_log_space: bool
+    tie_correct: bool
 
 
 class ScalePreset(NamedTuple):
@@ -109,6 +113,8 @@ class ScoreGenesPreset(NamedTuple):
 
 class LeidenPreset(NamedTuple):
     flavor: LeidenFlavor
+    directed: bool | frozenset[LeidenFlavor] | None
+    """A set means “directed for these flavors”."""
 
 
 preset_postprocessors: list[Callable[[], None]] = []
@@ -221,16 +227,18 @@ class Preset(enum.StrEnum):
     def umap() -> Mapping[Preset, UmapPreset]:
         """Settings for :func:`~scanpy.tl.umap`."""  # noqa: D401
         return {
-            Preset.ScanpyV1: DiffmapPreset(key_added=None),
-            Preset.ScanpyV2Preview: DiffmapPreset(key_added="umap"),
+            Preset.ScanpyV1: UmapPreset(key_added=None, compatibility_layout=True),
+            Preset.ScanpyV2Preview: UmapPreset(
+                key_added="umap", compatibility_layout=False
+            ),
         }
 
     @preset_property
-    def tsne() -> Mapping[Preset, UmapPreset]:
+    def tsne() -> Mapping[Preset, TsnePreset]:
         """Settings for :func:`~scanpy.tl.tsne`."""  # noqa: D401
         return {
-            Preset.ScanpyV1: DiffmapPreset(key_added=None),
-            Preset.ScanpyV2Preview: DiffmapPreset(key_added="tsne"),
+            Preset.ScanpyV1: TsnePreset(key_added=None),
+            Preset.ScanpyV2Preview: TsnePreset(key_added="tsne"),
         }
 
     @preset_property
@@ -258,10 +266,10 @@ class Preset(enum.StrEnum):
         """
         return {
             Preset.ScanpyV1: RankGenesGroupsPreset(
-                method="t-test", mean_in_log_space=True
+                method="t-test", mean_in_log_space=True, tie_correct=False
             ),
             Preset.ScanpyV2Preview: RankGenesGroupsPreset(
-                method="wilcoxon", mean_in_log_space=False
+                method="wilcoxon", mean_in_log_space=False, tie_correct=True
             ),
         }
 
@@ -283,10 +291,12 @@ class Preset(enum.StrEnum):
 
     @preset_property
     def leiden() -> Mapping[Preset, LeidenPreset]:
-        """Flavor for :func:`~scanpy.tl.leiden`."""
+        """Settings for :func:`~scanpy.tl.leiden`."""  # noqa: D401
         return {
-            Preset.ScanpyV1: LeidenPreset(flavor="leidenalg"),
-            Preset.ScanpyV2Preview: LeidenPreset(flavor="igraph"),
+            Preset.ScanpyV1: LeidenPreset(flavor="leidenalg", directed=None),
+            Preset.ScanpyV2Preview: LeidenPreset(
+                flavor="igraph", directed=frozenset({"igraph", "leidenalg"})
+            ),
         }
 
     @contextmanager

@@ -15,4 +15,4 @@ Contributions to Scanpy are highly welcome!
 ## Contributing code
 
 We love code contributions!
-If you're interested in contributing code, please take a look over the [contribution guide](https://scanpy.scverse.org/page/dev/index.html) in the main documentation.
+If you’re interested in contributing code, please take a look over the [contribution guide](https://scanpy.scverse.org/page/dev/index.html) in the main documentation.

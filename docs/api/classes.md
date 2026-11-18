@@ -14,5 +14,4 @@ Represent data as a neighborhood structure, usually a knn graph.
    :toctree: generated/
 
    Neighbors
-
 ```
