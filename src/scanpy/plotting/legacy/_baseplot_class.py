@@ -11,12 +11,13 @@ import pandas as pd
 from matplotlib import colormaps, gridspec
 from matplotlib import pyplot as plt
 from pandas.api.types import is_numeric_dtype
+from scipy import sparse
 
 from ... import logging as logg
-from ..._compat import CSBase, set_module, warn
+from ..._compat import CSBase, DaskArray, set_module, warn
 from ..._settings import Default
 from ..._utils import check_use_raw, sanitize_anndata
-from ...get._aggregated import _aggregate
+from ...get._aggregated import _aggregate, _group_counts
 from ._anndata import (
     VarGroups,
     _plot_dendrogram,
@@ -64,6 +65,87 @@ return_fig
     Returns :class:`DotPlot` object. Useful for fine-tuning
     the plot. Takes precedence over `show=False`.
 """
+
+
+def _contains_nan(data) -> bool:
+    if not np.issubdtype(data.dtype, np.floating):
+        return False
+    if isinstance(data, DaskArray):
+        import dask.array as da
+
+        return bool(da.isnan(data).any().compute())
+    return bool(np.isnan(data.data if isinstance(data, CSBase) else data).any())
+
+
+def _zero_nan(data):
+    """Replace NaN by 0 (sparse data stays sparse, dask data lazy)."""
+    if not _contains_nan(data):
+        return data
+    if isinstance(data, DaskArray):
+        import dask.array as da
+
+        return da.where(da.isnan(data), 0, data)
+    if isinstance(data, CSBase):
+        filled = data.copy()
+        filled.data = np.where(np.isnan(data.data), 0, data.data)
+        return filled
+    return np.where(np.isnan(data), 0, data)
+
+
+def _nan_skipping_mean(data, by: pd.Categorical):
+    """Mean per group over the non-NaN values, like ``groupby(...).mean()`` in pandas.
+
+    Groups without any non-NaN value for a feature give NaN.
+    Sparse data stays sparse and dask data lazy.
+    """
+    if isinstance(data, DaskArray):
+        import dask.array as da
+
+        xp, missing = da, da.isnan(data).astype(data.dtype)
+    elif isinstance(data, CSBase):
+        xp, missing = np, data.copy()
+        missing.data = np.isnan(data.data).astype(data.dtype)
+    else:
+        xp, missing = np, np.isnan(data).astype(data.dtype)
+    total = _aggregate(_zero_nan(data), by=by, func="sum")["sum"]
+    n_missing = _aggregate(missing, by=by, func="sum")["sum"]
+    n_observed = _group_counts(by, None)[:, None] - n_missing
+    # a NaN denominator gives NaN without the warning that dividing 0 by 0 would
+    return total / xp.where(n_observed > 0, n_observed, np.nan)
+
+
+def _add_obs_columns(matrix, obs_values: np.ndarray, is_obs: Sequence[bool]):
+    """Merge the selected `obs` columns into the selected feature columns.
+
+    Keeps sparse data sparse and dask data lazy; `is_obs` gives, for each
+    requested name in order, whether it comes from `obs_values` or `matrix`.
+    """
+    if matrix is None:  # only `obs` columns were requested
+        return obs_values
+    n_matrix_cols = matrix.shape[1]
+    positions, n_from_matrix, n_from_obs = [], 0, 0
+    for from_obs in is_obs:
+        if from_obs:
+            positions.append(n_matrix_cols + n_from_obs)
+            n_from_obs += 1
+        else:
+            positions.append(n_from_matrix)
+            n_from_matrix += 1
+    if isinstance(matrix, DaskArray):
+        import dask.array as da
+
+        obs_values = da.from_array(
+            obs_values, chunks=(matrix.chunks[0], obs_values.shape[1])
+        )
+        merged = da.concatenate([matrix, obs_values], axis=1)
+    elif isinstance(matrix, CSBase):
+        merged = sparse.hstack(
+            [matrix, sparse.csr_array(obs_values)],  # noqa: TID251
+            format="csr",
+        )
+    else:
+        merged = np.hstack([np.asarray(matrix), obs_values])
+    return merged[:, positions]
 
 
 def _prepare_plot_data(  # noqa: PLR0912, PLR0915
@@ -139,30 +221,33 @@ def _prepare_plot_data(  # noqa: PLR0912, PLR0915
     var = adata.raw.var if use_raw else adata.var
     lookup = pd.Index(var[gene_symbols]) if gene_symbols is not None else var.index
     unique_var_names = list(dict.fromkeys(var_names))
-    indices = []
+    source = f"adata.var[{gene_symbols!r}]" if gene_symbols else "adata.var_names"
+    indices: list[int] = []  # positions in `var` of the names that are features
+    obs_keys: list[str] = []  # names that are (numeric) `obs` columns
+    is_obs: list[bool] = []  # per name, in order: is it an `obs` column?
     for name in unique_var_names:
-        if name in adata.obs.columns and name in lookup:
-            location = (
-                f"adata.var[{gene_symbols!r}]" if gene_symbols else "adata.var_names"
-            )
-            msg = f"The key {name!r} is found in both adata.obs and {location}."
+        in_obs, in_var = name in adata.obs.columns, name in lookup
+        if in_obs and in_var:
+            msg = f"The key {name!r} is found in both adata.obs and {source}."
             raise KeyError(msg)
-        location = lookup.get_loc(name) if name in lookup else None
-        if location is None:
-            source = (
-                f"adata.var[{gene_symbols!r}]" if gene_symbols else "adata.var_names"
-            )
+        if in_obs:
+            if not is_numeric_dtype(adata.obs[name]):
+                msg = f"Column {name!r} of adata.obs is not numeric, so it can’t be plotted."
+                raise TypeError(msg)
+            obs_keys.append(name)
+            is_obs.append(True)
+            continue
+        if not in_var:
             msg = (
                 f"Could not find key {name!r} in columns of `adata.obs` or in {source}."
             )
             raise KeyError(msg)
+        location = lookup.get_loc(name)
         if not isinstance(location, int | np.integer):
-            source = (
-                f"adata.var[{gene_symbols!r}]" if gene_symbols else "adata.var_names"
-            )
             msg = f"Found duplicate entries for {name!r} in {source}."
             raise KeyError(msg)
         indices.append(int(location))
+        is_obs.append(False)
 
     if layer is not None:
         matrix = adata.layers[layer]
@@ -171,12 +256,21 @@ def _prepare_plot_data(  # noqa: PLR0912, PLR0915
     else:
         matrix = adata.X
 
-    if adata.isbacked:
+    if not indices:
+        matrix = None
+    elif adata.isbacked:
         order = np.argsort(indices)
         reverse = np.argsort(order)
         matrix = matrix[:, np.asarray(indices)[order]][:, reverse]
     else:
         matrix = matrix[:, indices]
+    if obs_keys:
+        matrix = _add_obs_columns(
+            matrix, adata.obs[obs_keys].to_numpy(dtype=np.float64), is_obs
+        )
+    if isinstance(matrix, DaskArray):
+        # only the few plotted features are left, and aggregation needs them in one chunk
+        matrix = matrix.rechunk({1: -1})
     if log:
         matrix = np.log1p(matrix)
 
@@ -352,7 +446,10 @@ class BasePlot:
         """Aggregate selected plotting data without constructing a cell-level frame."""
         data = self._plot_data if data is None else data
         with np.errstate(divide="ignore", invalid="ignore"):
-            values = _aggregate(data, by=self._groupby_obs, func=func)[func]
+            if func == "mean" and _contains_nan(data):
+                values = _nan_skipping_mean(data, self._groupby_obs)
+            else:
+                values = _aggregate(data, by=self._groupby_obs, func=func)[func]
         if hasattr(values, "compute"):
             values = values.compute()
         if func == "mean" and np.issubdtype(data.dtype, np.floating):
@@ -549,9 +646,13 @@ class BasePlot:
 
         _sort = sort is not None
         _ascending = sort == "ascending"
-        counts_df = pd.Series(self._groupby_obs).value_counts(
-            sort=_sort, ascending=_ascending
+        # honor `obs_tidy` if it was materialized (and maybe replaced) by the user
+        groups = (
+            pd.Series(self._groupby_obs)
+            if self._obs_tidy is None
+            else self._obs_tidy.index.to_series()
         )
+        counts_df = groups.value_counts(sort=_sort, ascending=_ascending)
 
         if _sort:
             self.categories_order = counts_df.index

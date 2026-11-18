@@ -11,7 +11,7 @@ from ... import logging as logg
 from ..._compat import CSBase, set_module, warn
 from ..._settings import Default, settings
 from ..._utils import _doc_params
-from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
+from ._baseplot_class import BasePlot, _zero_nan, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
     _create_white_to_color_gradient,
@@ -242,7 +242,7 @@ class DotPlot(BasePlot):
         if dot_color_df is None:
             if self.mean_only_expressed:
                 expressed_values = (
-                    self._plot_data.multiply(expressed)
+                    _zero_nan(self._plot_data).multiply(expressed)
                     if isinstance(self._plot_data, CSBase)
                     else np.where(expressed, self._plot_data, 0)
                 )
