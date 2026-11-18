@@ -19,6 +19,7 @@ from scanpy.preprocessing._pca import SvdSolver as SvdSolverSupported
 from scanpy.preprocessing._pca._dask import _cov_sparse_dask
 from testing.scanpy import _helpers
 from testing.scanpy._helpers.data import pbmc3k_normalized
+from testing.scanpy._pytest import params
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
 from testing.scanpy._pytest.params import param_with
@@ -73,6 +74,12 @@ VALID_ARRAY_TYPES = [
         "dask_array_sparse-1d_chunked-csc_matrix",
     }
 ]
+
+
+def _pca_copy(adata: AnnData, **kwargs) -> AnnData:
+    adata = adata.copy()
+    sc.pp.pca(adata, **kwargs)
+    return adata
 
 
 @pytest.fixture(params=VALID_ARRAY_TYPES)
@@ -154,9 +161,9 @@ def possible_solvers(
             svd_solvers = {"arpack", "covariance_eigh"}
         case (type() as dc, False) if issubclass(dc, CSBase):
             svd_solvers = {"arpack", "randomized"}
-        case (helpers.asarray, True):
+        case (helpers.asarray | params.as_dense_jax_array, True):
             svd_solvers = {"auto", "full", "arpack", "randomized", "covariance_eigh"}
-        case (helpers.asarray, False):
+        case (helpers.asarray | params.as_dense_jax_array, False):
             svd_solvers = {"arpack", "randomized"}
         case _:
             pytest.fail(f"Unknown {array_type=} ({zero_center=}) ({id=})")
@@ -297,13 +304,18 @@ def test_pca_shapes():
 
 
 @pytest.mark.parametrize(
-    ("key_added", "keys"),
+    ("out", "keys"),
     [
         pytest.param(None, _PcaKeys("pca", "X_pca", "PCs"), id="None"),
-        pytest.param("custom_key", _PcaKeys(*(["custom_key"] * 3)), id="custom_key"),
+        pytest.param(
+            "obsm.custom",
+            _PcaKeys(*(["custom"] * 3)),
+            id="acc",
+            marks=[needs.anndata_acc],
+        ),
     ],
 )
-def test_pca_sparse(key_added: str | None, keys: _PcaKeys):
+def test_pca_sparse(out: str | None, keys: _PcaKeys):
     """Tests implicitly centered pca on sparse arrays.
 
     Checks if it returns equivalent results to explicit centering on dense arrays.
@@ -313,8 +325,12 @@ def test_pca_sparse(key_added: str | None, keys: _PcaKeys):
     pbmc_dense = pbmc.copy()
     pbmc_dense.X = pbmc_dense.X.toarray()
 
-    implicit = sc.pp.pca(pbmc, dtype=np.float64, copy=True)
-    explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, key_added=key_added, copy=True)
+    implicit = _pca_copy(pbmc, dtype=np.float64)
+    explicit = _pca_copy(
+        pbmc_dense,
+        dtype=np.float64,
+        out=False if out is None else out,
+    )
 
     np.testing.assert_allclose(
         implicit.uns["pca"]["variance"], explicit.uns[keys.uns]["variance"]
@@ -335,11 +351,12 @@ def test_pca_reproducible(
     subtests: pytest.Subtests, array_type, rng_arg: Literal["rng", "random_state"]
 ):
     pbmc = pbmc3k_normalized()
+    # PCA only uses HVGs anyway, and densified copies of all genes take GBs
+    pbmc = pbmc[:, pbmc.var["highly_variable"]].copy()
     pbmc.X = array_type(pbmc.X)
 
     a, b, c = (
-        sc.pp.pca(pbmc, copy=True, dtype=np.float64, **{rng_arg: seed})
-        for seed in (42, 42, 0)
+        _pca_copy(pbmc, dtype=np.float64, **{rng_arg: seed}) for seed in (42, 42, 0)
     )
 
     with subtests.test("reproducible"):
@@ -363,8 +380,8 @@ def test_pca_chunked() -> None:
     pbmc_full = pbmc3k_normalized()
     pbmc = pbmc_full[::6].copy()
     pbmc.X = pbmc.X.astype(np.float64)
-    chunked = sc.pp.pca(pbmc_full, chunked=True, copy=True)
-    default = sc.pp.pca(pbmc_full, copy=True)
+    chunked = _pca_copy(pbmc_full, chunked=True)
+    default = _pca_copy(pbmc_full)
 
     # Taking absolute value since sometimes dimensions are flipped
     rtol = 1e-6
@@ -386,18 +403,16 @@ def test_pca_chunked() -> None:
     )
 
 
+@needs.anndata_acc
 def test_pca_n_pcs():
     """Tests that the n_pcs parameter also works for representations not called "X_pca"."""
     pbmc = pbmc3k_normalized()
     sc.pp.pca(pbmc, dtype=np.float64)
     pbmc.obsm["X_pca_test"] = pbmc.obsm["X_pca"]
-    original = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca", copy=True)
-    renamed = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca_test", copy=True)
+    original = sc.pp.neighbors(pbmc, n_pcs=5, use="obsm.X_pca", out=True)
+    renamed = sc.pp.neighbors(pbmc, n_pcs=5, use="obsm.X_pca_test", out=True)
 
-    assert np.allclose(original.obsm["X_pca"], renamed.obsm["X_pca_test"])
-    assert np.allclose(
-        original.obsp["distances"].toarray(), renamed.obsp["distances"].toarray()
-    )
+    assert np.allclose(original.distances.toarray(), renamed.distances.toarray())
 
 
 # We use all possible array types here since this error should be raised before
@@ -421,13 +436,11 @@ def test_mask_length_error():
     with pytest.raises(
         ValueError, match=r"The shape of the mask do not match the data\."
     ):
-        sc.pp.pca(adata, mask=mask_var, copy=True)
+        _pca_copy(adata, mask=mask_var)
 
 
-@pytest.mark.parametrize(
-    "mask_type",
-    [pytest.param("var.highly_variable", marks=needs.anndata_acc), "array"],
-)
+@needs.anndata_acc
+@pytest.mark.parametrize("mask_type", ["var.highly_variable", "array"])
 def test_obsm_mask_error(mask_type: Literal["var.highly_variable", "array"]) -> None:
     """Check that trying to use mask with obsm raises an error."""
     adata = AnnData(A_list)
@@ -435,9 +448,9 @@ def test_obsm_mask_error(mask_type: Literal["var.highly_variable", "array"]) -> 
         _helpers.random_mask(adata.shape[1]) if mask_type == "array" else mask_type
     )
     with pytest.raises(
-        ValueError, match=r"Argument `mask` is incompatible with `obsm`."
+        ValueError, match=r"Argument `mask` is incompatible with `\.obsm` arrays\."
     ):
-        sc.pp.pca(adata, mask=mask_var, obsm="X_pca", copy=True)
+        _pca_copy(adata, mask=mask_var, use="obsm.X_pca")
 
 
 @needs.anndata_acc
@@ -495,24 +508,28 @@ def test_mask_defaults(array_type, float_dtype):
     a = array_type(A_list).astype("float64")
     adata = AnnData(a)
 
-    without_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
+    without_var = _pca_copy(adata, dtype=float_dtype)
 
     rng = np.random.default_rng(8)
     mask = _helpers.random_mask(adata.shape[1], rng=rng)
     adata.var["highly_variable"] = mask
-    with_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
+    with_var = _pca_copy(adata, dtype=float_dtype)
     assert without_var.uns["pca"]["params"]["mask_var"] is None
     assert with_var.uns["pca"]["params"]["mask_var"] == "highly_variable"
     without_var, with_var = map(AnnData.to_memory, [without_var, with_var])
     assert not np.array_equal(without_var.obsm["X_pca"], with_var.obsm["X_pca"])
 
-    with_no_mask = sc.pp.pca(adata, mask=None, copy=True, dtype=float_dtype)
+    with_no_mask = _pca_copy(adata, mask=None, dtype=float_dtype)
     with_no_mask = with_no_mask.to_memory()
     assert np.array_equal(without_var.obsm["X_pca"], with_no_mask.obsm["X_pca"])
 
 
 @pytest.mark.parametrize("rep", ["layer", "obsm"])
-def test_pca_rep(rep: Literal["layer", "obsm"]) -> None:
+@pytest.mark.parametrize(
+    "spelling",
+    [pytest.param("use", marks=needs.anndata_acc), "legacy"],
+)
+def test_pca_rep(rep: Literal["layer", "obsm"], spelling: Literal["use", "legacy"]):
     """Tests that layers works the same way as `X`."""
     adata = pbmc3k_normalized()[:200].copy()
 
@@ -529,10 +546,16 @@ def test_pca_rep(rep: Literal["layer", "obsm"]) -> None:
     del rep_adata.X
 
     sc.pp.pca(adata, mask=None)
-    sc.pp.pca(rep_adata, **{rep: "counts"}, mask=None)
-
+    if spelling == "use":
+        attr = "layers" if rep == "layer" else rep
+        sc.pp.pca(rep_adata, use=f"{attr}.counts", mask=None)
+    else:
+        with pytest.warns(FutureWarning, match=rf"argument {rep} is deprecated"):
+            sc.pp.pca(rep_adata, **{rep: "counts"}, mask=None)
+    # stored the same way for both spellings
     assert rep_adata.uns["pca"]["params"][rep] == "counts"
     assert rep not in adata.uns["pca"]["params"]
+    assert "use" not in adata.uns["pca"]["params"]
 
     np.testing.assert_equal(
         adata.uns["pca"]["variance"], rep_adata.uns["pca"]["variance"]
@@ -541,6 +564,7 @@ def test_pca_rep(rep: Literal["layer", "obsm"]) -> None:
         adata.uns["pca"]["variance_ratio"], rep_adata.uns["pca"]["variance_ratio"]
     )
     np.testing.assert_equal(adata.obsm["X_pca"], rep_adata.obsm["X_pca"])
+    # an `.obsm` array’s columns aren’t variables, so its loadings go to `.uns`
     pcs = (
         rep_adata.varm["PCs"] if rep == "layer" else rep_adata.uns["pca"]["components"]
     )

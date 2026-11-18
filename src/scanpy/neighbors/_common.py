@@ -10,14 +10,22 @@ from .._compat import warn
 from .._settings import settings
 from .._utils import get_literal_vals
 from .._utils.random import _rng_kwds
-from ._types import NeighborsDict, _KnownTransformer
+from ..get._out import _dest_key
+from ..get._types import GraphAcc
+from ..get._use import _resolve_obs
+from ._types import NeighborsDict, NeighborsResult, _KnownTransformer
 
 if TYPE_CHECKING:
     from typing import Unpack
 
+    from anndata import AnnData
     from numpy.typing import NDArray
 
-    from .._compat import CSRBase
+    from .._compat import CSBase, CSRBase
+    from .._settings import Default
+    from .._utils import NeighborsView
+    from ..get._out import OutKind
+    from ..get._types import _SetRep
     from ._types import (
         BbknnParams,
         KnnTransformerLike,
@@ -78,32 +86,48 @@ def _make_transformer(
     return transformer  # `transformer` is probably an instance
 
 
+NEIGHBORS_KINDS: NeighborsResult[set[OutKind]] = NeighborsResult({"obsp"}, {"obsp"})
+"""Where `out` can write the outputs of `pp.neighbors` and `pp.bbknn`."""
+
+
+def _neighbors_dests(
+    key_added: str | Default | None,
+) -> NeighborsResult[_SetRep | None]:
+    """Where `key_added` put the outputs of `pp.neighbors` and `pp.bbknn`."""
+    prefix = "" if key_added is None else f"{key_added}_"
+    return NeighborsResult(
+        connectivities=dict(obsp=f"{prefix}connectivities"),
+        distances=dict(obsp=f"{prefix}distances"),
+    )
+
+
 def _get_metadata(
-    key_added: str | None, /, **params: Unpack[NeighborsParams]
+    key: str | None,
+    dests: NeighborsResult[_SetRep | None],
+    /,
+    **params: Unpack[NeighborsParams],
 ) -> tuple[str, NeighborsDict[NeighborsParams]]:
-    return _metadata(key_added, params)
+    return _metadata(key, dests, params)
 
 
 def _get_bbknn_metadata(
-    key_added: str | None, /, **params: Unpack[BbknnParams]
+    key: str | None,
+    dests: NeighborsResult[_SetRep | None],
+    /,
+    **params: Unpack[BbknnParams],
 ) -> tuple[str, NeighborsDict[BbknnParams]]:
-    return _metadata(key_added, params)
+    return _metadata(key, dests, params)
 
 
 def _metadata[P: NeighborsParams](
-    key_added: str | None, params: P
+    key: str | None, dests: NeighborsResult[_SetRep | None], params: P
 ) -> tuple[str, NeighborsDict[P]]:
-    if key_added is None:
-        return "neighbors", NeighborsDict(
-            connectivities_key="connectivities",
-            distances_key="distances",
-            params=params,
-        )
-    return key_added, NeighborsDict(
-        connectivities_key=f"{key_added}_connectivities",
-        distances_key=f"{key_added}_distances",
-        params=params,
-    )
+    """Get the `.uns` key and entry, which names where the matrices were written."""
+    neighbors_dict = NeighborsDict(params=params)
+    for name, dest in zip(NeighborsResult._fields, dests, strict=True):
+        if (dest_key := _dest_key(dest)) is not None:
+            neighbors_dict[f"{name}_key"] = dest_key
+    return key or "neighbors", neighbors_dict
 
 
 def _has_self_column(
@@ -197,21 +221,19 @@ def _ind_dist_slow(
     distances = np.zeros((d.shape[0], n_neighbors), dtype=d.dtype)
     n_neighbors_m1 = n_neighbors - 1
     for i in range(indices.shape[0]):
-        neighbors = d[i].nonzero()  # 'true' and 'spurious' zeros
+        row = slice(d.indptr[i], d.indptr[i + 1])
+        cols, vals = d.indices[row], d.data[row]
+        cols, vals = cols[vals != 0], vals[vals != 0]  # 'true' and 'spurious' zeros
         indices[i, 0] = i
         distances[i, 0] = 0
         # account for the fact that there might be more than n_neighbors
         # due to an approximate search
         # [the point itself was not detected as its own neighbor during the search]
-        if len(neighbors[1]) > n_neighbors_m1:
-            sorted_indices = np.argsort(d[i][neighbors].A1)[:n_neighbors_m1]
-            indices[i, 1:] = neighbors[1][sorted_indices]
-            distances[i, 1:] = d[i][
-                neighbors[0][sorted_indices], neighbors[1][sorted_indices]
-            ]
-        else:
-            indices[i, 1:] = neighbors[1]
-            distances[i, 1:] = d[i][neighbors]
+        if len(cols) > n_neighbors_m1:
+            order = np.argsort(vals)[:n_neighbors_m1]
+            cols, vals = cols[order], vals[order]
+        indices[i, 1:] = cols
+        distances[i, 1:] = vals
     return indices, distances
 
 
@@ -220,7 +242,7 @@ def _ind_dist_shortcut(
 ) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]] | None:
     """Shortcut for scipy or RAPIDS style distance matrices."""
     # Check if each row has the correct number of entries
-    nnzs = d.getnnz(axis=1)
+    nnzs = np.diff(d.indptr)
     if not is_constant(nnzs):
         msg = (
             "Sparse matrix has no constant number of neighbors per row. "
@@ -268,3 +290,56 @@ def _get_indices_distances_from_rect_matrix(
         np.take_along_axis(indices, order, axis=1),
         np.take_along_axis(distances, order, axis=1),
     )
+
+
+def _graph_key(use: GraphAcc | str) -> str:
+    """Get the `.obsp` key of a graph given as `use`."""
+    graph = _resolve_obs(use)
+    if not isinstance(graph, GraphAcc):
+        msg = f"`use` must point to `.obsp`, was {use!r}"
+        raise TypeError(msg)
+    return graph.k
+
+
+def _neighbors_view(
+    adata: AnnData, use: GraphAcc | str | None, neighbors_key: str | None = None
+) -> NeighborsView | None:
+    """View the neighbors around the graph `use`, or the deprecated `neighbors_key`’s.
+
+    Returns `None` if there are no neighbors at the default place.
+    """
+    from .._utils import NeighborsView
+
+    if use is not None:
+        if neighbors_key is not None:
+            msg = "Pass either `use` or `neighbors_key`, not both."
+            raise TypeError(msg)
+        return NeighborsView.from_graph(adata, _graph_key(use))
+    key = neighbors_key or "neighbors"
+    return NeighborsView(adata, key) if key in adata.uns else None
+
+
+def _use_graph(
+    adata: AnnData,
+    use: GraphAcc | str | None,
+    *,
+    adjacency: CSBase | None = None,
+    obsp: str | None = None,
+    neighbors_key: str | None = None,
+) -> CSBase:
+    """Choose the connectivities from `use`, or the deprecated `adjacency`/`obsp`/`neighbors_key`."""
+    if (adjacency is not None) + (obsp is not None) + (use is not None) > 1:
+        msg = "Pass only one of `use`, `obsp`, or `adjacency`."
+        raise TypeError(msg)
+    if adjacency is not None:
+        return adjacency
+    if obsp is not None:
+        if neighbors_key is not None:
+            msg = "Pass either `obsp` or `neighbors_key`, not both."
+            raise TypeError(msg)
+        return adata.obsp[obsp]
+    neighbors = _neighbors_view(adata, use, neighbors_key)
+    if neighbors is None or "connectivities" not in neighbors:
+        msg = "You need to run `pp.neighbors` first to compute a neighborhood graph."
+        raise ValueError(msg)
+    return neighbors["connectivities"]

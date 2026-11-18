@@ -78,13 +78,12 @@ class _RootLogger(logging.RootLogger):
 
 
 def _set_log_file(settings: Settings) -> None:
-    file = settings.logfile
-    name = settings.logpath
     root = settings._root_logger
     for handler in list(root.handlers):
         root.removeHandler(handler)
         handler.close()
-    h = logging.StreamHandler(file) if name is None else logging.FileHandler(name)
+    # write to `logfile` itself: a `FileHandler` would open a second handle that nobody closes
+    h = logging.StreamHandler(settings.logfile)
     h.setFormatter(_LogFormatter())
     h.setLevel(root.level)
     root.addHandler(h)

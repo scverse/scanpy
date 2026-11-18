@@ -1,28 +1,75 @@
 from __future__ import annotations
 
 from operator import truediv
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numba
 import numpy as np
-from fast_array_utils import stats
+from array_api_compat import array_namespace
+from fast_array_utils import conv, stats
 from fast_array_utils.numba import njit
+from fast_array_utils.stats import mean_var
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
-from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
-from ..get import _get_arr, _set_obs_rep
+from .._docs import DEPR_KEY_ADDED, doc_out, doc_out_multi, doc_use
+from .._utils import _doc_params, axis_mul_or_truediv, dematrix, view_to_actual
+from ..get._out import (
+    _dest_key,
+    _legacy_out,
+    _out_dests,
+    _use_dest,
+    _write_dests,
+    _write_out,
+    deprecated_copy,
+)
+from ..get._use import _get_arr, _resolve_obs
+from ._simple import log1p
 
 if TYPE_CHECKING:
     from anndata import AnnData
+    from fast_array_utils.types import HasArrayNamespace
+
+    from ..get._out import OutKind
+    from ..get._types import RepAcc, VecRef
 
 
-def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
+class NormalizeTotalResult[
+    M = np.ndarray | CSRBase | DaskArray,
+    V = np.ndarray | DaskArray,
+](NamedTuple):
+    """Outputs of :func:`~scanpy.pp.normalize_total`."""
+
+    normalized: M
+    """The normalized matrix."""
+    norm_factor: V
+    """The normalization factor (counts per cell before normalization, divided by `target_sum`)."""
+
+
+class NormalizeTotalOut(TypedDict, total=False):
+    """Where a mapping `out` of :func:`~scanpy.pp.normalize_total` writes each output, see :class:`~scanpy.pp.NormalizeTotalResult`."""
+
+    normalized: RepAcc | str
+    norm_factor: VecRef
+
+
+NORMALIZE_TOTAL_KINDS: NormalizeTotalResult[set[OutKind], set[OutKind]] = (
+    NormalizeTotalResult({"layer", "obsm"}, {"obs"})
+)
+"""Where `out` can write the outputs of `pp.normalize_total`."""
+
+
+def _compute_nnz_median(
+    counts: np.ndarray | DaskArray | HasArrayNamespace,
+) -> np.floating:
     """Given a 1D array of counts, compute the median of the non-zero counts."""
     if isinstance(counts, DaskArray):
         counts = counts.compute()
+
+    xp = array_namespace(counts)
     counts_greater_than_zero = counts[counts > 0]
-    median = np.median(counts_greater_than_zero)
+    median = xp.median(counts_greater_than_zero)
     return median
 
 
@@ -124,18 +171,45 @@ def _normalize_total_helper(
     return x, counts_per_cell, gene_subset
 
 
-def normalize_total(  # noqa: PLR0912
+@_doc_params(
+    use=doc_use("Which matrix to normalize."),
+    out=doc_out_multi(
+        dict(
+            normalized=(
+                "The normalized matrix. "
+                "By default written to the place `use` reads from."
+            ),
+            norm_factor=(
+                "The normalization factor of each cell. By default not written."
+            ),
+        ),
+        example="{'normalized': A.layers['normalized']}",
+        returns=":class:`~scanpy.pp.NormalizeTotalResult`",
+        key_added="`key_added='k'` is `out={'normalized': <use>, 'norm_factor': A.obs['k']}`.",
+    ),
+)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use`/`out` instead."))
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
+)
+@deprecated_arg("key_added", DEPR_KEY_ADDED)
+@deprecated_copy
+def normalize_total(  # noqa: PLR0913
     adata: AnnData,
     *,
     target_sum: float | None = None,
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
+    use: RepAcc | str | None = None,
+    out: RepAcc | str | NormalizeTotalOut | bool = False,
+    # deprecated
     key_added: str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> AnnData | dict[str, np.ndarray] | None:
+) -> AnnData | NormalizeTotalResult | dict[str, np.ndarray] | None:
     """Normalize counts per cell.
 
     Normalize each cell by total counts over all genes,
@@ -155,7 +229,7 @@ def normalize_total(  # noqa: PLR0912
     .. note::
         When used with a :class:`~dask.array.Array` in `adata.X`, this function will have to
         call functions that trigger `.compute()` on the :class:`~dask.array.Array` if `exclude_highly_expressed`
-        is `True`, `layer_norm` is not `None`, or if `key_added` is not `None`.
+        is `True`, or if `norm_factor` is written.
 
     Parameters
     ----------
@@ -177,24 +251,17 @@ def normalize_total(  # noqa: PLR0912
         If `exclude_highly_expressed=True`, consider cells as highly expressed
         that have more counts than `max_fraction` of the original total counts
         in at least one cell.
-    key_added
-        Name of the field in `adata.obs` where the normalization factor is
-        stored.
-    layer
-        Layer to normalize instead of `X`.
-    obsm
-        Array to normalize instead of `X`.
+    {use}
+    {out}
     inplace
-        Whether to update `adata` or return dictionary with normalized copies of
-        `adata.X` and `adata.layers`.
+        `inplace=False` is `out=True`.
     copy
-        Whether to modify copied input object. Not compatible with inplace=False.
+        Whether to return a modified copy instead of modifying `adata` in place.
 
     Returns
     -------
-    Returns dictionary with normalized copies of `adata.X` and `adata.layers`
-    or updates `adata` with normalized version of the original
-    `adata.X` and `adata.layers`, depending on `inplace`.
+    Returns the outputs as a :class:`~scanpy.pp.NormalizeTotalResult` if `out=True`, else `None`.
+    The deprecated `inplace=False` returns them as a :class:`dict` instead.
 
     Example
     -------
@@ -218,7 +285,7 @@ def normalize_total(  # noqa: PLR0912
     array([[ 3.,  3.,  3.,  6.,  6.],
            [ 1.,  1.,  1.,  2.,  2.],
            [ 1., 22.,  1.,  2.,  2.]], dtype=float32)
-    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, inplace=False)["X"]
+    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, out=True).normalized
     normalizing counts per cell
         finished (0:00:00)
     >>> X_norm
@@ -230,8 +297,8 @@ def normalize_total(  # noqa: PLR0912
     ...     target_sum=1,
     ...     exclude_highly_expressed=True,
     ...     max_fraction=0.2,
-    ...     inplace=False,
-    ... )["X"]
+    ...     out=True,
+    ... ).normalized
     normalizing counts per cell
     The following highly-expressed genes are not considered during normalization factor computation:
     ['1', '3', '4']
@@ -242,11 +309,18 @@ def normalize_total(  # noqa: PLR0912
            [ 0.5, 11. ,  0.5,  1. ,  1. ]], dtype=float32)
 
     """
-    if copy:
-        if not inplace:
-            msg = "`copy=True` cannot be used with `inplace=False`."
-            raise ValueError(msg)
-        adata = adata.copy()
+    out = _legacy_out(out, "inplace", None if inplace else True)
+    use = _resolve_obs(use)
+    # the normalized matrix goes back to where it was read from by default
+    src = _use_dest(use, layer=layer, obsm=obsm)
+    dests = _out_dests(
+        out,
+        key_added,
+        dests=lambda key: NormalizeTotalResult(
+            src, None if key is None else dict(obs=key)
+        ),
+        kinds=NORMALIZE_TOTAL_KINDS,
+    )
 
     if max_fraction < 0 or max_fraction > 1:
         msg = "Choose max_fraction between 0 and 1."
@@ -254,10 +328,12 @@ def normalize_total(  # noqa: PLR0912
 
     view_to_actual(adata)
 
-    x = _get_arr(adata, layer=layer, obsm=obsm)
+    x = _get_arr(adata, use, layer=layer, obsm=obsm)
     if isinstance(x, CSCBase):
         x = x.tocsr()
-    if not inplace:
+    if dests is True or src != dests[1].normalized:
+        # normalization is in-place, so leave the source alone
+        # unless we write back over it
         x = x.copy()
     if issubclass(x.dtype.type, int | np.integer):
         x = x.astype(np.float32)  # TODO: Check if float64 should be used
@@ -281,26 +357,158 @@ def normalize_total(  # noqa: PLR0912
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
         warn("Some cells have zero counts", UserWarning)
 
-    dat = dict(
-        X=x,
-        norm_factor=counts_per_cell,
-    )
-    if inplace:
-        if key_added is not None:
-            adata.obs[key_added] = dat["norm_factor"]
-        _set_obs_rep(adata, dat["X"], layer=layer, obsm=obsm)
-
-    logg.info(
-        "    finished ({time_passed})",
-        time=start,
-    )
-    if key_added is not None:
+    vals = NormalizeTotalResult(x, counts_per_cell)
+    logg.info("    finished ({time_passed})", time=start)
+    if dests is True:
+        if not inplace:  # deprecated, returns what it did in 1.12
+            return dict(X=vals.normalized, norm_factor=vals.norm_factor)
+        return vals
+    _write_dests(adata, vals, dests[1])
+    if (key := _dest_key(dests[1].norm_factor)) is not None:
         logg.debug(
-            f"and added {key_added!r}, counts per cell before normalization (adata.obs)"
+            f"and added {key!r}, counts per cell before normalization (adata.obs)"
         )
-
-    if copy:
-        return adata
-    elif not inplace:
-        return dat
     return None
+
+
+def _estimate_nb_overdispersion(x: np.ndarray | CSBase | DaskArray) -> float:
+    r"""Estimate the negative-binomial overdispersion :math:`α` from raw counts.
+
+    Fits :math:`\mathrm{Var}_g = μ_g + α \cdot μ_g^2` across genes, where
+    :math:`μ_g` and :math:`\mathrm{Var}_g` are the per-gene mean and (population)
+    variance over cells. The model is linear in :math:`α`, so the ordinary
+    least-squares solution is closed form
+
+    .. math::
+        α = \frac{\sum_g (\mathrm{Var}_g - μ_g) \, μ_g^2}{\sum_g μ_g^4},
+
+    which is exactly the minimizer a non-linear `curve_fit` would converge to,
+    but without the dependency. :func:`~fast_array_utils.stats.mean_var` is
+    dispatched for dense, sparse and dask input alike, so the only dask-specific
+    step is computing the two final scalar sums.
+    """
+    mu, var = mean_var(x, axis=0, correction=0)
+    mu2 = mu**2
+    numerator = np.sum((var - mu) * mu2)
+    denominator = np.sum(mu2 * mu2)
+    if isinstance(x, DaskArray):
+        import dask
+
+        numerator, denominator = dask.compute(numerator, denominator)
+    if denominator == 0.0:
+        msg = (
+            "Cannot estimate overdispersion: every gene has zero mean. "
+            "Pass a positive `alpha` explicitly."
+        )
+        raise ValueError(msg)
+    alpha = float(numerator / denominator)
+    if not alpha > 0:
+        msg = (
+            f"Estimated overdispersion is non-positive (alpha = {alpha}); "
+            "pass a positive `alpha` explicitly."
+        )
+        raise ValueError(msg)
+    return alpha
+
+
+def _normalize_shifted_clr_helper(
+    x: np.ndarray | CSBase | DaskArray,
+    *,
+    alpha: float | None,
+) -> tuple[np.ndarray | DaskArray, np.ndarray | DaskArray]:
+    """Compute the dense PFlog / shifted-CLR matrix and cell depths."""
+    # Keep the depths lazy for dask; `.ravel()` would otherwise materialize them.
+    cell_depths = stats.sum(x, axis=1)
+    if not isinstance(x, DaskArray):
+        cell_depths = np.asarray(cell_depths).ravel()
+
+    if alpha is None:
+        alpha = _estimate_nb_overdispersion(x)
+    elif not alpha > 0:
+        msg = (
+            f"`alpha` must be positive to compute PFlog, got {alpha}. "
+            "The data may be underdispersed."
+        )
+        raise ValueError(msg)
+
+    log_values = log1p(x * (4.0 * float(alpha)))
+
+    row_center = stats.sum(log_values, axis=1) / log_values.shape[1]
+    if not isinstance(row_center, DaskArray):
+        row_center = np.asarray(row_center).ravel()
+    log_values = conv.to_dense(log_values)
+    return log_values - row_center[:, None], cell_depths
+
+
+@_doc_params(use=doc_use("Which matrix to normalize.", legacy=()), out=doc_out())
+def normalize_shifted_clr(
+    adata: AnnData,
+    *,
+    alpha: float | None = None,
+    use: RepAcc | str | None = None,
+    out: RepAcc | str | bool = False,
+) -> np.ndarray | DaskArray | None:
+    r"""Normalize counts with the shifted centered log-ratio (PFlog) transform.
+
+    If `alpha` is not provided, it is estimated from the input matrix. PFlog is
+    then computed as
+
+    .. math::
+        T(x)_i = \log(1 + 4 α x_i)
+            - \frac{{1}}{{D}} \sum_{{j=1}}^D \log(1 + 4 α x_j),
+
+    which is equivalent to centering
+    :math:`\log(x_i + 1 / (4 α))` because the constant :math:`\log(4 α)`
+    cancels during CLR centering.
+
+    .. array-support:: pp.normalize_shifted_clr
+
+    .. note::
+        CLR centering generally maps zeros to non-zero values, so the resulting
+        matrix is dense even when the input is sparse.
+
+    Parameters
+    ----------
+    adata
+        The annotated data matrix of shape `n_obs` × `n_vars`.
+        Rows correspond to cells and columns to genes.
+    alpha
+        Negative-binomial overdispersion of the dataset (``var = μ + α·μ²``).
+        If `None`, it is estimated from the input matrix. A positive numeric
+        value uses that value directly. PFlog applies
+        ``log1p(4 * alpha * x)`` before CLR centering.
+    {use}
+    {out}
+
+    Returns
+    -------
+    The normalized matrix if `out=True`, else `None`.
+
+    Example
+    -------
+    >>> import numpy as np
+    >>> from anndata import AnnData
+    >>> import scanpy as sc
+    >>> adata = AnnData(np.array([[1, 2, 30], [4, 50, 6]], dtype="float32"))
+    >>> sc.pp.normalize_shifted_clr(adata, alpha=0.5)
+    >>> np.allclose(adata.X.sum(axis=1), 0, atol=1e-5)
+    True
+    """
+    use = _resolve_obs(use)
+    view_to_actual(adata)
+
+    x = _get_arr(adata, use)
+    if isinstance(x, CSCBase):
+        x = x.tocsr()
+    if issubclass(x.dtype.type, int | np.integer):
+        x = x.astype(np.float64)
+
+    start = logg.info("normalizing counts per cell via PFlog")
+
+    x, cell_depths = _normalize_shifted_clr_helper(x, alpha=alpha)
+
+    if not isinstance(cell_depths, DaskArray) and not np.all(cell_depths > 0):
+        warn("Some cells have zero counts", UserWarning)
+
+    logg.info("    finished ({time_passed})", time=start)
+    return _write_out(adata, x, out=out, use=use)

@@ -24,7 +24,7 @@ sc.pl.umap(adata, **plotting_params)
 ```
 
 If you pass `show=False`, a {class}`~matplotlib.axes.Axes` instance is returned
-and you have all of matplotlib's detailed configuration possibilities.
+and you have all of matplotlib’s detailed configuration possibilities.
 
 To facilitate writing memory-efficient pipelines, by default,
 Scanpy tools operate *inplace* on `adata` and return `None` –

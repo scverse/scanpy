@@ -2,7 +2,6 @@
 
 # Settings
 
-
 ```{eval-rst}
 .. currentmodule:: scanpy
 ```
@@ -53,7 +52,7 @@ Verbosity controls the amount of logging output:
 ```
 
 Influence the global behavior of plotting functions. In non-interactive scripts,
-you'd usually want to set {attr}`settings.autoshow` to `False`.
+you’d usually want to set {attr}`settings.autoshow` to `False`.
 
 ```{eval-rst}
 .. autosummary::
@@ -63,7 +62,6 @@ you'd usually want to set {attr}`settings.autoshow` to `False`.
 ```
 
 IO related settings for saving figures, caching files and storing datasets.
-
 
 ```{eval-rst}
 .. autosummary::

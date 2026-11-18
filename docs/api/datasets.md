@@ -22,5 +22,4 @@
    datasets.pbmc68k_reduced
    datasets.paul15
    datasets.visium_sge
-
 ```

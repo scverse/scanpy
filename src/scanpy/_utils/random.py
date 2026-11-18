@@ -53,14 +53,16 @@ class _RNGIgraph:
 
     def __init__(self, rng: SeedLike | RNGLike | None) -> None:
         self._rng = np.random.default_rng(rng)
+        # igraph calls `getrandbits` a lot, so bind the fastest source once.
+        # (`random_raw` is ~10× faster than `.integers(…)`)
+        self._raw: Callable[[], int] = (
+            self._rng.state.tomaxint
+            if isinstance(self._rng, _LegacyRng)
+            else self._rng.bit_generator.random_raw
+        )
 
     def getrandbits(self, k: int) -> int:
-        if isinstance(self._rng, _LegacyRng):
-            i = self._rng.state.tomaxint()
-        else:
-            lims = np.iinfo(np.uint64)
-            i = int(self._rng.integers(0, lims.max, dtype=np.uint64, endpoint=True))
-        return i & ((1 << k) - 1)
+        return self._raw() & ((1 << k) - 1)
 
     def randint(self, a: int, b: int) -> np.int64:
         """Can’t use `endpoint` here as _LegacyRng doesn’t support it."""
@@ -75,6 +77,9 @@ def _set_igraph_rng(rng: SeedLike | RNGLike | None) -> Generator[None]:
     ensure_igraph()
     import igraph
 
+    if rng is None:  # unseeded, so igraph’s native (and fastest) RNG is fine
+        yield None
+        return
     ig_rng = _RNGIgraph(rng)
     try:
         igraph.set_random_number_generator(ig_rng)

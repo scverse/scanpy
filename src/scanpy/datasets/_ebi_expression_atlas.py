@@ -139,9 +139,9 @@ def ebi_expression_atlas(
     Example
     -------
     >>> import scanpy as sc
-    >>> sc.datasets.ebi_expression_atlas("E-MTAB-4888")  # doctest: +ELLIPSIS
-    AnnData object with n_obs × n_vars = 2261 × 23899
-        obs: 'Sample Characteristic[organism]', 'Sample Characteristic Ontology Term[organism]', ..., 'Factor Value[cell type]', 'Factor Value Ontology Term[cell type]'
+    >>> sc.datasets.ebi_expression_atlas("E-ENAD-19")  # doctest: +ELLIPSIS
+    AnnData object with n_obs × n_vars = 26 × 3644
+        obs: 'Sample Characteristic[organism]', 'Sample Characteristic Ontology Term[organism]', ..., 'Factor Value[single cell identifier]', 'Factor Value Ontology Term[single cell identifier]'
         layers: None (.X)
 
     """

@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-from .._docs import doc_mask
+from .._docs import doc_mask, doc_use
 
 doc_adata_basic = """\
 adata
     Annotated data matrix.\
 """
 
-doc_expr_reps = """\
-layer
-    If provided, use `adata.layers[layer]` for expression values instead
-    of `adata.X`.
+doc_expr_reps = f"""\
+{doc_use("Which matrix to use for expression values.", legacy=("layer",), layers_only=True)}
 use_raw
     If True, use `adata.raw.X` for expression values instead of `adata.X`.\
 """
@@ -66,8 +64,6 @@ Variable level metrics include:
 
 `total_{expr_type}`
     E.g. "total_counts". Sum of counts for a gene.
-`n_genes_by_{expr_type}`
-    E.g. "n_genes_by_counts". The number of genes with at least 1 count in a cell. Calculated for all cells.
 `mean_{expr_type}`
     E.g. "mean_counts". Mean expression over all cells.
 `n_cells_by_{expr_type}`

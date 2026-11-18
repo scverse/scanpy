@@ -8,7 +8,9 @@ from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
 from ..._compat import CSBase
+from ..._utils import own_deprecations
 from ..._utils.random import _accepts_legacy_random_state
+from ...get._out import deprecated_copy
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -75,6 +77,7 @@ def recipe_weinreb17(
     return adata if copy else None
 
 
+@deprecated_copy
 def recipe_seurat(
     adata: AnnData, *, log: bool = True, plot: bool = False, copy: bool = False
 ) -> AnnData | None:
@@ -99,16 +102,20 @@ def recipe_seurat(
     """
     from ... import pl, pp
 
-    if copy:
-        adata = adata.copy()
     pp.filter_cells(adata, min_genes=200)
     pp.filter_genes(adata, min_cells=3)
     pp.normalize_total(adata, target_sum=1e4)
     adata.layers[layer_log := "log1p"] = adata.X
-    pp.log1p(adata, layer=layer_log)
-    filter_result = pp.highly_variable_genes(
-        adata, min_mean=0.0125, max_mean=3, min_disp=0.5, layer=layer_log, inplace=False
-    )
+    with own_deprecations():
+        pp.log1p(adata, layer=layer_log)
+        filter_result = pp.highly_variable_genes(
+            adata,
+            min_mean=0.0125,
+            max_mean=3,
+            min_disp=0.5,
+            inplace=False,
+            layer=layer_log,
+        )
     assert filter_result is not None
     if plot:
         pl.highly_variable_genes(filter_result, log=not log)
@@ -117,9 +124,10 @@ def recipe_seurat(
         adata.X = adata.layers[layer_log]
     del adata.layers[layer_log]
     pp.scale(adata, max_value=10)
-    return adata if copy else None
+    return None
 
 
+@deprecated_copy
 def recipe_zheng17(
     adata: AnnData,
     *,
@@ -157,21 +165,21 @@ def recipe_zheng17(
     from ... import pl, pp
 
     start = logg.info("running recipe zheng17")
-    if copy:
-        adata = adata.copy()
     # only consider genes with more than 1 count
     pp.filter_genes(adata, min_counts=1)
     # normalize with total UMI count per cell
-    pp.normalize_total(adata, key_added="n_counts_all")
+    with own_deprecations():  # `anndata.acc` is optional, so no `out`
+        pp.normalize_total(adata, key_added="n_counts_all")
     adata.layers[layer_log := "log1p"] = adata.X
-    pp.log1p(adata, layer=layer_log)
-    filter_result = pp.highly_variable_genes(
-        adata,
-        flavor="cell_ranger",
-        n_top_genes=n_top_genes,
-        layer=layer_log,
-        inplace=False,
-    )
+    with own_deprecations():
+        pp.log1p(adata, layer=layer_log)
+        filter_result = pp.highly_variable_genes(
+            adata,
+            flavor="cell_ranger",
+            n_top_genes=n_top_genes,
+            inplace=False,
+            layer=layer_log,
+        )
     assert filter_result is not None
     if plot:  # should not import at the top of the file
         pl.highly_variable_genes(filter_result, log=True)
@@ -184,4 +192,4 @@ def recipe_zheng17(
     del adata.layers[layer_log]
     pp.scale(adata)
     logg.info("    finished", time=start)
-    return adata if copy else None
+    return None

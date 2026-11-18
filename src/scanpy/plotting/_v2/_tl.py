@@ -8,10 +8,11 @@ import pandas as pd
 from anndata.acc import GraphAcc, MultiAcc
 from hv_anndata import A
 
-if TYPE_CHECKING:
-    from typing import Literal
+from ...get._out import _dest, _out_key
 
+if TYPE_CHECKING:
     from anndata import AnnData
+    from anndata.acc import AdRef
     from hv_anndata import AdDim
     from scipy.sparse import csr_matrix  # noqa: TID251
 
@@ -19,10 +20,8 @@ if TYPE_CHECKING:
 def draw_graph(
     adata: AnnData,
     kdims: list[AdDim] | MultiAcc,
-    edge_vdim: Literal["distances", "connectivities"] | GraphAcc = "connectivities",
+    edge_vdim: GraphAcc | str = "obsp.connectivities",
     node_vdims: AdDim | list[AdDim] | None = None,
-    *,
-    neighbors_key: str = "neighbors",
 ) -> hv.Graph:
     """Draw a graph.
 
@@ -34,16 +33,10 @@ def draw_graph(
         Key dimensions of the graph.
         Can just be ``A.obsm[<k>]`` or ``A.varm[<k>]`` to auto-select components.
     edge_vdim
-        Edge value dimension.
-        If ``"distances"``/``"connectivities"``,
-        the graph data is retrieved like :func:`scanpy.pp.neighbors` stores it:
-        ``A.uns[neighbors_key][f"{edge_vdim}_key"]``.
-        Therefore ``.opts(edge_color=calculated_edge_vdim)`` is set by default.
+        Edge value dimension, e.g. ``A.obsp["distances"]``.
+        ``.opts(edge_color=edge_vdim)`` is set by default.
     node_vdims
         Node value dimensions.
-    neighbors_key
-        Key in ``adata.uns`` where neighbors are stored.
-        Used only if ``edge_vdim`` is ``"distances"``/``"connectivities"``.
 
     Returns
     -------
@@ -63,7 +56,7 @@ def draw_graph(
         adata = sc.datasets.pbmc68k_reduced()
         sc.pp.neighbors(adata)
         sc.pl.draw_graph(
-            adata, A.obsm["umap"], "distances", [A.obs["bulk_labels"]]
+            adata, A.obsm["umap"], A.obsp["distances"], [A.obs["bulk_labels"]]
         ).opts(
             node_color=A.obs["bulk_labels"],
             node_cmap="tab10",
@@ -80,9 +73,9 @@ def draw_graph(
     if isinstance(kdims, MultiAcc):
         kdims = [kdims[0], kdims[1]]
     if isinstance(edge_vdim, str):
-        edge_vdim = A.obsp[adata.uns[neighbors_key][f"{edge_vdim}_key"]]
-    elif not isinstance(edge_vdim, GraphAcc):
-        msg = f"edge_vdim must be a string or `A.obsp[key]`, got {edge_vdim!r}."
+        edge_vdim = A.resolve(edge_vdim)
+    if not isinstance(edge_vdim, GraphAcc):
+        msg = f"`edge_vdim` must point to `.obsp`, got {edge_vdim!r}."
         raise TypeError(msg)
 
     edges = cast("csr_matrix", getattr(adata, f"{edge_vdim.dim}p")[edge_vdim.k]).tocoo()
@@ -190,8 +183,8 @@ def embedding_density(
     adata: AnnData,
     basis: MultiAcc,
     *,
-    groupby: str | None = None,
-    key: str | None = None,
+    groupby: AdRef | str | None = None,
+    use: AdRef | str | None = None,
 ) -> hv.Scatter | hv.NdLayout:
     """Plot embedding density.
 
@@ -202,9 +195,10 @@ def embedding_density(
     basis
         Embedding to plot (e.g. ``A.obsm["umap"]``).
     groupby
-        ``groupby`` as specified in :func:`scanpy.tl.embedding_density`.
-    key
-        ``key_added`` as specified in :func:`scanpy.tl.embedding_density`.
+        ``groupby`` as specified in :func:`scanpy.tl.embedding_density`, e.g. ``A.obs["phase"]``.
+    use
+        Where :func:`~scanpy.tl.embedding_density` wrote the densities, i.e. the `out` passed to it:
+        `None` for the default place, or an accessor like `A.obs['density']`.
 
     Returns
     -------
@@ -221,13 +215,18 @@ def embedding_density(
         A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
-        sc.tl.embedding_density(adata, basis="umap", groupby="phase")
-        sc.pl.embedding_density(adata, A.obsm["umap"], groupby="phase")
+        sc.tl.embedding_density(adata, A.obsm["umap"], groupby=A.obs["phase"])
+        sc.pl.embedding_density(adata, A.obsm["umap"], groupby=A.obs["phase"])
 
     """
+    if groupby is not None:
+        if (dest := _dest(groupby)).keys() != {"obs"}:
+            msg = f"`groupby` must point to a column of `.obs`, was {groupby!r}"
+            raise TypeError(msg)
+        groupby = dest["obs"]
     basis_name = basis.k.removeprefix("X_")
-    if key is None:
-        key = f"{basis_name}_density{'' if groupby is None else f'_{groupby}'}"
+    default = f"{basis_name}_density{'' if groupby is None else f'_{groupby}'}"
+    key = _out_key(False if use is None else use, None, kind="obs", default=default)
 
     groupby_vdims = [] if groupby is None else [A.obs[groupby]]
     scatter = hv.Scatter(adata, basis[0], [basis[1], *groupby_vdims, A.obs[key]]).opts(
