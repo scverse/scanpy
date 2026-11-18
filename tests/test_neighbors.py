@@ -518,7 +518,8 @@ def test_neighbors_reports_reused_pca(caplog: pytest.LogCaptureFixture) -> None:
         assert (
             f"Computing neighbors using A.obsm[{key!r}] (10 dimensions)." in caplog.text
         )
-        explicit = distances(use=f"obsm.{key}")
+        with pytest.warns(FutureWarning, match="argument use_rep is deprecated"):
+            explicit = distances(use_rep=key)
         assert (implicit != explicit).nnz == 0
         np.testing.assert_array_equal(adata.obsm[key], original)
         current = distances(n_pcs=0)
