@@ -283,7 +283,7 @@ def _check_score_genes_args(
 
     def get_subset(genes: pd.Index[str]):
         x = _get_arr(adata, use, use_raw=use_raw, layer=layer)
-        if len(genes) == len(var_names):
+        if genes.equals(var_names):
             return x
         idx = var_names.get_indexer(genes)
         return x[:, idx]
