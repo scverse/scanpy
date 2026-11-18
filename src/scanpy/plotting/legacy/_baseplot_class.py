@@ -206,17 +206,25 @@ def _prepare_plot_data(  # noqa: PLR0912, PLR0915
         categorical = grouping[groupby_keys[0]].astype("category")
         categorical.name = groupby_keys[0]
     else:
-        categorical = grouping[groupby_keys].apply("_".join, axis=1).astype("category")
-        categorical.name = "_".join(groupby_keys)
-        order = {
-            "_".join(keys): idx
-            for idx, keys in enumerate(
-                product(*(grouping[key].cat.categories for key in groupby_keys))
-            )
-        }
-        categorical = categorical.cat.reorder_categories(
-            sorted(categorical.cat.categories, key=lambda value: order[value])
-        )
+        # join the group values using "_" to make a new category; rows missing any
+        # value stay NaN, and `object` keeps `1` from turning into "1.0"
+        parts = [
+            grouping[key].map(str, na_action="ignore").astype(object)
+            for key in groupby_keys
+        ]
+        levels = [
+            grouping[key].astype("category").cat.categories for key in groupby_keys
+        ]
+        # categories in product order of each column's categories
+        all_cats = list(dict.fromkeys("_".join(map(str, k)) for k in product(*levels)))
+        categorical = pd.Series(
+            pd.Categorical(
+                parts[0].str.cat([p.to_numpy() for p in parts[1:]], sep="_"),
+                categories=all_cats,
+            ),
+            index=grouping.index,
+            name="_".join(groupby_keys),
+        ).cat.remove_unused_categories()
 
     var = adata.raw.var if use_raw else adata.var
     lookup = pd.Index(var[gene_symbols]) if gene_symbols is not None else var.index
@@ -268,6 +276,10 @@ def _prepare_plot_data(  # noqa: PLR0912, PLR0915
         matrix = _add_obs_columns(
             matrix, adata.obs[obs_keys].to_numpy(dtype=np.float64), is_obs
         )
+    if matrix is not None and not isinstance(matrix, np.ndarray | CSBase | DaskArray):
+        # e.g. jax arrays: aggregation doesn't support them, and only the plotted
+        # features are left
+        matrix = np.asarray(matrix)
     if isinstance(matrix, DaskArray):
         # only the few plotted features are left, and aggregation needs them in one chunk
         matrix = matrix.rechunk({1: -1})
