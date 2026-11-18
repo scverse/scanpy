@@ -498,3 +498,29 @@ def test_indices_distances_rect_matrix_padded() -> None:
 
     np.testing.assert_array_equal(indices, [[2, 0], [2, 3], [3, 0]])
     np.testing.assert_array_equal(distances, [[1, 2], [1, 2], [1, 4]])
+
+
+def test_neighbors_reports_reused_pca(caplog: pytest.LogCaptureFixture) -> None:
+    rng = np.random.default_rng(4462)
+    adata = AnnData(rng.normal(size=(64, 80)))
+    sc.pp.pca(adata, n_comps=10)
+    key = next(iter(adata.obsm))
+    original = adata.obsm[key].copy()
+    adata.X = rng.normal(size=adata.shape)
+
+    def distances(**kwargs):
+        caplog.clear()
+        sc.pp.neighbors(adata, transformer="sklearn", n_neighbors=5, **kwargs)
+        return adata.obsp["distances"].copy()
+
+    with sc.settings.override(verbosity="warning"):
+        implicit = distances()
+        assert (
+            f"Computing neighbors using A.obsm[{key!r}] (10 dimensions)." in caplog.text
+        )
+        explicit = distances(use=f"obsm.{key}")
+        assert (implicit != explicit).nnz == 0
+        np.testing.assert_array_equal(adata.obsm[key], original)
+        current = distances(n_pcs=0)
+        assert "Computing neighbors using A.X (80 dimensions)." in caplog.text
+        assert (implicit != current).nnz > 0

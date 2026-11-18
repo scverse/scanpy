@@ -42,6 +42,7 @@ def _choose_representation_compat(
     use_rep: RepAcc | str | None = None,
     n_pcs: int | None,
     silent: bool = False,
+    report_neighbors_input: bool = False,
 ) -> np.ndarray | CSRBase:  # TODO: what else?
     """Get the representation to compute on.
 
@@ -61,19 +62,25 @@ def _choose_representation_compat(
         use_rep = "X"
     match use_rep:
         case None:
-            x = _get_pca_or_small_x(adata, n_pcs)
+            x, source = _get_pca_or_small_x(adata, n_pcs)
         case LayerAcc():
+            source = str(use_rep)
             x = _get_arr(adata, use_rep)
         case MultiAcc():
+            source = str(use_rep)
             x = _slice_n_pcs(_get_arr(adata, use_rep), n_pcs, use_rep)
         case str() if use_rep in adata.obsm:
+            source = f"A.obsm[{use_rep!r}]"
             x = _slice_n_pcs(adata.obsm[use_rep], n_pcs, use_rep)
         case "X":
+            source = "A.X"
             x = adata.X
         case _:
             msg = f"Did not find {use_rep} in `.obsm.keys()`. You need to compute it first."
             raise ValueError(msg)
     settings.verbosity = verbosity  # resetting verbosity
+    if report_neighbors_input:
+        logg.warning(f"Computing neighbors using {source} ({x.shape[1]} dimensions).")
     return x
 
 
@@ -92,13 +99,15 @@ def _slice_n_pcs[A: np.ndarray | CSBase](
     return x[:, :n_pcs]
 
 
-def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBase:
+def _get_pca_or_small_x(
+    adata: AnnData, n_pcs: int | None
+) -> tuple[np.ndarray | CSRBase, str]:
     from .._keys import _embedding_keys
     from ..preprocessing._pca import pca
 
     if adata.n_vars <= settings.N_PCS:
         logg.info("    using data matrix X directly")
-        return adata.X
+        return adata.X, "A.X"
 
     if keys := _existing_preset_keys(adata, "pca"):
         if n_pcs is not None and n_pcs > adata.obsm[keys.obsm].shape[1]:
@@ -106,7 +115,7 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
             raise ValueError(msg)
         x = adata.obsm[keys.obsm][:, :n_pcs]
         logg.info(f"    using {keys.obsm!r} with n_pcs = {x.shape[1]}")
-        return x
+        return x, f"A.obsm[{keys.obsm!r}]"
 
     msg = (
         f"You’re trying to run this on {adata.n_vars} dimensions of `.X`, "
@@ -116,7 +125,8 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
     warn(msg, UserWarning)
     n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
     pca(adata, n_comps=n_pcs_pca)
-    return adata.obsm[_embedding_keys("pca").obsm]
+    key = _embedding_keys("pca").obsm
+    return adata.obsm[key], f"A.obsm[{key!r}]"
 
 
 def get_init_pos_from_paga(

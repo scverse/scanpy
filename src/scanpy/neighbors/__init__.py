@@ -249,7 +249,9 @@ def neighbors(  # noqa: PLR0913
         if callable(metric):
             msg = "`metric` must be a string if `distances` is given."
             raise TypeError(msg)
-        start = logg.info("computing connectivities")
+        start = logg.warning(
+            "Computing connectivities using the supplied distance matrix."
+        )
         # if a precomputed distance matrix is provided, skip the PCA and distance computation
         if isinstance(distances, SpBase):
             if TYPE_CHECKING:
@@ -635,7 +637,11 @@ class Neighbors:
         self.knn = knn
 
         x = _choose_representation_compat(
-            self._adata, use=use, use_rep=use_rep, n_pcs=n_pcs
+            self._adata,
+            use=use,
+            use_rep=use_rep,
+            n_pcs=n_pcs,
+            report_neighbors_input=True,
         )
         if isinstance(x, HasArrayNamespace):
             # sklearn transformers require numpy, so need to convert at boundary
