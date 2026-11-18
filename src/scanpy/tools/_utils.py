@@ -60,9 +60,10 @@ def _choose_representation_compat(
         settings.verbosity = 1
     if use_rep is None and n_pcs == 0:  # backwards compat for specifying `.X`
         use_rep = "X"
+    source = None
     match use_rep:
         case None:
-            x, source = _get_pca_or_small_x(adata, n_pcs)
+            x = _get_pca_or_small_x(adata, n_pcs, warn_on_reuse=report_neighbors_input)
         case LayerAcc():
             source = str(use_rep)
             x = _get_arr(adata, use_rep)
@@ -79,8 +80,8 @@ def _choose_representation_compat(
             msg = f"Did not find {use_rep} in `.obsm.keys()`. You need to compute it first."
             raise ValueError(msg)
     settings.verbosity = verbosity  # resetting verbosity
-    if report_neighbors_input:
-        logg.warning(f"Computing neighbors using {source} ({x.shape[1]} dimensions).")
+    if report_neighbors_input and source is not None:
+        logg.info(f"Computing neighbors using {source} ({x.shape[1]} dimensions).")
     return x
 
 
@@ -100,22 +101,25 @@ def _slice_n_pcs[A: np.ndarray | CSBase](
 
 
 def _get_pca_or_small_x(
-    adata: AnnData, n_pcs: int | None
-) -> tuple[np.ndarray | CSRBase, str]:
+    adata: AnnData, n_pcs: int | None, *, warn_on_reuse: bool
+) -> np.ndarray | CSRBase:
     from .._keys import _embedding_keys
     from ..preprocessing._pca import pca
 
     if adata.n_vars <= settings.N_PCS:
         logg.info("    using data matrix X directly")
-        return adata.X, "A.X"
+        return adata.X
 
     if keys := _existing_preset_keys(adata, "pca"):
         if n_pcs is not None and n_pcs > adata.obsm[keys.obsm].shape[1]:
             msg = f"`adata.obsm[{keys.obsm!r}]` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
             raise ValueError(msg)
         x = adata.obsm[keys.obsm][:, :n_pcs]
-        logg.info(f"    using {keys.obsm!r} with n_pcs = {x.shape[1]}")
-        return x, f"A.obsm[{keys.obsm!r}]"
+        log = logg.warning if warn_on_reuse else logg.info
+        log(
+            f"Using the existing PCA in adata.obsm[{keys.obsm!r}] ({x.shape[1]} dimensions)."
+        )
+        return x
 
     msg = (
         f"You’re trying to run this on {adata.n_vars} dimensions of `.X`, "
@@ -125,8 +129,7 @@ def _get_pca_or_small_x(
     warn(msg, UserWarning)
     n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
     pca(adata, n_comps=n_pcs_pca)
-    key = _embedding_keys("pca").obsm
-    return adata.obsm[key], f"A.obsm[{key!r}]"
+    return adata.obsm[_embedding_keys("pca").obsm]
 
 
 def get_init_pos_from_paga(

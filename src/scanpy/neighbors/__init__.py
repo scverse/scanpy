@@ -249,7 +249,7 @@ def neighbors(  # noqa: PLR0913
         if callable(metric):
             msg = "`metric` must be a string if `distances` is given."
             raise TypeError(msg)
-        start = logg.warning(
+        start = logg.info(
             "Computing connectivities using the supplied distance matrix."
         )
         # if a precomputed distance matrix is provided, skip the PCA and distance computation

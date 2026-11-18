@@ -513,15 +513,22 @@ def test_neighbors_reports_reused_pca(caplog: pytest.LogCaptureFixture) -> None:
         sc.pp.neighbors(adata, transformer="sklearn", n_neighbors=5, **kwargs)
         return adata.obsp["distances"].copy()
 
-    with sc.settings.override(verbosity="warning"):
+    with sc.settings.override(verbosity="info"):
         implicit = distances()
         assert (
-            f"Computing neighbors using A.obsm[{key!r}] (10 dimensions)." in caplog.text
-        )
+            "WARNING",
+            f"Using the existing PCA in adata.obsm[{key!r}] (10 dimensions).",
+        ) in [(r.levelname, r.getMessage()) for r in caplog.records]
         with pytest.warns(FutureWarning, match="argument use_rep is deprecated"):
             explicit = distances(use_rep=key)
+        assert (
+            "INFO",
+            f"Computing neighbors using A.obsm[{key!r}] (10 dimensions).",
+        ) in [(r.levelname, r.getMessage()) for r in caplog.records]
+        assert all(r.levelname != "WARNING" for r in caplog.records)
         assert (implicit != explicit).nnz == 0
         np.testing.assert_array_equal(adata.obsm[key], original)
         current = distances(n_pcs=0)
         assert "Computing neighbors using A.X (80 dimensions)." in caplog.text
+        assert all(r.levelname != "WARNING" for r in caplog.records)
         assert (implicit != current).nnz > 0
