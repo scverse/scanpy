@@ -87,11 +87,11 @@ def _graph_and_vals(
     obsp: str | None,
 ) -> tuple[CSRBase, _Vals]:
     """Resolve the graph and values of `gearys_c`/`morans_i` called on an `AnnData`."""
-    from anndata.acc import A
-
     g = _use_graph(adata, use, obsp=use_graph, neighbors_key=neighbors_key)
 
     if isinstance(vals, str):
+        from anndata.acc import A
+
         vals = A.resolve(vals)
     if isinstance(vals, AdRef):
         if use_raw or layer is not None or obsm is not None or obsp is not None:
