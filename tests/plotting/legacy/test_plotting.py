@@ -673,6 +673,7 @@ def test_baseplot_obs_tidy_lazy_and_settable() -> None:
     assert plot.obs_tidy is replacement
 
 
+@needs.dask
 @pytest.mark.parametrize("mean_only_expressed", [False, True])
 def test_dotplot_aggregates_dask_data(*, mean_only_expressed: bool) -> None:
     import dask.array as da
