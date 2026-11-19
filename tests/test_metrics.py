@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 import warnings
 from functools import partial
 from itertools import combinations
@@ -30,6 +31,28 @@ if TYPE_CHECKING or hasattr(anndata, "acc"):
 @pytest.fixture(scope="session", params=[sc.metrics.gearys_c, sc.metrics.morans_i])
 def metric(request: pytest.FixtureRequest):
     return request.param
+
+
+def test_legacy_anndata_without_acc(metric, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Legacy AnnData calls do not require the optional accessor module."""
+    x = np.array([[1.0, 2.0], [2.0, 4.0], [4.0, 1.0], [8.0, 3.0]])
+    graph = sparse.csr_matrix(  # noqa: TID251
+        [[0, 1, 0, 0], [1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0]]
+    )
+    adata = AnnData(x)
+    adata.obsp["connectivities"] = graph
+    adata.uns["neighbors"] = dict(connectivities_key="connectivities")
+    expected = metric(graph, x.T)
+    original_import = builtins.__import__
+
+    def import_without_acc(name, *args, **kwargs):
+        if name == "anndata.acc":
+            msg = "No module named 'anndata.acc'"
+            raise ModuleNotFoundError(msg)
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_without_acc)
+    np.testing.assert_allclose(metric(adata), expected, rtol=1e-12, atol=1e-12)
 
 
 @pytest.fixture(params=["single-threaded", "multi-threaded"])
