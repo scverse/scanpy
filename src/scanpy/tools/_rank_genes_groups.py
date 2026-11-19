@@ -1145,7 +1145,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     The log2 fold changes and fractions of expressing cells are taken from
     the :func:`~scanpy.tl.rank_genes_groups` results if they are stored there
     (`'logfoldchanges'`, and `'pts'` and `'pts_rest'` if `pts=True` was passed),
-    `groupby` and `use_raw` are the same as for that call,
+    `groupby`, `use_raw`, and the selected layer are the same as for that call,
     and it compared each group to `reference='rest'`.
     Otherwise, they are computed from the expression values,
     comparing each group to all other cells.
@@ -1221,6 +1221,8 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
         adata.uns[key]["params"]["groupby"] == groupby
         and adata.uns[key]["params"]["reference"] == "rest"
         and adata.uns[key]["params"]["use_raw"] == use_raw
+        and adata.uns[key]["params"].get("layer")
+        == _use_to_uns(use, rep=False).get("layer")
     )
 
     use_logfolds = same_params and "logfoldchanges" in adata.uns[key]
