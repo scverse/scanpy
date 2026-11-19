@@ -12,6 +12,7 @@ import pytest
 from anndata import AnnData
 from fast_array_utils import conv
 from scipy import sparse
+from scipy.stats import rankdata
 
 import scanpy as sc
 from scanpy._utils.random import random_str
@@ -29,6 +30,38 @@ if TYPE_CHECKING:
 
 _create_random_gene_names = partial(random_str, alphabet=string.ascii_uppercase)
 """Create a bunch of random gene names (just CAPS letters)."""
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("order", ["stored", "reversed", "rotated", "subset"])
+@pytest.mark.parametrize("ctrl_as_ref", [False, True])
+def test_score_genes_gene_pool_order(array_type, order: str, *, ctrl_as_ref: bool):
+    """Gene means must be aligned with pool names even when all genes are present."""
+    values = np.arange(1, 9, dtype=np.float64)
+    x = np.vstack([values, values**2, values * 3, values**1.5])
+    adata = AnnData(array_type(x.copy()))
+    pool = np.arange(8)
+    if order == "reversed":
+        pool = pool[::-1]
+    elif order == "rotated":
+        pool = np.roll(pool, 3)
+    elif order == "subset":
+        pool = pool[:-1][::-1]
+    n_items = int(np.round(len(pool) / 2))
+    bins = rankdata(x[:, pool].mean(axis=0), method="min") // n_items
+    target_bin = bins[np.flatnonzero(pool == 1)[0]]
+    controls = pool[(bins == target_bin) & (pool != 1)]
+    expected = x[:, 1] - x[:, controls].mean(axis=1)
+    score = sc.tl.score_genes(
+        adata,
+        ["1"],
+        gene_pool=adata.var_names[pool],
+        n_bins=3,
+        ctrl_size=50,
+        ctrl_as_ref=ctrl_as_ref,
+        out=True,
+    )
+    np.testing.assert_allclose(score, expected, rtol=1e-12, atol=1e-12)
 
 
 def _create_sparse_nan_matrix(
