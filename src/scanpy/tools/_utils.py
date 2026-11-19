@@ -42,6 +42,7 @@ def _choose_representation_compat(
     use_rep: RepAcc | str | None = None,
     n_pcs: int | None,
     silent: bool = False,
+    report_neighbors_input: bool = False,
 ) -> np.ndarray | CSRBase:  # TODO: what else?
     """Get the representation to compute on.
 
@@ -59,21 +60,28 @@ def _choose_representation_compat(
         settings.verbosity = 1
     if use_rep is None and n_pcs == 0:  # backwards compat for specifying `.X`
         use_rep = "X"
+    source = None
     match use_rep:
         case None:
-            x = _get_pca_or_small_x(adata, n_pcs)
+            x = _get_pca_or_small_x(adata, n_pcs, warn_on_reuse=report_neighbors_input)
         case LayerAcc():
+            source = str(use_rep)
             x = _get_arr(adata, use_rep)
         case MultiAcc():
+            source = str(use_rep)
             x = _slice_n_pcs(_get_arr(adata, use_rep), n_pcs, use_rep)
         case str() if use_rep in adata.obsm:
+            source = f"A.obsm[{use_rep!r}]"
             x = _slice_n_pcs(adata.obsm[use_rep], n_pcs, use_rep)
         case "X":
+            source = "A.X"
             x = adata.X
         case _:
             msg = f"Did not find {use_rep} in `.obsm.keys()`. You need to compute it first."
             raise ValueError(msg)
     settings.verbosity = verbosity  # resetting verbosity
+    if report_neighbors_input and source is not None:
+        logg.info(f"Computing neighbors using {source} ({x.shape[1]} dimensions).")
     return x
 
 
@@ -92,7 +100,9 @@ def _slice_n_pcs[A: np.ndarray | CSBase](
     return x[:, :n_pcs]
 
 
-def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBase:
+def _get_pca_or_small_x(
+    adata: AnnData, n_pcs: int | None, *, warn_on_reuse: bool
+) -> np.ndarray | CSRBase:
     from .._keys import _embedding_keys
     from ..preprocessing._pca import pca
 
@@ -105,7 +115,10 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
             msg = f"`adata.obsm[{keys.obsm!r}]` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
             raise ValueError(msg)
         x = adata.obsm[keys.obsm][:, :n_pcs]
-        logg.info(f"    using {keys.obsm!r} with n_pcs = {x.shape[1]}")
+        log = logg.warning if warn_on_reuse else logg.info
+        log(
+            f"Using the existing PCA in adata.obsm[{keys.obsm!r}] ({x.shape[1]} dimensions)."
+        )
         return x
 
     msg = (
