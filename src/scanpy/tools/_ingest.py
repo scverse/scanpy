@@ -308,6 +308,15 @@ class Ingest:
             self._rep = _choose_representation_compat(
                 adata, use_rep=self._use_rep, n_pcs=None
             )
+            if use_rep == "X_pca" and "pca" in adata.uns:
+                # ponytail: `use_rep` was recorded as an explicit "X_pca"
+                # (rather than inferred from a recorded `n_pcs`), so without
+                # this `_same_rep` would try (and fail) to read `X_pca`
+                # straight off `adata_new`, then silently fall back to raw
+                # `.X` -- a different, wrong representation (or a shape
+                # mismatch in the knn query). Set `_n_pcs` so it re-projects
+                # through the stored PCA basis, like the branches below do.
+                self._n_pcs = self._rep.shape[1]
         elif "n_pcs" in neighbors["params"]:
             self._use_rep = "X_pca"
             self._n_pcs = neighbors["params"]["n_pcs"]
