@@ -245,6 +245,10 @@ def leiden(  # noqa: PLR0913
         adjacencies = [a for a, _ in restricted]
         restrict_indices = restricted[0][1]
     adjacency = adjacencies[0]
+    # Prepare find_partition arguments as a dictionary,
+    # appending to whatever the user provided. It needs to be this way
+    # as this allows for the accounting of a None resolution
+    # (in the case of a partition variant that doesn't take it on input)
     clustering_args["n_iterations"] = n_iterations
     if flavor == "leidenalg":
         part = _leiden_leidenalg(
