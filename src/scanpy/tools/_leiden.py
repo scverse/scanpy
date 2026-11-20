@@ -194,7 +194,9 @@ def leiden(  # noqa: PLR0913
         to calculate a score independent of `flavor`.
 
     """
-    graphs, resolutions, weights = _graphs(use, resolution, layer_weights)
+    graphs, resolutions, weights = _normalize_multiplex_args(
+        use, resolution, layer_weights
+    )
     multiplex = len(graphs) > 1
     flavor, directed = _validate_flavor(
         flavor,
@@ -386,7 +388,7 @@ def _leiden_igraph(
         return g.community_leiden(**clustering_args)
 
 
-def _graphs(
+def _normalize_multiplex_args(
     use: GraphAcc | str | list[GraphAcc | str] | None,
     resolution: float | Sequence[float] | None,
     layer_weights: Sequence[float] | None,
@@ -401,13 +403,15 @@ def _graphs(
             msg = "`layer_weights` needs several graphs in `use`."
             raise ValueError(msg)
         return graphs, [resolution], None
-    resolutions = _per_graph(resolution, len(graphs), "resolution")
+    resolutions = _broadcast_per_graph(resolution, len(graphs), "resolution")
     if layer_weights is not None:
-        layer_weights = _per_graph(layer_weights, len(graphs), "layer_weights")
+        layer_weights = _broadcast_per_graph(
+            layer_weights, len(graphs), "layer_weights"
+        )
     return graphs, resolutions, layer_weights
 
 
-def _per_graph(value: object, n: int, name: str) -> list:
+def _broadcast_per_graph(value: object, n: int, name: str) -> list:
     """Broadcast a parameter to one value per graph in `use`."""
     values = [value] * n if np.ndim(value) == 0 else list(value)
     if len(values) != n:
@@ -523,8 +527,7 @@ def _validate_flavor(  # noqa: PLR0912
     if multiplex and flavor != "leidenalg":
         msg = "Clustering several graphs at once needs `flavor='leidenalg'`."
         raise ValueError(msg)
-    if n_jobs is not None and flavor != "networkit":
-        _raise_unless_v1(f"Do not pass in n_jobs argument when using {flavor}.")
+    ignored = [] if n_jobs is None or flavor == "networkit" else ["n_jobs"]
     match flavor:
         case "igraph":
             if partition_type is not None:
@@ -537,10 +540,7 @@ def _validate_flavor(  # noqa: PLR0912
             if partition_type is not None:
                 msg = "Do not pass in partition_type argument when using networkit."
                 raise ValueError(msg)
-            if clustering_args:
-                _raise_unless_v1(
-                    f"Do not pass in further arguments when using networkit: {', '.join(clustering_args)}."
-                )
+            ignored.extend(clustering_args)
         case "leidenalg":
             msg = (
                 "The `igraph` and `networkit` implementations of leiden clustering are *orders of magnitude faster*. "
@@ -563,14 +563,12 @@ def _validate_flavor(  # noqa: PLR0912
         case _:
             msg = f"flavor must be either 'igraph', 'leidenalg', or 'networkit', but {flavor!r} was passed."
             raise ValueError(msg)
+    if ignored:
+        msg = f"`flavor={flavor!r}` ignores {', '.join(ignored)}."
+        if settings.preset is Preset.ScanpyV2Preview:
+            raise ValueError(msg)
+        warn(f"{msg} This will raise an error in the future.", FutureWarning)
     return flavor, is_directed
-
-
-def _raise_unless_v1(msg: str) -> None:
-    """Raise a :class:`ValueError`; with ScanpyV1, only warn that it will be raised."""
-    if settings.preset is Preset.ScanpyV2Preview:
-        raise ValueError(msg)
-    warn(f"{msg} This will raise an error in the future.", FutureWarning)
 
 
 def _resolve_directed(directed: bool | Default | None, *, flavor: str) -> bool:  # noqa: FBT001

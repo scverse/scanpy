@@ -309,7 +309,7 @@ def test_leiden_igraph_partition_type(adata_neighbors):
         pytest.param(
             "networkit",
             dict(objective_function="CPM"),
-            r"further arguments.*objective_function",
+            r"ignores objective_function",
             marks=needs.networkit,
         ),
     ],
