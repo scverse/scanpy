@@ -170,8 +170,8 @@ def leiden(  # noqa: PLR0913
     copy
         Whether to copy `adata` or modify it inplace.
     **clustering_args
-        Any further arguments to pass to :func:`~leidenalg.find_partition` or :func:`~leidenalg.find_partition_multiplex`
-        (which pass them on to the `partition_type`), or to :meth:`igraph.Graph.community_leiden`.
+        Any further arguments to pass to :func:`~leidenalg.find_partition` (which in turn passes arguments to the `partition_type`)
+        or :meth:`igraph.Graph.community_leiden` from `igraph`.
 
     Returns
     -------
