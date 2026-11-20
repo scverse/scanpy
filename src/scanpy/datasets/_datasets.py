@@ -421,8 +421,10 @@ def pbmc68k_reduced() -> AnnData:
 
     if settings.preset is Preset.ScanpyV2Preview:
         adata.layers["log_counts"] = log_counts
-        adata.obsm = {k.removeprefix("X_"): v for k, v in adata.obsm.items()}
     else:
+        adata.obsm = {f"X_{k}": v for k, v in adata.obsm.items()}
+        adata.varm["PCs"] = adata.varm.pop("pca")
+        del adata.obs["leiden"], adata.uns["leiden"]
         # matches the precision of the original, pre-2.0 shipped `.raw`
         log_counts.data = np.round(log_counts.data, 3)
         # tie-break rounding boundary like the original did
@@ -499,6 +501,15 @@ def pbmc3k_processed() -> AnnData:
     As analysis steps, the embeddings :func:`~scanpy.tl.tsne` and :func:`~scanpy.tl.umap` are performed.
     Communities are identified using :func:`~scanpy.tl.louvain` and marker genes using :func:`~scanpy.tl.rank_genes_groups`.
 
+    With :attr:`~scanpy.Preset.ScanpyV2Preview`:
+
+    - no :attr:`~anndata.AnnData.raw`: :attr:`~anndata.AnnData.X` has all genes (logarithmized, not scaled),
+      `.var["highly_variable"]` marks the ones used for PCA
+    - embedding keys as written by the preset: no `X_` prefix for :attr:`~anndata.AnnData.obsm` keys,
+      `.varm["pca"]` instead of `.varm["PCs"]`, `graph_fr` instead of `draw_graph_fr`/`draw_graph`
+    - cell types in `.obs["cell_type"]` instead of `.obs["louvain"]`
+    - :func:`~scanpy.tl.leiden` clusters in `.obs["leiden"]`
+
     Returns
     -------
     Annotated data matrix.
@@ -510,17 +521,46 @@ def pbmc3k_processed() -> AnnData:
     AnnData object with n_obs × n_vars = 2638 × 1838
         obs: 'n_genes', 'percent_mito', 'n_counts', 'louvain'
         var: 'n_cells'
-        uns: 'draw_graph', 'louvain', 'louvain_colors', 'neighbors', 'pca', 'rank_genes_groups'
-        obsm: 'X_pca', 'X_tsne', 'X_umap', 'X_draw_graph_fr'
+        uns: 'draw_graph', 'neighbors', 'pca', 'rank_genes_groups', 'louvain_colors', 'louvain'
+        obsm: 'X_draw_graph_fr', 'X_pca', 'X_tsne', 'X_umap'
         varm: 'PCs'
-        obsp: 'distances', 'connectivities'
+        obsp: 'connectivities', 'distances'
         layers: None (.X)
 
     """  # noqa: D401
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=OldFormatWarning)
-        warnings.filterwarnings("ignore", r"Moving.*from.*uns.*to.*obsp", FutureWarning)
-        return read(fetch_dataset("pbmc3k_processed"))
+    from .. import pp
+
+    path = fetch_dataset("pbmc3k_processed")
+    with zarr.storage.ZipStore(path, mode="r") as store:
+        adata = read_zarr(zarr.open_group(store=store, mode="r"))
+    if settings.preset is Preset.ScanpyV2Preview:
+        return adata
+
+    adata.obsm = {f"X_{k}": v for k, v in adata.obsm.items()}
+    adata.obsm["X_draw_graph_fr"] = adata.obsm.pop("X_graph_fr")
+    adata.uns["draw_graph"] = adata.uns.pop("graph_fr")
+    adata.varm["PCs"] = adata.varm.pop("pca")
+    adata.obs = adata.obs.drop(columns="leiden").rename(
+        columns={"cell_type": "louvain"}
+    )
+    adata.uns["louvain_colors"] = adata.uns.pop("cell_type_colors")
+    adata.uns["louvain"] = dict(params=dict(random_state=0, resolution=1))
+    del adata.uns["leiden"], adata.uns["pca"]["params"]
+    adata.uns["rank_genes_groups"]["params"] |= dict(groupby="louvain", use_raw=True)
+
+    # `X` is log1p of the counts, as was v1’s `.raw`
+    hvg = adata.var.pop("highly_variable").to_numpy()
+    adata.raw = adata
+    adata = adata[:, hvg].copy()
+    # v1’s `X` was normalized over all genes (`n_counts`) before subsetting and `log1p`
+    x = cast("CSRBase", adata.X)
+    size_factors = adata.obs["n_counts"].to_numpy() / 1e4
+    x.data = np.log1p(np.expm1(x.data) / np.repeat(size_factors, np.diff(x.indptr)))
+    pp.regress_out(adata, ["n_counts", "percent_mito"])
+    pp.scale(adata, max_value=10)
+    assert isinstance(adata.var, pd.DataFrame)
+    adata.var = adata.var.drop(columns=["mean", "std"])
+    return adata
 
 
 def _download_visium_dataset(
