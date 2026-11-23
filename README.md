@@ -3,7 +3,7 @@
 [![PyPI Downloads](https://img.shields.io/pepy/dt/scanpy?logo=pypi)](https://pepy.tech/project/scanpy)
 [![Conda Forge](https://img.shields.io/conda/vn/conda-forge/scanpy)
 ![Conda Forge Downloads](https://img.shields.io/conda/dn/conda-forge/scanpy?logo=condaforge)](https://anaconda.org/conda-forge/scanpy)
-[![Docs](https://readthedocs.com/projects/icb-scanpy/badge/?version=latest)](https://scanpy.scverse.org/)
+[![Docs](https://readthedocs.org/projects/scanpy/badge/?version=latest)](https://scanpy.scverse.org/)
 [![CI](https://github.com/scverse/scanpy/actions/workflows/ci.yml/badge.svg)](https://github.com/scverse/scanpy/actions/workflows/ci.yml)
 [![Discourse topics](https://img.shields.io/discourse/posts?color=yellow&logo=discourse&server=https%3A%2F%2Fdiscourse.scverse.org)](https://discourse.scverse.org/)
 [![Chat](https://img.shields.io/badge/zulip-join_chat-%2367b08f.svg)](https://scverse.zulipchat.com)
