@@ -6,7 +6,9 @@
 ```
 
 Previously found here, but now part of scanpy’s main API:
+
 - {func}`scanpy.pp.harmony_integrate`
+- {func}`scanpy.pp.hashsolo`
 - {func}`scanpy.pp.scrublet`
 - {func}`scanpy.pp.scrublet_simulate_doublets`
 

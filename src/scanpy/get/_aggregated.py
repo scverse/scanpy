@@ -10,11 +10,13 @@ import pandas as pd
 from anndata import AnnData
 from fast_array_utils.numba import njit
 from scipy import sparse
+from scverse_misc import Deprecation, deprecated_arg
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 from .._compat import CSBase, CSRBase, DaskArray, warn
+from .._docs import doc_ref_compat
 from .._settings import Preset, settings
-from .._utils import _resolve_axis, get_literal_vals
+from .._utils import _doc_params, _resolve_axis, get_literal_vals
 from .._utils._doctests import doctest_needs
 from ._kernels import (
     agg_sum_csc,
@@ -23,7 +25,7 @@ from ._kernels import (
     mean_var_csr,
     mean_var_dense,
 )
-from .get import _check_mask, _get_arr, _get_vec, _refs_dim, _resolve_ref
+from ._use import _check_mask, _get_arr, _get_vec, _refs_dim, _resolve_ref
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
@@ -276,7 +278,11 @@ def _normalize_by[I: Idx2D | int](
     return by_list, dim
 
 
+@_doc_params(ref=doc_ref_compat)
 @doctest_needs("anndata_acc")
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("varm", Deprecation("1.13.0", "Use `use` instead."))
 def aggregate(  # noqa: PLR0913
     adata: AnnData,
     by: (
@@ -286,7 +292,7 @@ def aggregate(  # noqa: PLR0913
     ),
     func: AggType | Iterable[AggType],
     *,
-    acc: LayerAcc | MultiAcc | GraphAcc | str | None = None,
+    use: LayerAcc | MultiAcc | GraphAcc | str | None = None,
     mask: NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str | None = None,
     dof: int = 1,
     keep_sparse: bool = True,
@@ -322,7 +328,7 @@ def aggregate(  # noqa: PLR0913
         If True and the input data is a sparse matrix, preserve sparse outputs
         for metrics that support it (for example, ``sum`` and ``count_nonzero``).
         If False, force dense :class:`numpy.ndarray` outputs. Defaults to True.
-    acc
+    use
         If not None, accessor for aggregation data.
         Replaces `layer`, `obsm`, and `varm`.
         Can also be a :class:`~anndata.acc.GraphAcc` (e.g. `A.obsp[...]`, `A.varp[...]`)
@@ -334,7 +340,6 @@ def aggregate(  # noqa: PLR0913
     obsm
     varm
         If not None, key for aggregation data.
-        Use `acc` instead.
 
     Returns
     -------
@@ -379,9 +384,7 @@ def aggregate(  # noqa: PLR0913
         var: 'n_cells'
         layers: 'mean', 'count_nonzero'
 
-    .. [#ref] If :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`,
-       :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d to :class:`~anndata.acc.AdRef`\ s,
-       otherwise interpreted as :attr:`anndata.AnnData.obs` columns.
+    .. [#ref] {ref}
 
     """
     if not isinstance(adata, AnnData):
@@ -391,22 +394,20 @@ def aggregate(  # noqa: PLR0913
         )
         raise NotImplementedError(msg)
 
-    if settings.preset is Preset.ScanpyV2Preview and any(
-        v is not None for v in (axis, layer, obsm, varm)
-    ):
-        msg = "`acc` will replace `layer`, `obsm`, and `varm` arguments in scanpy 2."
-        if axis is not None:
-            msg += " `axis` is no longer necessary as it is inferred from `by`."
+    if axis is not None and settings.preset is Preset.ScanpyV2Preview:
+        msg = "`axis` is no longer necessary as it is inferred from `by`."
         warn(msg, FutureWarning)
 
     by, dim = _normalize_by(by, axis, obsm=obsm, varm=varm)
     del axis
 
-    if isinstance(by[0], AdRef) and acc is None:
-        acc = A.X
-    data = _get_arr(adata, acc, dim=dim, layer=layer, obsm=obsm, varm=varm)
+    if isinstance(use, str):
+        use = A.resolve(use, vec=False)
+    elif isinstance(by[0], AdRef) and use is None:
+        use = A.X
+    data = _get_arr(adata, use, dim=dim, layer=layer, obsm=obsm, varm=varm)
 
-    values = _get_vec(adata, by, dim=dim)
+    values = _get_vec(adata, by, dim=dim, compat=True)
     dim_df = pd.DataFrame({
         (
             ref
@@ -431,17 +432,20 @@ def aggregate(  # noqa: PLR0913
     )
 
     # Define new var dataframe
-    if obsm or varm or isinstance(acc, MultiAcc):
+    if obsm or varm or isinstance(use, MultiAcc):
         var = pd.DataFrame(  # Check if there could be labels, create them otherwise
             index=data.columns
             if isinstance(data, pd.DataFrame)
             else pd.RangeIndex(data.shape[1]).astype(str)
         )
-    elif isinstance(acc, GraphAcc):
+    elif isinstance(use, GraphAcc):
         # Square graph: the un-grouped axis still indexes the original `dim`
         var = getattr(adata, dim)
-    else:  # layer
+    elif use is None or isinstance(use, LayerAcc):
         var = getattr(adata, "var" if dim == "obs" else "obs")
+    else:  # pragma: no cover
+        msg = f"Unexpected `use`: {use!r}"
+        raise AssertionError(msg)
 
     # It's all coming together
     result = AnnData(layers=layers, obs=new_label_df, var=var)

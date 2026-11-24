@@ -62,15 +62,17 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
     req: Requirement
 
     scanpy2 = "scanpy[scanpy2]"
-    anndata_acc = "anndata>=0.13.0rc3"
+    anndata_acc = "anndata>=0.13.3"
 
     colour = "colour-science"
     dask = auto()
     dask_ml = auto()
     fa2 = auto()
     gprofiler = "gprofiler-official"
+    jax = auto()
     leidenalg = auto()
     louvain = auto()
+    networkit = auto()
     openpyxl = auto()
     igraph = auto()
     pybiomart = auto()
@@ -87,7 +89,7 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
     phate = auto()
     phenograph = auto()
     pypairs = auto()
-    samalg = "sam-algorithm"
+    samalg = "sc-sam"
     scanorama = auto()
     trimap = auto()
     wishbone = "wishbone-dev"

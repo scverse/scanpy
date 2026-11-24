@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from scverse_misc import Deprecation, deprecated
+
 from ..._settings import settings
 
 if TYPE_CHECKING:
@@ -13,6 +15,12 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "For batch correction, use :func:`scanpy.pp.bbknn` or :func:`scanpy.pp.combat` instead.",
+    )
+)
 def mnn_correct(  # noqa: PLR0913
     *datas: AnnData | np.ndarray,
     var_index: Collection[str] | None = None,

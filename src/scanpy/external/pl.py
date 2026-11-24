@@ -38,6 +38,11 @@ __all__ = [
 ]
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0", "Use :func:`scanpy.pl.embedding` with ``basis='phate'`` instead."
+    )
+)
 @doctest_needs("phate")
 @_wraps_plot_scatter
 @_doc_params(
@@ -77,6 +82,8 @@ def phate(adata: AnnData, **kwargs) -> list[Axes] | None:
     >>> adata = AnnData(data)
     >>> adata.obs["branches"] = branches
     >>> sce.tl.phate(adata, k=5, a=20, t=150)
+    FutureWarning: The function phate is deprecated and will be removed in the future. Use the `phate <https://github.com/KrishnaswamyLab/PHATE>`_ package directly.
+        sce.tl.phate(adata, k=5, a=20, t=150)
     >>> adata.obsm["X_phate"].shape
     (2000, 2)
     >>> sce.pl.phate(
@@ -84,11 +91,18 @@ def phate(adata: AnnData, **kwargs) -> list[Axes] | None:
     ...     color="branches",
     ...     color_map="tab20",
     ... )
+    FutureWarning: The function phate is deprecated and will be removed in the future. Use :func:`scanpy.pl.embedding` with ``basis='phate'`` instead.
+        sce.pl.phate(
 
     """
     return embedding(adata, "phate", **kwargs)
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0", "Use :func:`scanpy.pl.embedding` with ``basis='trimap'`` instead."
+    )
+)
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -114,6 +128,11 @@ def trimap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
     return embedding(adata, "trimap", **kwargs)
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0", "Use :func:`scanpy.pl.embedding` with ``basis='harmony'`` instead."
+    )
+)
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -162,6 +181,7 @@ def harmony_timeseries(
     return axes
 
 
+@deprecated(Deprecation("1.13.0", "Use :func:`scanpy.pl.embedding` instead."))
 def sam(
     adata: AnnData,
     projection: str | np.ndarray = "X_umap",
@@ -256,6 +276,13 @@ def sam(
     return axes
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use :func:`palantir.plot.plot_gene_trends` from Wishbone’s successor "
+        "`palantir <https://github.com/dpeerlab/Palantir>`_ instead.",
+    )
+)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def wishbone_marker_trajectory(  # noqa: PLR0913
     adata: AnnData,

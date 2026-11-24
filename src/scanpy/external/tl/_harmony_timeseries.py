@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
 from ..._utils._doctests import doctest_needs
@@ -14,6 +15,12 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use the `harmonyTS <https://github.com/dpeerlab/Harmony>`_ package directly.",
+    )
+)
 @doctest_needs("harmony")
 def harmony_timeseries(
     adata: AnnData,
@@ -118,10 +125,14 @@ def harmony_timeseries(
     Run harmony_timeseries
 
     >>> sce.tl.harmony_timeseries(adata, tp="time_points", n_components=500)
+    FutureWarning: The function harmony_timeseries is deprecated and will be removed in the future. Use the `harmonyTS <https://github.com/dpeerlab/Harmony>`_ package directly.
+        sce.tl.harmony_timeseries(adata, tp="time_points", n_components=500)
 
     Plot time points:
 
     >>> sce.pl.harmony_timeseries(adata)
+    FutureWarning: The function harmony_timeseries is deprecated and will be removed in the future. Use :func:`scanpy.pl.embedding` with ``basis='harmony'`` instead.
+        sce.pl.harmony_timeseries(adata)
 
     For further demonstration of Harmony visualizations please follow the notebook
     `Harmony_sample_notebook.ipynb

@@ -8,29 +8,42 @@ from typing import TYPE_CHECKING, cast
 import numba
 import numpy as np
 from fast_array_utils.numba import njit
+from scverse_misc import deprecated_arg
 
 from .._compat import CSRBase
+from .._docs import DEPR_RAW
 from .._utils import _doc_params
-from ..get import _get_arr
 from ..neighbors._doc import doc_neighbors_key
-from ._common import _get_graph, _SparseMetric
+from ..tools._docs import doc_use_neighbors
+from ._common import DEPR_GRAPH, DEPR_VALS, _graph_and_vals, _SparseMetric
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
+    from ..get._types import ArrAcc, GraphAcc, VecRef
     from ._common import _Vals
 
 
 @singledispatch
-@_doc_params(neighbors_key=doc_neighbors_key)
+@_doc_params(
+    neighbors_key=doc_neighbors_key,
+    use=doc_use_neighbors(),
+)
+@deprecated_arg("use_graph", DEPR_GRAPH)
+@deprecated_arg("neighbors_key", DEPR_GRAPH)
+@deprecated_arg("layer", DEPR_VALS)
+@deprecated_arg("obsm", DEPR_VALS)
+@deprecated_arg("obsp", DEPR_VALS)
+@deprecated_arg("use_raw", DEPR_RAW)
 def gearys_c(
     adata_or_graph: AnnData | CSRBase,
     /,
-    vals: _Vals | None = None,
+    vals: _Vals | ArrAcc | VecRef | None = None,
     *,
     use_graph: str | None = None,
     neighbors_key: str | None = None,
+    use: GraphAcc | str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     obsp: str | None = None,
@@ -40,9 +53,9 @@ def gearys_c(
 
     Specifically as used by `VISION <https://doi.org/10.1038/s41467-019-12235-0>`_.
 
-    Geary's C is a measure of autocorrelation for some measure on a graph. This
-    can be to whether measures are correlated between neighboring cells. Lower
-    values indicate greater correlation.
+    Geary's C is a measure of autocorrelation for some measure on a graph.
+    This can be to whether measures are correlated between neighboring cells.
+    Lower values indicate greater correlation.
 
     .. math::
 
@@ -56,27 +69,29 @@ def gearys_c(
     Params
     ------
     adata_or_graph
-        AnnData object containing a graph (see ``use_graph``) or the graph itself.
+        AnnData object containing a graph (see ``use``) or the graph itself.
         See the examples for more info.
     vals
-        Values to calculate Geary's C for. If this is two dimensional, should
-        be of shape `(n_features, n_cells)`. Otherwise should be of shape
-        `(n_cells,)`. This matrix can be selected from elements of the anndata
-        object by using key word arguments: `layer`, `obsm`, `obsp`, or
-        `use_raw`.
-    use_graph
-        Key to use for graph in anndata object.
-        If not provided, default neighbors connectivities will be used instead.
-        (See ``neighbors_key`` below.)
-    {neighbors_key}
+        Values to calculate Geary's C for.
+        If this is two dimensional, should be of shape `(n_features, n_cells)`.
+        Otherwise should be of shape `(n_cells,)`.
+        If `adata_or_graph` is an :class:`~anndata.AnnData`, this can be an accessor,
+        e.g. `A.obsm['X_pca']` or the 1D `A.obs['n_genes']`
+        (:class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d, e.g. `'obsm.X_pca'`),
+        by default `A.X`.
     layer
-        Key for `adata.layers` to choose `vals`.
+        A key of :attr:`~anndata.AnnData.layers`, i.e. `layer='k'` is `vals=A.layers['k']`.
     obsm
-        Key for `adata.obsm` to choose `vals`.
+        A key of :attr:`~anndata.AnnData.obsm`, i.e. `obsm='k'` is `vals=A.obsm['k']`.
     obsp
-        Key for `adata.obsp` to choose `vals`.
+        A key of :attr:`~anndata.AnnData.obsp`, i.e. `obsp='k'` is `vals=A.obsp['k']`.
     use_raw
         Whether to use `adata.raw.X` for `vals`.
+    use_graph
+        Key of the graph in :attr:`~anndata.AnnData.obsp`,
+        i.e. `use_graph='k'` is `use=A.obsp['k']`.
+    {neighbors_key}
+    {use}
 
     Returns
     -------
@@ -90,9 +105,10 @@ def gearys_c(
     .. code:: python
 
         import scanpy as sc, numpy as np
+        from anndata.acc import A
 
         pbmc = sc.datasets.pbmc68k_processed()
-        pc_c = sc.metrics.gearys_c(pbmc, obsm="X_pca")
+        pc_c = sc.metrics.gearys_c(pbmc, A.obsm["X_pca"])
 
     It's equivalent to call the function directly on the underlying arrays:
 
@@ -102,10 +118,17 @@ def gearys_c(
         np.testing.assert_array_equal(pc_c, alt)
 
     """
-    adata = cast("AnnData", adata_or_graph)
-    g = _get_graph(adata, use_graph=use_graph, neighbors_key=neighbors_key)
-    if vals is None:
-        vals = _get_arr(adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp).T
+    g, vals = _graph_and_vals(
+        cast("AnnData", adata_or_graph),
+        use,
+        vals=vals,
+        use_graph=use_graph,
+        neighbors_key=neighbors_key,
+        use_raw=use_raw,
+        layer=layer,
+        obsm=obsm,
+        obsp=obsp,
+    )
     return gearys_c(g, vals)
 
 

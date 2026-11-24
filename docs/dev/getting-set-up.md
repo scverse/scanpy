@@ -6,31 +6,31 @@ This section of the docs covers our practices for working with `git` on our code
 
 For a more complete git tutorials we recommend checking out:
 
-[Atlassian's git tutorial](https://www.atlassian.com/git/tutorials)
-: Beginner friendly introductions to the git command line interface
+[Atlassian’s git tutorial](https://www.atlassian.com/git/tutorials)
+:   Beginner friendly introductions to the git command line interface
 
 [Setting up git for GitHub](https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/set-up-git)
-: Configuring git to work with your GitHub user account
+:   Configuring git to work with your GitHub user account
 
 (forking-and-cloning)=
 
 ### Forking and cloning
 
-To get the code, and be able to push changes back to the main project, you'll need to (1) fork the repository on github and (2) clone the repository to your local machine.
+To get the code, and be able to push changes back to the main project, you’ll need to (1) fork the repository on github and (2) clone the repository to your local machine.
 
-This is very straight forward if you're using [GitHub's CLI][]:
+This is very straight forward if you’re using [GitHub's CLI][]:
 
 ```console
-$ gh repo fork scverse/scanpy --clone --remote
+$ gh repo fork scverse/scanpy --clone --remote -- --filter=blob:none
 ```
 
 This will fork the repo to your github account, create a clone of the repo on your current machine, add our repository as a remote, and set the `main` development branch to track our repository.
 
-To do this manually, first make a fork of the repository by clicking the "fork" button on our main github package. Then, on your machine, run:
+To do this manually, first make a fork of the repository by clicking the {guilabel}`Fork` button on our main github page. Then, on your machine, run:
 
 ```console
 $ # Clone your fork of the repository (substitute in your username)
-$ git clone https://github.com/{your-username}/scanpy.git
+$ git clone --filter=blob:none https://github.com/{your-username}/scanpy.git
 $ # Enter the cloned repository
 $ cd scanpy
 $ # Add our repository as a remote
@@ -40,28 +40,31 @@ $ # git branch --set-upstream-to "upstream/main"
 
 [GitHub's CLI]: https://cli.github.com
 
-### `pre-commit`
+(prek)=
+(pre-commit)=
 
-We use [pre-commit][] to run some styling checks in an automated way.
+### Commit hooks
+
+We use [prek][] to run some styling checks in an automated way.
 We also test against these checks, so make sure you follow them!
 
-You can install pre-commit with:
+You can install `prek` with:
 
 ```console
-$ pip install pre-commit
+$ uv tool install prek
 ```
 
 You can then install it to run while developing here with:
 
 ```console
-$ pre-commit install
+$ prek install
 ```
 
 From the root of the repo.
 
-If you choose not to run the hooks on each commit, you can run them manually with `pre-commit run --files={your files}`.
+If you choose not to run the hooks on each commit, you can run them manually with `prek run --files={your files}`.
 
-[pre-commit]: https://pre-commit.com
+[prek]: https://prek.j178.dev/
 
 (creating-a-branch)=
 
@@ -81,7 +84,7 @@ $ git switch -c {your-branch-name}  # Making and changing to the new branch
 
 ### Open a pull request
 
-When you're ready to have your code reviewed, push your changes up to your fork:
+When you’re ready to have your code reviewed, push your changes up to your fork:
 
 ```console
 $ # The first time you push the branch, you'll need to tell git where
@@ -90,16 +93,16 @@ $ # After that, just use
 $ git push
 ```
 
-And open a pull request by going to the main repo and clicking *New pull request*.
+And open a pull request by going to the main repo and clicking {guilabel}`New pull request`.
 GitHub is also pretty good about prompting you to open PRs for recently pushed branches.
 
-We'll try and get back to you soon!
+We’ll try and get back to you soon!
 
 (dev-environments)=
 
 ## Development environments
 
-It's recommended to do development work in an isolated environment.
+It’s recommended to do development work in an isolated environment.
 There are number of ways to do this, including virtual environments, conda environments, and virtual machines.
 
 We think the easiest is probably [Hatch environments][].

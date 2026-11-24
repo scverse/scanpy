@@ -6,6 +6,7 @@ from types import NoneType
 from typing import TYPE_CHECKING
 
 from packaging.version import Version
+from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
 from ..._compat import pkg_version
@@ -23,6 +24,13 @@ if TYPE_CHECKING:
 MIN_VERSION = "2.0"
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use :func:`palantir.utils.run_magic_imputation` from MAGIC’s successor "
+        "`palantir <https://github.com/dpeerlab/Palantir>`_ instead.",
+    )
+)
 @doctest_needs("magic")
 def magic(  # noqa: PLR0913
     adata: AnnData,
@@ -127,12 +135,18 @@ def magic(  # noqa: PLR0913
     >>> sc.pp.normalize_total(adata)
     >>> sc.pp.sqrt(adata)  # or sc.pp.log1p(adata)
     >>> adata_magic = sce.pp.magic(adata, name_list=["Mpo", "Klf1", "Ifitm1"], knn=5)
+    FutureWarning: The function magic is deprecated and will be removed in the future. Use :func:`palantir.utils.run_magic_imputation` from MAGIC’s successor `palantir <https://github.com/dpeerlab/Palantir>`_ instead.
+        adata_magic = sce.pp.magic(adata, name_list=["Mpo", "Klf1", "Ifitm1"], knn=5)
     >>> adata_magic.shape
     (2730, 3)
     >>> sce.pp.magic(adata, name_list="pca_only", knn=5)
+    FutureWarning: The function magic is deprecated and will be removed in the future. Use :func:`palantir.utils.run_magic_imputation` from MAGIC’s successor `palantir <https://github.com/dpeerlab/Palantir>`_ instead.
+        sce.pp.magic(adata, name_list="pca_only", knn=5)
     >>> adata.obsm["X_magic"].shape
     (2730, 100)
     >>> sce.pp.magic(adata, name_list="all_genes", knn=5)
+    FutureWarning: The function magic is deprecated and will be removed in the future. Use :func:`palantir.utils.run_magic_imputation` from MAGIC’s successor `palantir <https://github.com/dpeerlab/Palantir>`_ instead.
+        sce.pp.magic(adata, name_list="all_genes", knn=5)
     >>> adata.X.shape
     (2730, 3451)
 

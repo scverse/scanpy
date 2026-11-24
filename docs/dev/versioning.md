@@ -18,10 +18,10 @@ At a `point` release, there should be no changes beyond bug fixes.
 Valid version numbers are described in [PEP 440](https://peps.python.org/pep-0440/).
 
 [Pre-releases](https://peps.python.org/pep-0440/#pre-releases)
-: should have versions like `1.7.0rc1` or `1.7.0rc2`.
+:   should have versions like `1.7.0rc1` or `1.7.0rc2`.
 
 [Development versions](https://peps.python.org/pep-0440/#developmental-releases)
-: should look like `1.8.0.dev0`, with a commit hash optionally appended as a local version identifier (e.g. `1.8.0.dev2+g00ad77b`).
+:   should look like `1.8.0.dev0`, with a commit hash optionally appended as a local version identifier (e.g. `1.8.0.dev2+g00ad77b`).
 
 (versioning-tooling)=
 ## Tooling
@@ -44,4 +44,4 @@ given as a comment on the PR, or a label or milestone description:
 In our case, these commands are part of the milestone description,
 which causes the merge of a PR assigned to a milestone to trigger the bot.
 
-[meseeks bot]: https://meeseeksbox.github.io
+[meeseeks bot]: https://meeseeksbox.github.io

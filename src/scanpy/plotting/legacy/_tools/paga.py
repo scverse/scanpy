@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import sys
 import warnings
 from collections.abc import Collection, Mapping, Sequence
 from contextlib import nullcontext
 from pathlib import Path
-from types import MappingProxyType
 from typing import TYPE_CHECKING, TypedDict
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 import pandas as pd
@@ -14,6 +17,7 @@ from matplotlib import patheffects, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
 from pandas.api.types import CategoricalDtype
+from scverse_misc import Deprecation, deprecated
 
 from scanpy.tools._draw_graph import coerce_fa2_layout, fa2_positions
 
@@ -210,7 +214,7 @@ def _compute_pos(  # noqa: PLR0912
     init_pos: np.ndarray | None,
     adj_tree,
     root: int,
-    layout_kwds: Mapping[str, Any] = MappingProxyType({}),
+    layout_kwds: Mapping[str, Any] = frozendict({}),
 ) -> NDArray[np.float64]:
     import random
 
@@ -354,7 +358,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     threshold: float | None = None,
     color: str | Mapping[str | int, Mapping[Any, float]] | None = None,
     layout: _Layout | None = None,
-    layout_kwds: Mapping[str, Any] = MappingProxyType({}),
+    layout_kwds: Mapping[str, Any] = frozendict({}),
     init_pos: np.ndarray | None = None,
     root: int | str | Sequence[int] | None = 0,
     labels: str | Sequence[str] | Mapping[str, str] | None = None,
@@ -365,7 +369,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     fontsize: int | None = None,
     fontweight: str = "bold",
     fontoutline: int | None = None,
-    text_kwds: Mapping[str, Any] = MappingProxyType({}),
+    text_kwds: Mapping[str, Any] = frozendict({}),
     node_size_scale: float = 1.0,
     node_size_power: float = 0.5,
     edge_width_scale: float = 1.0,
@@ -380,7 +384,8 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     cmap: str | Colormap | None = None,
     cax: Axes | None = None,
     colorbar=None,  # TODO: this seems to be unused
-    cb_kwds: Mapping[str, Any] = MappingProxyType({}),
+    cb_kwds: Mapping[str, Any] = frozendict({}),
+    ncols: int | None = None,
     frameon: bool | None = None,
     add_pos: bool = True,
     export_to_gexf: bool = False,
@@ -492,6 +497,9 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     cb_kwds
         Keyword arguments for :class:`~matplotlib.colorbar.Colorbar`,
         for instance, `ticks`.
+    ncols
+        Number of panels shown per row when plotting multiple colors. If
+        `None`, all panels are shown in a single row.
     add_pos
         Add the positions to `adata.uns['paga']`.
     title
@@ -544,6 +552,13 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
 
     """
     rng = np.random.default_rng(rng)
+    if ncols is not None:
+        if isinstance(ncols, bool) or not isinstance(ncols, int) or ncols < 1:
+            msg = "`ncols` must be a positive integer or `None`."
+            raise ValueError(msg)
+        if ax is not None:
+            msg = "Cannot specify `ncols` when passing a pre-supplied `ax`."
+            raise ValueError(msg)
     if groups is not None:  # backwards compat
         labels = groups
         logg.warning("`groups` is deprecated in `pl.paga`: use `labels` instead")
@@ -630,9 +645,21 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
         )
 
     if plot:
-        axs, panel_pos, draw_region_width, _figure_width = _utils.setup_axes(
-            ax, panels=colors, colorbars=colorbars
-        )
+        if ncols is None:
+            axs, panel_pos, draw_region_width, _figure_width = _utils.setup_axes(
+                ax, panels=colors, colorbars=colorbars
+            )
+        else:
+            from .scatterplots import _panel_grid
+
+            fig, grid = _panel_grid(
+                hspace=0.25,
+                wspace=0.1,
+                ncols=ncols,
+                num_panels=len(colors),
+            )
+            axs = [fig.add_subplot(grid[i]) for i in range(len(colors))]
+            panel_pos = None
 
         if len(colors) == 1 and not isinstance(axs, list):
             axs = [axs]
@@ -674,7 +701,21 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
                 pos=pos,
             )
             if colorbars[icolor]:
-                if cax is None:
+                if ncols is not None:
+                    if cax is None:
+                        colorbar_kwds = {
+                            "format": ticker.FuncFormatter(_utils.ticks_formatter)
+                        }
+                        colorbar_kwds.update(cb_kwds)
+                        _ = axs[icolor].figure.colorbar(
+                            sct,
+                            ax=axs[icolor],
+                            use_gridspec=False,
+                            **colorbar_kwds,
+                        )
+                        continue
+                    ax_cb = cax[icolor] if isinstance(cax, Sequence) else cax
+                elif cax is None:
                     bottom = panel_pos[0][0]
                     height = panel_pos[1][0] - bottom
                     width = 0.006 * draw_region_width / len(colors)
@@ -721,7 +762,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
     fontsize=None,
     fontweight=None,
     fontoutline=None,
-    text_kwds: Mapping[str, Any] = MappingProxyType({}),
+    text_kwds: Mapping[str, Any] = frozendict({}),
     node_size_scale=1.0,
     node_size_power=0.5,
     edge_width_scale=1.0,
@@ -735,7 +776,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
     export_to_gexf=False,
     colorbar=None,
     use_raw=True,
-    cb_kwds: Mapping[str, Any] = MappingProxyType({}),
+    cb_kwds: Mapping[str, Any] = frozendict({}),
     single_component=False,
     arrowsize=30,
 ):
@@ -1070,7 +1111,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
     use_raw: bool = True,
     annotations: Sequence[str] = ("dpt_pseudotime",),
     color_map: str | Colormap | None = None,
-    color_maps_annotations: Mapping[str, str | Colormap] = MappingProxyType(
+    color_maps_annotations: Mapping[str, str | Colormap] = frozendict(
         dict(dpt_pseudotime="Greys")
     ),
     palette_groups: Sequence[str] | None = None,
@@ -1369,6 +1410,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
     return (ax, df) if return_data else ax
 
 
+@deprecated(Deprecation("1.13.0"))
 def paga_adjacency(
     adata: AnnData,
     *,

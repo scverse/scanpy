@@ -7,17 +7,20 @@ For more tutorials featuring scanpy and other [scverse](https://scverse.org) eco
 ## Basic workflows
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
-basics/index
+basics/clustering
+basics/clustering-2017
+basics/integrating-data-using-ingest
 ```
 
 ## Visualization
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
-plotting/index
+plotting/core
+plotting/advanced
 ```
 
 ## Trajectory inference
@@ -25,35 +28,30 @@ plotting/index
 ```{seealso}
 For more powerful tools for analysing single cell dynamics, check out the scverse ecosystem packages:
 
-* [CellRank](https://cellrank.readthedocs.io)
-* [Dynamo](https://dynamo-release.readthedocs.io/en/latest/)
+* {doc}`CellRank <cellrank:index>`
+* {doc}`Dynamo <dynamo:index>`
 ```
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
-trajectories/index
+trajectories/paga-paul15
 ```
 
 ## Experimental
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
-experimental/index
+experimental/pearson_residuals
+experimental/dask
 ```
-
-## Older tutorials
-
-A number of older tutorials can be found at:
-
-* The [`scanpy_usage`](https://github.com/scverse/scanpy_usage) repository
 
 ```{seealso}
 Scanpy used to have tutorials for its (now deprecated) spatial data functionality.
 For up-to-date tutorials on working with spatial data, see:
 
 * SquidPy {doc}`squidpy:notebooks/tutorials/index`
-* [SpatialData tutorials](https://spatialdata.scverse.org/en/latest/tutorials/notebooks/notebooks.html)
+* SpatialData {doc}`spatialdata:tutorials/notebooks/notebooks`
 * [Scverse ecosystem spatial tutorials](https://scverse.org/learn/)
 ```

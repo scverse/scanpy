@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -17,7 +17,15 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any, Literal
 
-pytestmark = [needs.skimage]
+    from scanpy._compat import CSBase
+
+pytestmark = [
+    needs.skimage,
+    # most tests use the deprecated `batch_key`, so they also run without `anndata.acc`
+    pytest.mark.filterwarnings(
+        "ignore:.*argument batch_key is deprecated:FutureWarning"
+    ),
+]
 
 
 def pbmc200() -> AnnData:
@@ -88,13 +96,66 @@ def test_scrublet_batched():
     pd.testing.assert_frame_equal(adata.obs[merged.obs.columns], merged.obs)
 
 
+@pytest.mark.filterwarnings("ignore:Observation names are not unique:UserWarning")
+@pytest.mark.parametrize("batch_key", [None, "batch"], ids=["unbatched", "batched"])
+def test_scrublet_duplicate_obs_names(batch_key: str | None):
+    """Duplicate `obs_names` must not break mapping results back (see #4098)."""
+    adata = pbmc200()
+    adata.obs["batch"] = 100 * ["a"] + 100 * ["b"]
+    # the batches now consist of different cells sharing the same names
+    obs_names = [*adata.obs_names[:100]] * 2
+    adata.obs_names = obs_names
+    assert not adata.obs_names.is_unique
+
+    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key=batch_key, rng=0)
+
+    assert_array_equal(adata.obs_names, obs_names)  # left untouched
+    assert adata.obs["doublet_score"].notna().all()
+    assert adata.obs["predicted_doublet"].dtype == bool
+    if batch_key is not None:
+        # check that the rows line up, using the sub-generators the batched path spawns
+        expected = np.concatenate([
+            sc.pp.scrublet(
+                adata[adata.obs["batch"] == batch].copy(),
+                use_approx_neighbors=False,
+                rng=sub_rng,
+                out=True,
+            ).doublet_score
+            for batch, sub_rng in zip(
+                "ab", np.random.default_rng(0).spawn(2), strict=True
+            )
+        ])
+        assert_allclose(adata.obs["doublet_score"], expected)
+
+
+@pytest.mark.parametrize("batch_key", [None, "batch"], ids=["unbatched", "batched"])
+def test_scrublet_filtered_cells(batch_key: str | None):
+    """Cells dropped by Scrublet’s internal filtering get missing scores, not an error."""
+    adata = pbmc200()
+    adata.obs["batch"] = 100 * ["a"] + 100 * ["b"]
+    # make these too sparse to survive `pp.filter_cells(min_genes=3)`, one per batch
+    dropped = [5, 105]
+    x = cast("CSBase", adata.X).tolil()
+    x[dropped, :] = 0
+    adata.X = x.tocsr()
+
+    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key=batch_key)
+
+    assert_array_equal(
+        np.flatnonzero(adata.obs["doublet_score"].isna()),
+        dropped,
+    )
+    assert adata.obs["predicted_doublet"].isna().sum() == len(dropped)
+
+
 def _preprocess_for_scrublet(adata: AnnData) -> AnnData:
     adata_pp = adata.copy()
     sc.pp.filter_genes(adata_pp, min_cells=3)
     sc.pp.filter_cells(adata_pp, min_genes=3)
     adata_pp.layers["raw"] = adata_pp.X.copy()
     sc.pp.normalize_total(adata_pp)
-    logged = sc.pp.log1p(adata_pp, copy=True)
+    logged = adata_pp.copy()
+    sc.pp.log1p(logged)
     sc.pp.highly_variable_genes(logged)
     return adata_pp[:, logged.var["highly_variable"]].copy()
 
@@ -128,10 +189,10 @@ def test_scrublet_data(rng_arg: Literal["rng", "random_state"]) -> None:
     seed = 1234
 
     # Run Scrublet and let the main function run simulations
-    adata_scrublet_auto_sim = sc.pp.scrublet(
-        pbmc200(),
+    adata_scrublet_auto_sim = pbmc200()
+    sc.pp.scrublet(
+        adata_scrublet_auto_sim,
         use_approx_neighbors=False,
-        copy=True,
         **{rng_arg: seed},
     )
 
@@ -150,11 +211,11 @@ def test_scrublet_data(rng_arg: Literal["rng", "random_state"]) -> None:
     sc.pp.normalize_total(adata_obs, target_sum=1e6)
     sc.pp.normalize_total(adata_sim, target_sum=1e6)
 
-    adata_scrublet_manual_sim = sc.pp.scrublet(
-        adata_obs,
+    adata_scrublet_manual_sim = adata_obs.copy()
+    sc.pp.scrublet(
+        adata_scrublet_manual_sim,
         adata_sim=adata_sim,
         use_approx_neighbors=False,
-        copy=True,
         **{rng_arg: seed},
     )
 
@@ -202,13 +263,13 @@ def test_scrublet_params(scrub_small: AnnData, param: str, value: Any):
 
     Check that changes to parameters change scrublet results.
     """
-    curr = sc.pp.scrublet(
-        adata=scrub_small, use_approx_neighbors=False, copy=True, **{param: value}
-    )
+    curr = scrub_small.copy()
+    sc.pp.scrublet(adata=curr, use_approx_neighbors=False, **{param: value})
     with pytest.raises(AssertionError):
         assert_equal(scrub_small, curr)
 
 
+@needs.anndata_acc
 def test_scrublet_simulate_doublets():
     """Check that doublet simulation runs and simulates some doublets."""
     adata_obs = pbmc200()
@@ -216,13 +277,13 @@ def test_scrublet_simulate_doublets():
     sc.pp.filter_cells(adata_obs, min_genes=3)
     adata_obs.layers["raw"] = adata_obs.X
     sc.pp.normalize_total(adata_obs)
-    logged = sc.pp.log1p(adata_obs, copy=True)
-
-    _ = sc.pp.highly_variable_genes(logged)
-    adata_obs = adata_obs[:, logged.var["highly_variable"]]
+    # HVG needs log'd data, but the simulation uses the un-log'd counts
+    sc.pp.log1p(adata_obs, out="layers.log1p")
+    sc.pp.highly_variable_genes(adata_obs, use="layers.log1p")
+    adata_obs = adata_obs[:, adata_obs.var["highly_variable"]]
 
     adata_sim = sc.pp.scrublet_simulate_doublets(
-        adata_obs, sim_doublet_ratio=0.02, layer="raw"
+        adata_obs, sim_doublet_ratio=0.02, use="layers.raw"
     )
 
     assert_array_equal(
@@ -239,3 +300,36 @@ def test_scrublet_dtypes() -> None:
     sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key="batch")
 
     assert adata.obs["batch"].dtype == "category"
+
+
+@needs.anndata_acc
+def test_scrublet_out() -> None:
+    """`out=True` returns the columns, a mapping names them and the `.uns` entry."""
+    from anndata.acc import A
+
+    adata = pbmc200()
+    res = sc.pp.scrublet(adata, use_approx_neighbors=False, out=True, rng=0)
+    assert "doublet_score" not in adata.obs
+    assert "scrublet" not in adata.uns
+    out = dict(doublet_score=A.obs["p"], predicted_doublet=A.obs["p_doublet"])
+    sc.pp.scrublet(adata, use_approx_neighbors=False, out=out, rng=0)
+    np.testing.assert_array_equal(adata.obs["p"], res.doublet_score)
+    np.testing.assert_array_equal(adata.obs["p_doublet"], res.predicted_doublet)
+    assert "threshold" in adata.uns["p"]
+
+    with pytest.raises(TypeError, match=r"must be a `bool` or a mapping"):
+        sc.pp.scrublet(adata, use_approx_neighbors=False, out=A.obs["x"], rng=0)
+
+
+@needs.anndata_acc
+def test_scrublet_batch() -> None:
+    """`batch` takes references (or resolvable strings) instead of `batch_key`’s column names."""
+    from anndata.acc import A
+
+    adata = pbmc200()
+    adata.obs["batch"] = 100 * ["a"] + 100 * ["b"]
+    kw = dict(use_approx_neighbors=False, rng=0, out=True)
+    expected = sc.pp.scrublet(adata, batch_key="batch", **kw)
+    for batch in [A.obs["batch"], "obs.batch"]:
+        res = sc.pp.scrublet(adata, batch=batch, **kw)
+        np.testing.assert_allclose(res.doublet_score, expected.doublet_score)

@@ -9,6 +9,7 @@ from anndata import AnnData
 from matplotlib import colormaps
 
 from scanpy.plotting.legacy._anndata import _check_if_annotations
+from scanpy.plotting.legacy._tools.scatterplots import _get_palette
 from scanpy.plotting.legacy._utils import validate_palette
 
 if TYPE_CHECKING:
@@ -34,6 +35,33 @@ def test_validate_palette_no_mod(palette, typ):
     adata = AnnData(uns=dict(test_colors=palette))
     validate_palette(adata, "test")
     assert palette is adata.uns["test_colors"], "Palette should not be modified"
+
+
+def test_get_palette_bool_colors_from_uns_after_subset():
+    adata = AnnData(
+        X=np.ones((4, 1)),
+        obs={"flag": [False, True, False, True]},
+        uns={"flag_colors": ["red", "blue"]},
+    )
+
+    true_subset = adata[adata.obs["flag"]].copy()
+    false_subset = adata[~adata.obs["flag"]].copy()
+
+    assert _get_palette(true_subset, "flag") == {"False": "red", "True": "blue"}
+    assert _get_palette(false_subset, "flag") == {"False": "red", "True": "blue"}
+
+
+def test_get_palette_bool_colors_from_palette_argument_after_subset():
+    adata = AnnData(
+        X=np.ones((4, 1)),
+        obs={"flag": [False, True, False, True]},
+    )
+    true_subset = adata[adata.obs["flag"]].copy()
+
+    assert _get_palette(true_subset, "flag", palette=["red", "blue"]) == {
+        "False": "#ff0000",
+        "True": "#0000ff",
+    }
 
 
 @pytest.mark.parametrize(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import anndata
 import numpy as np
 import pytest
 from anndata import AnnData
@@ -11,12 +12,24 @@ from sklearn.neighbors import KNeighborsTransformer
 import scanpy as sc
 from scanpy import Neighbors
 from scanpy._compat import CSBase
+from scanpy.neighbors._common import (
+    _get_indices_distances_from_rect_matrix,
+    _get_indices_distances_from_sparse_matrix,
+)
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
     from typing import Literal
 
     from pytest_mock import MockerFixture
+
+    from scanpy.get._types import RepAcc
+
+if TYPE_CHECKING or hasattr(anndata, "acc"):
+    from anndata.acc import A
 
 
 # the input data
@@ -171,7 +184,15 @@ def test_distances_euclidean(
         # knn=False trivially returns all distances
         pytest.param(None, False, id="knn=False"),
         # pynndescent returns all distances when data is so small
-        pytest.param("pynndescent", True, id="pynndescent"),
+        pytest.param(
+            "pynndescent",
+            True,
+            id="pynndescent",
+            # TODO: remove once https://github.com/lmcinnes/pynndescent/issues/286 is fixed
+            marks=pytest.mark.filterwarnings(
+                "ignore:Failed to correctly find n_neighbors:UserWarning"
+            ),
+        ),
         # Explicit brute force also returns all distances
         pytest.param(
             KNeighborsTransformer(n_neighbors=n_neighbors, algorithm="brute"),
@@ -248,17 +269,157 @@ def test_metrics_argument():
     assert not np.allclose(no_knn_euclidean.distances, no_knn_manhattan.distances)
 
 
-def test_use_rep_argument():
-    rng = np.random.default_rng()
-    adata = AnnData(rng.standard_normal((30, 300)))
+@pytest.fixture
+def adata_pca() -> AnnData:
+    rng = np.random.default_rng(0)
+    adata = AnnData(rng.standard_normal((30, 300)).astype(np.float32))
     sc.pp.pca(adata)
-    neigh_pca = Neighbors(adata)
-    neigh_pca.compute_neighbors(n_pcs=5, use_rep="X_pca")
-    neigh_none = Neighbors(adata)
-    neigh_none.compute_neighbors(n_pcs=5, use_rep=None)
+    return adata
+
+
+@needs.anndata_acc
+def test_use_rep_argument(adata_pca: AnnData):
+    neigh_pca = Neighbors(adata_pca)
+    neigh_pca.compute_neighbors(n_pcs=5, use="obsm.X_pca")
+    neigh_none = Neighbors(adata_pca)
+    neigh_none.compute_neighbors(n_pcs=5, use=None)
     np.testing.assert_allclose(
         neigh_pca.distances.toarray(), neigh_none.distances.toarray()
     )
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize(
+    ("acc", "legacy"),
+    [
+        pytest.param(lambda: A.X, "X", id="X"),
+        pytest.param(lambda: A.obsm["X_pca"], "X_pca", id="obsm"),
+    ],
+)
+def test_use_rep_acc(
+    adata_pca: AnnData, acc: Callable[[], RepAcc], legacy: str
+) -> None:
+    """An accessor `use` is equivalent to the legacy `use_rep` string spelling it."""
+    expected = adata_pca.copy()
+    with pytest.warns(FutureWarning, match=r"argument use_rep is deprecated"):
+        sc.pp.neighbors(expected, n_pcs=5, use_rep=legacy)
+    sc.pp.neighbors(adata_pca, n_pcs=5, use=acc())
+    np.testing.assert_allclose(
+        adata_pca.obsp["distances"].toarray(), expected.obsp["distances"].toarray()
+    )
+
+
+@needs.anndata_acc
+def test_use_and_use_rep(adata_pca: AnnData) -> None:
+    """`use` and `use_rep` are mutually exclusive."""
+    with (
+        pytest.warns(FutureWarning, match=r"argument use_rep is deprecated"),
+        pytest.raises(TypeError, match=r"Pass either `use` or `use_rep`, not both"),
+    ):
+        sc.pp.neighbors(adata_pca, use=A.obsm["X_pca"], use_rep="X_pca")
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize(
+    ("use", "stored"),
+    [
+        pytest.param(lambda: A.obsm["X_pca"], dict(use_rep="X_pca"), id="obsm"),
+        pytest.param(lambda: A.X, dict(use_rep="X"), id="X"),
+        pytest.param(lambda: A.layers["l"], dict(layer="l"), id="layer"),
+    ],
+)
+def test_use_stored(
+    adata_pca: AnnData,
+    tmp_path: Path,
+    use: Callable[[], RepAcc],
+    stored: dict[str, str],
+) -> None:
+    """`use` is stored in `.uns` like its predecessors, and understood by readers."""
+    adata_pca.layers["l"] = adata_pca.X.copy()
+    sc.pp.neighbors(adata_pca, use=use())
+    params = adata_pca.uns["neighbors"]["params"]
+    assert {k: params[k] for k in ("use_rep", "layer") if k in params} == stored
+    adata_pca.write_h5ad(path := tmp_path / "adata.h5ad")
+    adata = anndata.read_h5ad(path)
+    sc.tl.umap(adata)  # reads `use_rep`/`layer` back out of `.uns`
+    sc.tl.ingest(adata.copy(), adata, embedding_method="umap")
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize(
+    "preset",
+    [
+        sc.Preset.ScanpyV1,
+        # only the v2 preset needs the full extra, see `Preset.check`
+        pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2),
+    ],
+)
+def test_use_rep_str_is_legacy(
+    subtests: pytest.Subtests, adata_pca: AnnData, preset: sc.Preset
+) -> None:
+    """A deprecated `use_rep` string is an `.obsm` key under every preset."""
+    expected = adata_pca.copy()
+    sc.pp.neighbors(expected, use=A.obsm["X_pca"])
+    with subtests.test("obsm key"), sc.settings.override(preset=preset):
+        with pytest.warns(FutureWarning, match=r"argument use_rep is deprecated"):
+            sc.pp.neighbors(adata_pca, use_rep="X_pca")
+        np.testing.assert_allclose(
+            adata_pca.obsp["distances"].toarray(), expected.obsp["distances"].toarray()
+        )
+    with (
+        subtests.test("acc spec rejected"),
+        sc.settings.override(preset=preset),
+        pytest.warns(FutureWarning, match=r"argument use_rep is deprecated"),
+        pytest.raises(ValueError, match=r"Did not find obsm\.X_pca"),
+    ):
+        sc.pp.neighbors(adata_pca, use_rep="obsm.X_pca")
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize(
+    ("arg", "value", "exc_type", "match"),
+    [
+        pytest.param(
+            "use",
+            lambda: A.varm["PCs"],
+            ValueError,
+            "aligned to `obs`",
+            id="not-obs-aligned",
+        ),
+        pytest.param(
+            "use_rep",
+            lambda: "nonexistent",
+            ValueError,
+            "Did not find nonexistent",
+            id="missing",
+        ),
+        pytest.param(
+            "use",
+            lambda: "nonexistent",
+            ValueError,
+            "Cannot parse accessor",
+            id="unparsable",
+        ),
+        pytest.param(
+            "use",
+            lambda: 1.0,
+            TypeError,
+            "must be a `LayerAcc`",
+            id="wrong-type",
+        ),
+    ],
+)
+@pytest.mark.filterwarnings("ignore:.*use_rep is deprecated:FutureWarning")
+def test_use_rep_invalid(
+    adata_pca: AnnData,
+    arg: Literal["use", "use_rep"],
+    value: Callable[[], object],
+    exc_type: type[Exception],
+    match: str,
+) -> None:
+    """Invalid `use`/`use_rep` arguments are refused with a message saying why."""
+    with pytest.raises(exc_type, match=match):
+        sc.pp.neighbors(adata_pca, **{arg: value()})  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("conv", [sparse.csr_matrix.toarray, sparse.csr_matrix])  # noqa: TID251
@@ -294,3 +455,46 @@ def test_neighbors_distance_equivalence() -> None:
     assert p.pop("metric") == "euclidean"
     assert p_d.pop("metric") is None
     assert p == p_d
+
+
+def test_indices_distances_non_constant_neighbors() -> None:
+    """A kNN matrix with varying neighbor counts falls back to the per-row path."""
+    dist = np.array(
+        [
+            [0, 1, 2, 3, 0],
+            [1, 0, 4, 2, 5],
+            [2, 4, 0, 0, 3],
+            [3, 2, 0, 0, 6],
+            [0, 5, 3, 6, 0],
+        ],
+        dtype=np.float64,
+    )
+    d = sparse.csr_matrix(dist)  # noqa: TID251
+
+    with pytest.warns(RuntimeWarning, match=r"no constant number of neighbors"):
+        indices, distances = _get_indices_distances_from_sparse_matrix(d, 3)
+
+    np.testing.assert_array_equal(
+        indices, [[0, 1, 2], [1, 0, 3], [2, 0, 4], [3, 1, 0], [4, 2, 1]]
+    )
+    np.testing.assert_array_equal(
+        distances, [[0, 1, 2], [0, 1, 2], [0, 2, 3], [0, 2, 3], [0, 3, 5]]
+    )
+
+
+def test_indices_distances_rect_matrix_padded() -> None:
+    """Rows with varying neighbor counts are padded, then truncated to the closest."""
+    rect = np.array(
+        [
+            [2, 0, 1, 0],
+            [0, 3, 1, 2],
+            [4, 0, 0, 1],
+        ],
+        dtype=np.float64,
+    )
+    d = sparse.csr_matrix(rect)  # noqa: TID251
+
+    indices, distances = _get_indices_distances_from_rect_matrix(d, 2)
+
+    np.testing.assert_array_equal(indices, [[2, 0], [2, 3], [3, 0]])
+    np.testing.assert_array_equal(distances, [[1, 2], [1, 2], [1, 4]])
