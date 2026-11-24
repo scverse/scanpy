@@ -129,8 +129,8 @@ def ranking(
 
         adata = sc.datasets.pbmc68k_reduced()
         hv.Layout([
-            sc.pl.ranking(adata, A.varm["PCs"][0]).opts(aspect=1.2),
-            sc.pl.ranking(adata, A.varm["PCs"][0], include_lowest=False).opts(aspect=0.6),
+            sc.pl.ranking(adata, A.varm["pca"][0]).opts(aspect=1.2),
+            sc.pl.ranking(adata, A.varm["pca"][0], include_lowest=False).opts(aspect=0.6),
         ]).opts(shared_axes=False)
 
     Rank principal components by their explained variance ratio
