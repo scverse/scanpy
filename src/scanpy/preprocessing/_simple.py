@@ -719,7 +719,8 @@ def regress_out(  # noqa: PLR0912, PLR0915
     else:
         # add column of ones at index 0 (first column)
         covariates.insert(0, "ones", 1.0)
-        regressors = covariates.to_numpy()
+        # C order: `get_resid` indexes rows (`DataFrame.to_numpy()` is often F order)
+        regressors = np.ascontiguousarray(covariates.to_numpy())
 
     # if the regressors are not categorical and the matrix is not singular
     # use the shortcut numpy_regress_out
