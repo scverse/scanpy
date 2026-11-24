@@ -521,8 +521,8 @@ def pbmc3k_processed() -> AnnData:
     AnnData object with n_obs × n_vars = 2638 × 1838
         obs: 'n_genes', 'percent_mito', 'n_counts', 'louvain'
         var: 'n_cells'
-        uns: 'draw_graph', 'neighbors', 'pca', 'rank_genes_groups', 'louvain_colors', 'louvain'
-        obsm: 'X_draw_graph_fr', 'X_pca', 'X_tsne', 'X_umap'
+        uns: 'neighbors', 'pca', 'rank_genes_groups', 'draw_graph', 'louvain_colors', 'louvain'
+        obsm: 'X_pca', 'X_tsne', 'X_umap', 'X_draw_graph_fr'
         varm: 'PCs'
         obsp: 'connectivities', 'distances'
         layers: None (.X)

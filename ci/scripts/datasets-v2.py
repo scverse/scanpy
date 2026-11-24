@@ -58,9 +58,6 @@ import zarr.storage
 import scanpy as sc
 from scanpy._compat import CSRBase
 
-# write strings as `string-array`: older anndata refuses to write back `nullable-string-array`
-pd.set_option("future.infer_string", False)  # noqa: FBT003
-
 
 def pbmc3k_processed(adata: ad.AnnData) -> ad.AnnData:
     """Apply changes specific to `pbmc3k_processed`."""
@@ -175,6 +172,8 @@ def main() -> None:
     parser.add_argument("dst", type=Path, help="output path for v2 (`….zarr.zip`)")
     args = parser.parse_args()
 
+    # write strings as `string-array`: older anndata refuses to write back `nullable-string-array`
+    pd.set_option("future.infer_string", False)  # noqa: FBT003
     convert(args.dataset, args.src, args.dst)
     # read back the same way `scanpy.datasets` reads `10x_pbmc68k_reduced.zarr.zip`
     with zarr.storage.ZipStore(args.dst, mode="r") as store:
