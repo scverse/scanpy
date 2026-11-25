@@ -83,10 +83,14 @@ def test_draw_graph(pl, acc) -> None:
     assert len(graph.data) == adata.obsp["p"].nnz
 
 
-@pytest.mark.parametrize("layer", [None, "counts"])
-def test_dotplot(pl, acc, layer: str | None) -> None:
+@pytest.mark.parametrize("kind", ["default", "accessor", "str"])
+def test_dotplot(pl, acc, kind: str) -> None:
     adata = pbmc68k_reduced()[:, :5]
-    kw = {} if layer is None else dict(use=acc.layers[layer])
+    kw = {
+        "default": {},
+        "accessor": dict(use=acc.layers["counts"]),
+        "str": dict(use="layers.counts"),
+    }[kind]
     points = pl.dotplot(adata, acc.obs["bulk_labels"], **kw)
     expected = sc.get.aggregate(adata, acc.obs["bulk_labels"], "mean", **kw)
     means = expected.to_df("mean")
