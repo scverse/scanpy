@@ -81,3 +81,21 @@ def test_draw_graph(pl, acc) -> None:
     assert len(graph.data) == adata.obsp["p"].nnz
     graph = pl.draw_graph(adata, acc.obsm["X_umap"], "obsp.p")
     assert len(graph.data) == adata.obsp["p"].nnz
+
+
+@pytest.mark.parametrize("layer", [None, "counts"])
+def test_dotplot(pl, acc, layer: str | None) -> None:
+    adata = pbmc68k_reduced()[:, :5]
+    kw = {} if layer is None else dict(use=acc.layers[layer])
+    points = pl.dotplot(adata, acc.obs["bulk_labels"], **kw)
+    expected = sc.get.aggregate(adata, acc.obs["bulk_labels"], "mean", **kw)
+    means = expected.to_df("mean")
+    np.testing.assert_allclose(
+        points.data["mean"],
+        [
+            means.loc[group, marker]
+            for group, marker in zip(
+                points.data["group"], points.data["marker"], strict=True
+            )
+        ],
+    )
