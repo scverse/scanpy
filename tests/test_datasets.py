@@ -216,12 +216,10 @@ def test_download_failure() -> None:
 
 @pytest.fixture
 def fake_downloader(monkeypatch: pytest.MonkeyPatch) -> Callable[[Downloader], None]:
-    """Let a test stand in for the downloader pooch would pick for a URL."""
+    """Let a test stand in for the downloader that `download` hands to pooch."""
 
     def use(downloader: Downloader) -> None:
-        monkeypatch.setattr(
-            pooch.core, "choose_downloader", lambda url, progressbar=False: downloader
-        )
+        monkeypatch.setattr(pooch, "HTTPDownloader", lambda **_: downloader)
 
     return use
 
