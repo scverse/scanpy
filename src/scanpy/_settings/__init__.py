@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from collections.abc import Container
 from itertools import chain
@@ -129,8 +130,10 @@ class Settings(scverse_misc.Settings):
     Is currently not well respected…
     """
 
-    n_jobs: int = 4
+    n_jobs: int = min(4, os.process_cpu_count() or 1)
     """Default number of jobs/ CPUs to use for parallel computing.
+
+    Defaults to 4, or fewer if fewer CPUs are available to the process.
 
     Set to `-1` in order to use all available cores.
     Not all algorithms support special behavior for numbers < `-1`,
