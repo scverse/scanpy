@@ -10,23 +10,23 @@ repos:
           - --drop=abstract
         groups: [format]
   - repo: https://github.com/biomejs/pre-commit
-    rev: v2.6.6
+    rev: v2.6.8
     hooks:
       - id: biome-format
         groups: [format]
         exclude: ^\.cruft\.json$ # inconsistent indentation with cruft - file never to be modified manually.
   - repo: https://github.com/jolars/panache-pre-commit
-    rev: v3.18.0
+    rev: v3.19.0
     hooks:
       - id: panache-format
         groups: [format]
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: v2.30.6
+    rev: v2.31.1
     hooks:
       - id: pyproject-fmt
         groups: [format]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.4
+    rev: v0.17.5
     hooks:
       - id: ruff-check
         args: [--fix, --exit-non-zero-on-fix]
