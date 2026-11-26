@@ -320,17 +320,17 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         # `mask` selects variables, which an `.obsm` array’s columns aren’t
         msg = "Argument `mask` is incompatible with `.obsm` arrays."
         raise ValueError(msg)
-    mask = _mask_hvg(adata, mask)
+    mask = None if multi and isinstance(mask, Default) else _mask_hvg(adata, mask)
     mask_param, mask_var = mask, _check_mask(adata, mask, "var")
     adata_comp = adata[:, mask_var] if mask_var is not None else adata
 
+    x = _get_arr(adata_comp, use, layer=layer, obsm=obsm)
     if n_comps is None:
-        min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
+        min_dim = min(x.shape)
         n_comps = min_dim - 1 if min_dim <= settings.N_PCS else settings.N_PCS
 
     logg.info(f"    with {n_comps=}")
 
-    x = _get_arr(adata_comp, use, layer=layer, obsm=obsm)
     if is_backed_type(x) and (layer is not None or obsm is not None or use is not None):
         msg = f"PCA is not implemented for matrices of type {type(x)} from layers/obsm"
         raise NotImplementedError(msg)
