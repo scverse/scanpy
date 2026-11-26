@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from scanpy.tools import filter_rank_genes_groups, rank_genes_groups
@@ -134,3 +135,50 @@ def test_filter_rank_genes_groups_out() -> None:
             np.array(adata.uns[key]["names"].tolist()),
             np.array(res["names"].tolist()),
         )
+
+
+def test_filter_rank_genes_groups_missing_genes() -> None:
+    """Genes removed after ranking must raise, not be scored as the last gene (#1487)."""
+    adata = pbmc68k_reduced().raw.to_adata()
+    rank_genes_groups(adata, "bulk_labels", method="wilcoxon", n_genes=5)
+    removed = list(adata.uns["rank_genes_groups"]["names"]["CD14+ Monocyte"][:3])
+    adata = adata[:, ~adata.var_names.isin(removed)].copy()
+
+    with pytest.raises(KeyError, match=r"are not in `adata\.var_names`"):
+        filter_rank_genes_groups(adata)
+
+
+def test_filter_rank_genes_groups_missing_genes_cached() -> None:
+    """With cached fractions and fold changes, removed genes do not raise.
+
+    Nothing is recomputed from `adata` in that case, so the stored values
+    (valid for the data that was ranked) are filtered as usual.
+    """
+    adata = pbmc68k_reduced().raw.to_adata()
+    rank_genes_groups(adata, "bulk_labels", method="wilcoxon", n_genes=5, pts=True)
+    expected = filter_rank_genes_groups(adata, out=True)["names"]
+    removed = list(adata.uns["rank_genes_groups"]["names"]["CD14+ Monocyte"][:3])
+    adata = adata[:, ~adata.var_names.isin(removed)].copy()
+
+    res = filter_rank_genes_groups(adata, out=True)["names"]
+    pd.testing.assert_frame_equal(pd.DataFrame(expected), pd.DataFrame(res))
+
+
+@pytest.mark.parametrize("pts", [False, True], ids=["computed", "cached_pts"])
+def test_filter_rank_genes_groups_refilter(*, pts: bool) -> None:
+    """Filtering an already filtered result (with NaN names) still works.
+
+    With ``pts=True`` the fractions come from the cached ``pts``/``pts_rest``.
+    """
+    adata = pbmc68k_reduced()
+    rank_genes_groups(adata, "bulk_labels", method="wilcoxon", n_genes=5, pts=pts)
+    filter_rank_genes_groups(adata)
+    filter_rank_genes_groups(
+        adata, key="rank_genes_groups_filtered", key_added="refiltered"
+    )
+    first = pd.DataFrame(adata.uns["rank_genes_groups_filtered"]["names"])
+    second = pd.DataFrame(adata.uns["refiltered"]["names"])
+    # the first filter must leave NaN names, or this test checks nothing
+    assert first.isna().to_numpy().any()
+    # re-applying the same thresholds keeps the same genes
+    pd.testing.assert_frame_equal(first, second)
