@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from anndata import AnnData
 
 from scanpy.tools import filter_rank_genes_groups, rank_genes_groups
 from testing.scanpy._helpers.data import pbmc68k_reduced
@@ -14,6 +15,36 @@ NAMES_NO_REF = [
     ["nan", "SRSF7", "IL32", "GZMA", "nan", "LST1", "IGJ", "nan", "CTSW", "nan"],
     ["nan", "nan", "CD2", "CTSW", "CD8B", "TYROBP", "ISG20", "SNHG8", "GZMB", "nan"],
 ]
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize("rank_layer", [None, "alternate"])
+@pytest.mark.parametrize("filter_layer", [None, "alternate"])
+@pytest.mark.parametrize("pts", [False, True])
+def test_filter_rank_genes_groups_selected_matrix(
+    rank_layer: str | None, filter_layer: str | None, *, pts: bool
+) -> None:
+    """Cached fold changes and fractions must describe the matrix being filtered."""
+    x = np.log1p(np.array([[8, 0], [10, 1], [9, 0], [0, 8], [1, 10], [0, 9]]))
+    adata = AnnData(x.copy())
+    adata.obs["group"] = ["a"] * 3 + ["b"] * 3
+    adata.layers["alternate"] = x[:, ::-1].copy()
+    rank_use = "X" if rank_layer is None else f"layers.{rank_layer}"
+    filter_use = "X" if filter_layer is None else f"layers.{filter_layer}"
+    rank_genes_groups(adata, "group", method="t-test", use=rank_use, pts=pts)
+    res = filter_rank_genes_groups(
+        adata,
+        use=filter_use,
+        out=True,
+        min_in_group_fraction=0.5,
+        max_out_group_fraction=0.5,
+        min_fold_change=1,
+    )
+    expected = ("0", "1") if filter_layer is None else ("1", "0")
+    for group, gene in zip(("a", "b"), expected, strict=True):
+        kept = res["names"][group]
+        assert kept[~pd.isna(kept)].tolist() == [gene]
+
 
 NAMES_REF = [
     ["CD3D", "ITM2A", "CD3D", "nan", "CD3D", "nan", "CD79A", "nan", "CD7"],
