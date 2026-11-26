@@ -580,8 +580,9 @@ def dotplot(
     group_by: AdDim,
     *,
     funcs: Mapping[str, AggType] = frozendict(dict(color="mean", size="count_nonzero")),
+    use: LayerAcc | MultiAcc | str | None = None,
 ) -> hv.Points:
-    """Dot plot of marker expression per group.
+    r"""Dot plot of marker expression per group.
 
     For each group/marker combination,
     calculate all `funcs` and map them to a :class:`~holoviews.Points` object’s `opts`.
@@ -601,6 +602,10 @@ def dotplot(
         The groupby expression.
     funcs
         The aggregation functions.
+    use
+        The data to aggregate, e.g. `A.layers['counts']`.
+        :class:`str`\ s are :meth:`~anndata.acc.AdAcc.resolve`\ d, e.g. `'layers.counts'`.
+        Uses `.X` by default.
 
     Returns
     -------
@@ -621,7 +626,7 @@ def dotplot(
         sc.pl.dotplot(adata[:, markers], A.obs["bulk_labels"])
 
     """
-    stats_wide = sc.get.aggregate(adata, group_by, funcs.values())
+    stats_wide = sc.get.aggregate(adata, group_by, funcs.values(), use=use)
     stats_long = reduce(
         pd.merge,
         (
