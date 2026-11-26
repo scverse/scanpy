@@ -371,6 +371,38 @@ def test_pca_reproducible(
             assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
+@needs.anndata_acc
+@pytest.mark.parametrize(("n_vars", "n_features"), [(10, 3), (3, 10)])
+@pytest.mark.parametrize("hvg", [False, True])
+@pytest.mark.filterwarnings("ignore:.*argument obsm is deprecated:FutureWarning")
+@pytest.mark.parametrize("spelling", ["use", "legacy"])
+def test_pca_obsm_default_n_comps(
+    n_vars: int, n_features: int, *, hvg: bool, spelling: str
+) -> None:
+    """Choose defaults from the selected representation, independently of `.var`."""
+    rng = np.random.default_rng(0)
+    adata = AnnData(rng.normal(size=(20, n_vars)))
+    x = rng.normal(size=(20, n_features))
+    adata.obsm["features"] = x.copy()
+    if hvg:
+        adata.var["highly_variable"] = np.arange(n_vars) < 2
+    before = adata.X.copy()
+    expected = AnnData(x.copy())
+    sc.pp.pca(expected)
+    kwargs = dict(use="obsm.features") if spelling == "use" else dict(obsm="features")
+    sc.pp.pca(adata, **kwargs)
+    np.testing.assert_allclose(
+        np.abs(adata.obsm["X_pca"]), np.abs(expected.obsm["X_pca"])
+    )
+    np.testing.assert_allclose(
+        np.abs(adata.uns["pca"]["components"]), np.abs(expected.varm["PCs"])
+    )
+    for field in ("variance", "variance_ratio"):
+        np.testing.assert_allclose(adata.uns["pca"][field], expected.uns["pca"][field])
+    np.testing.assert_array_equal(adata.X, before)
+    np.testing.assert_array_equal(adata.obsm["features"], x)
+
+
 def test_pca_chunked() -> None:
     """Tests that chunked PCA is equivalent to default PCA.
 
