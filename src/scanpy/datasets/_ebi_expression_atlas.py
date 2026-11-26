@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from urllib.error import HTTPError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
 import anndata
@@ -35,10 +35,13 @@ def _filter_boring(dataframe: pd.DataFrame) -> pd.DataFrame:
 def sniff_url(accession: str):
     # Note that data is downloaded from gxa/sc/experiment, not experiments
     base_url = f"https://www.ebi.ac.uk/gxa/sc/experiments/{accession}/"
+    # EBI rejects the default `Python-urllib/*` user agent with 403
+    req = Request(base_url, headers={"User-Agent": "scanpy"})
     try:
-        with urlopen(base_url):  # Check if server up/ dataset exists
+        with urlopen(req):  # Check if server up/ dataset exists
             pass
     except HTTPError as e:
+        e.close()  # otherwise its ResourceWarning leaks into later doctests
         e.add_note(base_url)
         raise
 
