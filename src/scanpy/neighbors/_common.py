@@ -7,8 +7,8 @@ from fast_array_utils.stats import is_constant
 from scipy import sparse
 
 from .._compat import warn
-from .._settings import settings
 from .._utils import get_literal_vals
+from .._utils._numba import _n_jobs, _resolve_n_threads
 from .._utils.random import _rng_kwds
 from ..get._out import _dest_key
 from ..get._types import GraphAcc
@@ -59,7 +59,7 @@ def _make_transformer(
         assert transformer in {None, "sklearn"}
         return KNeighborsTransformer(
             algorithm="brute",
-            n_jobs=settings.n_jobs,
+            n_jobs=_n_jobs(),
             n_neighbors=kwds["n_neighbors"],
             metric=kwds["metric"],
             metric_params=dict(kwds["metric_params"]),  # needs dict
@@ -71,8 +71,9 @@ def _make_transformer(
         kwds["metric_kwds"] = dict(kwds.pop("metric_params"))  # needs to be cloneable
         if transformer is None:
             # Use defaults from UMAP’s `nearest_neighbors` function
+            # pynndescent passes `n_jobs` to `numba.set_num_threads`, which rejects > NUMBA_NUM_THREADS
             kwds.update(
-                n_jobs=settings.n_jobs,
+                n_jobs=_resolve_n_threads(_n_jobs()),
                 n_trees=min(64, 5 + round(n_index**0.5 / 20.0)),
                 n_iters=max(5, round(np.log2(n_index))),
             )

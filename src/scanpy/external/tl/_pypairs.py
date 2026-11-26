@@ -11,6 +11,7 @@ from scverse_misc import Deprecation, deprecated
 from ..._compat import pkg_version
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
+from ..._utils._numba import _n_jobs
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping
@@ -81,7 +82,7 @@ def sandbag(
     from pypairs.pairs import sandbag
 
     pp_settings.verbosity = settings.verbosity
-    pp_settings.n_jobs = settings.n_jobs
+    pp_settings.n_jobs = _n_jobs()
     pp_settings.writedir = settings.writedir
     pp_settings.cachedir = settings.cachedir
     pp_settings.logfile = settings.logfile
@@ -150,7 +151,7 @@ def cyclone(
     from pypairs.pairs import cyclone
 
     pp_settings.verbosity = settings.verbosity
-    pp_settings.n_jobs = settings.n_jobs
+    pp_settings.n_jobs = _n_jobs()
     pp_settings.writedir = settings.writedir
     pp_settings.cachedir = settings.cachedir
     pp_settings.logfile = settings.logfile

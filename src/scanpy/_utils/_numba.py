@@ -11,6 +11,18 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
+def _n_jobs(n_jobs: int | None = None) -> int:
+    """Resolve ``n_jobs`` at call time.
+
+    Falls back to :attr:`scanpy.settings.n_jobs`, then to :func:`numba.get_num_threads`.
+    """
+    from .._settings import settings
+
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+    return numba.get_num_threads() if n_jobs is None else n_jobs
+
+
 def _resolve_n_threads(n_threads: int) -> int:
     n_max = numba.config.NUMBA_NUM_THREADS
     if n_threads < -1:

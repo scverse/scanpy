@@ -10,6 +10,7 @@ from .._docs import DEPR_KEY_ADDED, doc_out_key, doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default, settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
+from .._utils._numba import _n_jobs
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ..get._out import _out_key, deprecated_copy
 from ..get._uns import _use_to_uns
@@ -132,7 +133,7 @@ def tsne(  # noqa: PLR0913
     x = _choose_representation_compat(adata, use=use, use_rep=use_rep, n_pcs=n_pcs)
     raise_not_implemented_error_if_backed_type(x, "tsne")
     # params for sklearn
-    n_jobs = settings.n_jobs if n_jobs is None else n_jobs
+    n_jobs = _n_jobs(n_jobs)
     params_sklearn = dict(
         perplexity=perplexity,
         random_state=_legacy_random_state(rng),

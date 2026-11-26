@@ -10,8 +10,8 @@ from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
 from ..._compat import pkg_version
-from ..._settings import settings
 from ..._utils._doctests import doctest_needs
+from ..._utils._numba import _n_jobs
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -183,7 +183,7 @@ def magic(  # noqa: PLR0913
         )
         raise ValueError(msg)
     adata = adata.copy() if copy else adata
-    n_jobs = settings.n_jobs if n_jobs is None else n_jobs
+    n_jobs = _n_jobs(n_jobs)
 
     x_magic = MAGIC(
         knn=knn,

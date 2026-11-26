@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from scverse_misc import Deprecation, deprecated
 
-from ..._settings import settings
+from ..._utils._numba import _n_jobs
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Sequence
@@ -144,7 +144,7 @@ def mnn_correct(  # noqa: PLR0913
         e.add_note("Please install `mnnpy` and try again.")
         raise
 
-    n_jobs = settings.n_jobs if n_jobs is None else n_jobs
+    n_jobs = _n_jobs(n_jobs)
 
     if n_jobs < 2:
         mnnpy.settings.normalization = "single"

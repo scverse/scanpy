@@ -7,6 +7,7 @@ import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
 
 import scanpy as sc
+from scanpy._utils._numba import _n_jobs
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
@@ -40,9 +41,9 @@ def test_tsne(*, out: str | bool, key_obsm: str, key_uns: str):
     assert not np.array_equal(euclidean1.obsm["X_tsne"], cosine.obsm["X_tsne"])
 
     # Params are recorded
-    assert euclidean1.uns["tsne"]["params"]["n_jobs"] == sc.settings.n_jobs
+    assert euclidean1.uns["tsne"]["params"]["n_jobs"] == _n_jobs()
     assert euclidean2.uns[key_uns]["params"]["n_jobs"] == 2
-    assert cosine.uns["tsne"]["params"]["n_jobs"] == sc.settings.n_jobs
+    assert cosine.uns["tsne"]["params"]["n_jobs"] == _n_jobs()
     assert euclidean1.uns["tsne"]["params"]["metric"] == "euclidean"
     assert euclidean2.uns[key_uns]["params"]["metric"] == "euclidean"
     assert cosine.uns["tsne"]["params"]["metric"] == "cosine"

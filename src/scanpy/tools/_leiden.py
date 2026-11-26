@@ -22,8 +22,9 @@ from .._docs import (
     doc_out_key,
     doc_rng,
 )
-from .._settings import Default, settings
+from .._settings import Default
 from .._utils import _doc_params
+from .._utils._numba import _n_jobs
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng, _set_igraph_rng
 from ..get._out import _out_key, deprecated_copy
 from ..neighbors._common import _use_graph
@@ -189,7 +190,7 @@ def leiden(  # noqa: PLR0913
     clustering_args = dict(clustering_args)
     if n_jobs is None:
         # unseeded runs needn’t be reproducible, so they can be parallel
-        n_jobs = settings.n_jobs if rng is None else 1
+        n_jobs = _n_jobs() if rng is None else 1
     seeded = rng is not None
     rng = np.random.default_rng(rng)
     meta_random_state = (

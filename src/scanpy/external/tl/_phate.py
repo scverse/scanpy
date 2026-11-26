@@ -9,6 +9,7 @@ from scverse_misc import Deprecation, deprecated
 from ... import logging as logg
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
+from ..._utils._numba import _n_jobs
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -144,7 +145,7 @@ def phate(  # noqa: PLR0913
     adata = adata.copy() if copy else adata
     verbosity = settings.verbosity if verbose is None else verbose
     verbose = verbosity if isinstance(verbosity, bool) else verbosity >= 2
-    n_jobs = settings.n_jobs if n_jobs is None else n_jobs
+    n_jobs = _n_jobs(n_jobs)
     try:
         import phate
     except ImportError as e:

@@ -28,7 +28,6 @@ from sklearn.utils import check_array
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray
 from .._docs import doc_out, doc_ref_compat, doc_rng, doc_use
-from .._settings import settings
 from .._utils import (
     _doc_params,
     _resolve_axis,
@@ -39,6 +38,7 @@ from .._utils import (
     sanitize_anndata,
     view_to_actual,
 )
+from .._utils._numba import _n_jobs
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
 from ..get._out import (
     _dest,
@@ -692,7 +692,7 @@ def regress_out(  # noqa: PLR0912, PLR0915
     if isinstance(x, CSBase):
         logg.info("    sparse input is densified and may lead to high memory use")
 
-    n_jobs = settings.n_jobs if n_jobs is None else n_jobs
+    n_jobs = _n_jobs(n_jobs)
 
     # regress on a single categorical variable
     variable_is_categorical = False

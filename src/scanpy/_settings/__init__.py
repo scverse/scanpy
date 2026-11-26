@@ -49,12 +49,6 @@ def _default_logfile() -> TextIO:
     return sys.stdout if _is_run_from_ipython() else sys.stderr
 
 
-def _resolve_n_jobs(n_jobs: int | None) -> int:
-    import numba
-
-    return numba.config.NUMBA_NUM_THREADS if n_jobs is None else n_jobs
-
-
 def _is_run_from_ipython() -> bool:
     """Determine whether we're currently in IPython."""
     import builtins
@@ -135,11 +129,11 @@ class Settings(scverse_misc.Settings):
     Is currently not well respected…
     """
 
-    n_jobs: Annotated[int | None, AfterValidator(_resolve_n_jobs)] = None
+    n_jobs: int | None = None
     """Default number of jobs/ CPUs to use for parallel computing.
 
-    `None` (the default) resolves to :data:`numba.config.NUMBA_NUM_THREADS`,
-    i.e. the CPUs available to the process unless overridden via `NUMBA_NUM_THREADS`.
+    `None` (the default) resolves to :func:`numba.get_num_threads` when a function runs,
+    i.e. the CPUs available to the process, `NUMBA_NUM_THREADS`, or :func:`numba.set_num_threads`.
 
     Set to `-1` in order to use all available cores.
     Not all algorithms support special behavior for numbers < `-1`,
@@ -149,7 +143,7 @@ class Settings(scverse_misc.Settings):
         The default changed from `1` to `4`.
 
     .. version-changed:: 1.13.1
-        The default changed from `4` to `None`, i.e. :data:`numba.config.NUMBA_NUM_THREADS`.
+        The default changed from `4` to `None`, i.e. :func:`numba.get_num_threads`.
     """
 
     categories_to_ignore: Container[str] = frozenset({
