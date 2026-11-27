@@ -77,6 +77,14 @@ def recipe_weinreb17(
     return adata if copy else None
 
 
+@deprecated(
+    Deprecation(
+        "1.13.1",
+        "Compose :func:`~scanpy.pp.filter_cells`, :func:`~scanpy.pp.filter_genes`, "
+        ":func:`~scanpy.pp.normalize_total`, :func:`~scanpy.pp.log1p`, "
+        ":func:`~scanpy.pp.highly_variable_genes`, and :func:`~scanpy.pp.scale` instead.",
+    )
+)
 @deprecated_copy
 def recipe_seurat(
     adata: AnnData, *, log: bool = True, plot: bool = False, copy: bool = False
@@ -127,6 +135,14 @@ def recipe_seurat(
     return None
 
 
+@deprecated(
+    Deprecation(
+        "1.13.1",
+        "Compose :func:`~scanpy.pp.filter_genes`, :func:`~scanpy.pp.normalize_total`, "
+        ":func:`~scanpy.pp.log1p`, :func:`~scanpy.pp.highly_variable_genes` "
+        "(with `flavor='cell_ranger'`), and :func:`~scanpy.pp.scale` instead.",
+    )
+)
 @deprecated_copy
 def recipe_zheng17(
     adata: AnnData,
