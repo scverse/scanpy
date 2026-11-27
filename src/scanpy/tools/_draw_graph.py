@@ -65,7 +65,7 @@ type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular",
 @deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
 @deprecated_arg("obsp", DEPR_OBSP_GRAPH)
 @deprecated_copy
-def draw_graph(  # noqa: PLR0912, PLR0913
+def draw_graph(  # noqa: PLR0913
     adata: AnnData,
     layout: _Layout = "fa",
     *,
@@ -186,33 +186,14 @@ def draw_graph(  # noqa: PLR0912, PLR0913
     adjacency = _use_graph(
         adata, use, adjacency=adjacency, obsp=obsp, neighbors_key=neighbors_key
     )
-    # init coordinates
-    if isinstance(init_pos, str) and init_pos != "paga":
-        init_pos = _resolve_ref(init_pos, vec=False)
-    if isinstance(init_pos, MultiAcc):
-        init_coords = cast("NDArray[np.floating]", adata[init_pos])
-    elif init_pos in adata.obsm:
-        init_coords = cast("NDArray[np.floating]", adata.obsm[init_pos])
-    elif init_pos:  # "paga" or True
-        init_coords = get_init_pos_from_paga(adata, adjacency=adjacency, rng=rng)
-    else:
-        _if_legacy_apply_global(rng)
-        init_coords = rng.random((adjacency.shape[0], 2))
+    init_coords = _init_coords(adata, init_pos=init_pos, adjacency=adjacency, rng=rng)
     # actual drawing
     if layout == "fa":
         positions = np.array(fa2_positions(adjacency, init_coords, **kwds))
     else:
-        g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
-        with _igraph_rng_compat(rng):
-            if layout in {"fr", "drl", "kk", "grid_fr"}:
-                ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-            elif "rt" in layout:
-                if root is not None:
-                    root = [root]
-                ig_layout = g.layout(layout, root=root, **kwds)
-            else:
-                ig_layout = g.layout(layout, **kwds)
-        positions = np.array(ig_layout.coords)
+        positions = _igraph_positions(
+            adjacency, layout, init_coords, root=root, rng=rng, **kwds
+        )
     if keys is None:
         logg.info("    finished", time=start)
         return positions
@@ -227,6 +208,45 @@ def draw_graph(  # noqa: PLR0912, PLR0913
         f"\n    {keys.uns!r}, draw_graph parameters (adata.uns)",
     )
     return None
+
+
+def _init_coords(
+    adata: AnnData,
+    *,
+    init_pos: MultiAcc | str | bool | None,
+    adjacency: CSBase,
+    rng: np.random.Generator,
+) -> NDArray[np.floating]:
+    if isinstance(init_pos, str) and init_pos != "paga":
+        init_pos = _resolve_ref(init_pos, vec=False)
+    if isinstance(init_pos, MultiAcc):
+        return cast("NDArray[np.floating]", adata[init_pos])
+    if init_pos in adata.obsm:
+        return cast("NDArray[np.floating]", adata.obsm[init_pos])
+    if init_pos:  # "paga" or True
+        return get_init_pos_from_paga(adata, adjacency=adjacency, rng=rng)
+    _if_legacy_apply_global(rng)
+    return rng.random((adjacency.shape[0], 2))
+
+
+def _igraph_positions(
+    adjacency: CSBase,
+    layout: _Layout,
+    init_coords: NDArray[np.floating],
+    *,
+    root: int | None,
+    rng: np.random.Generator,
+    **kwds,
+) -> np.ndarray:
+    g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
+    with _igraph_rng_compat(rng):
+        if layout in {"fr", "drl", "kk", "grid_fr"}:
+            ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
+        elif "rt" in layout:
+            ig_layout = g.layout(layout, root=None if root is None else [root], **kwds)
+        else:
+            ig_layout = g.layout(layout, **kwds)
+    return np.array(ig_layout.coords)
 
 
 def fa2_positions(

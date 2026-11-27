@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
+from anndata import AnnData
 
 from scanpy.tools import filter_rank_genes_groups, rank_genes_groups
 from testing.scanpy._helpers.data import pbmc68k_reduced
@@ -14,6 +16,36 @@ NAMES_NO_REF = [
     ["nan", "SRSF7", "IL32", "GZMA", "nan", "LST1", "IGJ", "nan", "CTSW", "nan"],
     ["nan", "nan", "CD2", "CTSW", "CD8B", "TYROBP", "ISG20", "SNHG8", "GZMB", "nan"],
 ]
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize("rank_layer", [None, "alternate"])
+@pytest.mark.parametrize("filter_layer", [None, "alternate"])
+@pytest.mark.parametrize("pts", [False, True])
+def test_filter_rank_genes_groups_selected_matrix(
+    rank_layer: str | None, filter_layer: str | None, *, pts: bool
+) -> None:
+    """Cached fold changes and fractions must describe the matrix being filtered."""
+    x = np.log1p(np.array([[8, 0], [10, 1], [9, 0], [0, 8], [1, 10], [0, 9]]))
+    adata = AnnData(x.copy())
+    adata.obs["group"] = ["a"] * 3 + ["b"] * 3
+    adata.layers["alternate"] = x[:, ::-1].copy()
+    rank_use = "X" if rank_layer is None else f"layers.{rank_layer}"
+    filter_use = "X" if filter_layer is None else f"layers.{filter_layer}"
+    rank_genes_groups(adata, "group", method="t-test", use=rank_use, pts=pts)
+    res = filter_rank_genes_groups(
+        adata,
+        use=filter_use,
+        out=True,
+        min_in_group_fraction=0.5,
+        max_out_group_fraction=0.5,
+        min_fold_change=1,
+    )
+    expected = ("0", "1") if filter_layer is None else ("1", "0")
+    for group, gene in zip(("a", "b"), expected, strict=True):
+        kept = res["names"][group]
+        assert kept[~pd.isna(kept)].tolist() == [gene]
+
 
 NAMES_REF = [
     ["CD3D", "ITM2A", "CD3D", "nan", "CD3D", "nan", "CD79A", "nan", "CD7"],
@@ -134,3 +166,50 @@ def test_filter_rank_genes_groups_out() -> None:
             np.array(adata.uns[key]["names"].tolist()),
             np.array(res["names"].tolist()),
         )
+
+
+def test_filter_rank_genes_groups_missing_genes() -> None:
+    """Genes removed after ranking must raise, not be scored as the last gene (#1487)."""
+    adata = pbmc68k_reduced().raw.to_adata()
+    rank_genes_groups(adata, "bulk_labels", method="wilcoxon", n_genes=5)
+    removed = list(adata.uns["rank_genes_groups"]["names"]["CD14+ Monocyte"][:3])
+    adata = adata[:, ~adata.var_names.isin(removed)].copy()
+
+    with pytest.raises(KeyError, match=r"are not in `adata\.var_names`"):
+        filter_rank_genes_groups(adata)
+
+
+def test_filter_rank_genes_groups_missing_genes_cached() -> None:
+    """With cached fractions and fold changes, removed genes do not raise.
+
+    Nothing is recomputed from `adata` in that case, so the stored values
+    (valid for the data that was ranked) are filtered as usual.
+    """
+    adata = pbmc68k_reduced().raw.to_adata()
+    rank_genes_groups(adata, "bulk_labels", method="wilcoxon", n_genes=5, pts=True)
+    expected = filter_rank_genes_groups(adata, out=True)["names"]
+    removed = list(adata.uns["rank_genes_groups"]["names"]["CD14+ Monocyte"][:3])
+    adata = adata[:, ~adata.var_names.isin(removed)].copy()
+
+    res = filter_rank_genes_groups(adata, out=True)["names"]
+    pd.testing.assert_frame_equal(pd.DataFrame(expected), pd.DataFrame(res))
+
+
+@pytest.mark.parametrize("pts", [False, True], ids=["computed", "cached_pts"])
+def test_filter_rank_genes_groups_refilter(*, pts: bool) -> None:
+    """Filtering an already filtered result (with NaN names) still works.
+
+    With ``pts=True`` the fractions come from the cached ``pts``/``pts_rest``.
+    """
+    adata = pbmc68k_reduced()
+    rank_genes_groups(adata, "bulk_labels", method="wilcoxon", n_genes=5, pts=pts)
+    filter_rank_genes_groups(adata)
+    filter_rank_genes_groups(
+        adata, key="rank_genes_groups_filtered", key_added="refiltered"
+    )
+    first = pd.DataFrame(adata.uns["rank_genes_groups_filtered"]["names"])
+    second = pd.DataFrame(adata.uns["refiltered"]["names"])
+    # the first filter must leave NaN names, or this test checks nothing
+    assert first.isna().to_numpy().any()
+    # re-applying the same thresholds keeps the same genes
+    pd.testing.assert_frame_equal(first, second)

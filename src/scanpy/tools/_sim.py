@@ -132,168 +132,199 @@ def add_args(p):
     return p
 
 
-def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
-    rng: np.random.Generator = params["rng"]
-    model_key = Path(params["model"]).with_suffix("").name
-    writedir = params.get("writedir")
-    if writedir is None:
-        writedir = settings.writedir / f"{model_key}_sim"
-    else:
-        writedir = Path(writedir)
-    writedir.mkdir(parents=True, exist_ok=True)
-    write_params(writedir / "params.txt", params)
-    # init variables
-    tmax = params["tmax"]
-    branching = params["branching"]
-    noiseObs = params["noiseObs"]
-    noiseDyn = params["noiseDyn"]
-    nrRealizations = params["nrRealizations"]
-    step = params["step"]  # step size for saving the figure
+def sample_dynamic_data(**params):
+    return _DynamicDataSampler(params).sample()
 
-    nrSamples = 1  # how many files?
-    maxRestarts = 1000
-    maxNrSamples = 1
 
-    # simple vector auto regressive process or
-    # hill kinetics process simulation
-    if "krumsiek11" not in model_key:
+class _DynamicDataSampler:
+    """Simulate realizations of a model, write them to files, and read the last one."""
+
+    nrSamples: ClassVar = 1  # how many files?
+    maxRestarts: ClassVar = 1000
+    maxNrSamples: ClassVar = 1
+
+    def __init__(self, params: dict) -> None:
+        self.params = params
+        self.rng: np.random.Generator = params["rng"]
+        self.model_key = Path(params["model"]).with_suffix("").name
+        writedir = params.get("writedir")
+        if writedir is None:
+            self.writedir = settings.writedir / f"{self.model_key}_sim"
+        else:
+            self.writedir = Path(writedir)
+        self.writedir.mkdir(parents=True, exist_ok=True)
+        write_params(self.writedir / "params.txt", params)
+        # init variables
+        self.tmax = params["tmax"]
+        self.branching = params["branching"]
+        self.noiseObs = params["noiseObs"]
+        self.noiseDyn = params["noiseDyn"]
+        self.nrRealizations = params["nrRealizations"]
+        self.step = params["step"]  # step size for saving the figure
+
+    def sample(self) -> AnnData:
+        # simple vector auto regressive process or
+        # hill kinetics process simulation
+        if "krumsiek11" not in self.model_key:
+            self._sample_simple()
+        # more complex models
+        else:
+            self.step = 5
+            self._sample_krumsiek11()
+        # load the last simulation file
+        filename = max(self.writedir.glob("sim*.txt"))
+        logg.info(f"reading simulation results {filename}")
+        adata = read(filename, first_column_names=True, suppress_cache_warning=True)
+        adata.uns["tmax_write"] = self.tmax / self.step
+        return adata
+
+    def _write(self, grnsim: GRNsim, X: np.ndarray, *, restart: int) -> None:
+        grnsim.write_data(
+            X,
+            dir=self.writedir,
+            noiseObs=self.noiseObs,
+            append=restart != 0,
+            branching=self.branching,
+            nrRealizations=self.nrRealizations,
+        )
+
+    def _sample_simple(self) -> None:
+        rng = self.rng
         # create instance, set seed
-        grnsim = GRNsim(model=model_key, params=params)
-        nrOffEdges_list = np.zeros(nrSamples)
-        for sample in range(nrSamples):
+        grnsim = GRNsim(model=self.model_key, params=self.params)
+        nrOffEdges_list = np.zeros(self.nrSamples)
+        for sample in range(self.nrSamples):
             # random topology / for a given edge density
-            if "hill" not in model_key:
-                Coupl = np.array(grnsim.Coupl)
-                for _sampleCoupl in range(10):
-                    nrOffEdges = 0
-                    for gp in range(grnsim.dim):
-                        for g in range(grnsim.dim):
-                            # only consider off-diagonal edges
-                            if g != gp:
-                                Coupl[gp, g] = 0.7 if rng.random() < 0.4 else 0
-                                nrOffEdges += 1 if Coupl[gp, g] > 0 else 0
-                            else:
-                                Coupl[gp, g] = 0.7
-                    # check that the coupling matrix does not have eigenvalues
-                    # greater than 1, which would lead to an exploding var process
-                    if max(sp.linalg.eig(Coupl)[0]) < 1:
-                        break
-                nrOffEdges_list[sample] = nrOffEdges
-                grnsim.set_coupl(Coupl)
+            if "hill" not in self.model_key:
+                nrOffEdges_list[sample] = self._set_random_coupl(grnsim)
             # init type
             real = 0
             X0 = rng.random(grnsim.dim)
             Xsamples = []
-            for restart in range(nrRealizations + maxRestarts):
+            for restart in range(self.nrRealizations + self.maxRestarts):
                 # slightly break symmetry in initial conditions
-                if "toggleswitch" in model_key:
+                if "toggleswitch" in self.model_key:
                     X0 = np.array([
                         0.8 for i in range(grnsim.dim)
                     ]) + 0.01 * rng.standard_normal(grnsim.dim)
-                X = grnsim.sim_model(tmax=tmax, X0=X0, noiseDyn=noiseDyn)
+                X = grnsim.sim_model(tmax=self.tmax, X0=X0, noiseDyn=self.noiseDyn)
                 # check branching
                 check = True
-                if branching:
+                if self.branching:
                     check, Xsamples = _check_branching(X, Xsamples, restart)
                 if check:
                     real += 1
-                    grnsim.write_data(
-                        X[::step],
-                        dir=writedir,
-                        noiseObs=noiseObs,
-                        append=restart != 0,
-                        branching=branching,
-                        nrRealizations=nrRealizations,
-                    )
+                    self._write(grnsim, X[:: self.step], restart=restart)
                 # append some zeros
-                if "zeros" in writedir.name and real == 2:
-                    grnsim.write_data(
-                        noiseDyn * rng.standard_normal((500, 3)),
-                        dir=writedir,
-                        noiseObs=noiseObs,
-                        append=restart != 0,
-                        branching=branching,
-                        nrRealizations=nrRealizations,
+                if "zeros" in self.writedir.name and real == 2:
+                    self._write(
+                        grnsim,
+                        self.noiseDyn * rng.standard_normal((500, 3)),
+                        restart=restart,
                     )
-                if real >= nrRealizations:
+                if real >= self.nrRealizations:
                     break
             _check_nr_realizations(
-                model_key, real=real, nrRealizations=nrRealizations, restart=restart
+                self.model_key,
+                real=real,
+                nrRealizations=self.nrRealizations,
+                restart=restart,
             )
         logg.debug(
             f"mean nr of offdiagonal edges {nrOffEdges_list.mean()} "
             f"compared to total nr {grnsim.dim * (grnsim.dim - 1) / 2.0}"
         )
 
-    # more complex models
-    else:
+    def _set_random_coupl(self, grnsim: GRNsim) -> int:
+        """Set a random coupling matrix on `grnsim`, return the nr of off-diagonal edges."""
+        Coupl = np.array(grnsim.Coupl)
+        for _sampleCoupl in range(10):
+            nrOffEdges = 0
+            for gp in range(grnsim.dim):
+                for g in range(grnsim.dim):
+                    # only consider off-diagonal edges
+                    if g != gp:
+                        Coupl[gp, g] = 0.7 if self.rng.random() < 0.4 else 0
+                        nrOffEdges += 1 if Coupl[gp, g] > 0 else 0
+                    else:
+                        Coupl[gp, g] = 0.7
+            # check that the coupling matrix does not have eigenvalues
+            # greater than 1, which would lead to an exploding var process
+            if max(sp.linalg.eig(Coupl)[0]) < 1:
+                break
+        grnsim.set_coupl(Coupl)
+        return nrOffEdges
+
+    def _sample_krumsiek11(self) -> None:
+        rng = self.rng
         initType = "random"
 
         dim = 11
-        step = 5
 
-        grnsim = GRNsim(dim=dim, initType=initType, model=model_key, params=params)
+        grnsim = GRNsim(
+            dim=dim, initType=initType, model=self.model_key, params=self.params
+        )
         Xsamples = []
-        for _sample in range(maxNrSamples):
+        for _sample in range(self.maxNrSamples):
             # choose initial conditions such that branchings result
+            X0mean = None
             if initType == "branch":
-                X0mean = grnsim.branch_init_model1(tmax)
+                X0mean = grnsim.branch_init_model1(self.tmax)
                 if X0mean is None:
                     grnsim.set_coupl()
                     continue
             real = 0
-            for restart in range(nrRealizations + maxRestarts):
-                if initType == "branch":
-                    # vary initial conditions around mean
-                    X0 = X0mean + (0.05 * rng.random(dim) - 0.025 * np.ones(dim))
-                else:
-                    # generate random initial conditions within [0.3,0.7]
-                    X0 = 0.4 * rng.random(dim) + 0.3
-                if model_key in [5, 6]:
-                    X0 = np.array([0.3, 0.3, 0, 0, 0, 0])
-                if model_key in [7, 8, 9, 10]:
-                    X0 = 0.6 * rng.random(dim) + 0.2
-                    X0[2:] = np.zeros(4)
-                if "krumsiek11" in model_key:
+            for restart in range(self.nrRealizations + self.maxRestarts):
+                X0 = self._init_X0(dim=dim, initType=initType, X0mean=X0mean)
+                if "krumsiek11" in self.model_key:
                     X0 = np.zeros(dim)
                     X0[grnsim.varNames["Gata2"]] = 0.8
                     X0[grnsim.varNames["Pu.1"]] = 0.8
                     X0[grnsim.varNames["Cebpa"]] = 0.8
                     X0 += 0.001 * rng.standard_normal(dim)
                     if False:
-                        switch_gene = restart - (nrRealizations - dim)
+                        switch_gene = restart - (self.nrRealizations - dim)
                         if switch_gene >= dim:
                             break
                         X0[switch_gene] = 0 if X0[switch_gene] > 0.1 else 0.8
-                X = grnsim.sim_model(tmax, X0=X0, noiseDyn=noiseDyn, restart=restart)
+                X = grnsim.sim_model(
+                    self.tmax, X0=X0, noiseDyn=self.noiseDyn, restart=restart
+                )
                 # check branching
                 check = True
-                if branching:
+                if self.branching:
                     check, Xsamples = _check_branching(X, Xsamples, restart)
                 if check:
                     real += 1
-                    grnsim.write_data(
-                        X[::step],
-                        dir=writedir,
-                        noiseObs=noiseObs,
-                        append=restart != 0,
-                        branching=branching,
-                        nrRealizations=nrRealizations,
-                    )
-                if real >= nrRealizations:
+                    self._write(grnsim, X[:: self.step], restart=restart)
+                if real >= self.nrRealizations:
                     break
             _check_nr_realizations(
-                model_key, real=real, nrRealizations=nrRealizations, restart=restart
+                self.model_key,
+                real=real,
+                nrRealizations=self.nrRealizations,
+                restart=restart,
             )
-    # load the last simulation file
-    filename = max(writedir.glob("sim*.txt"))
-    logg.info(f"reading simulation results {filename}")
-    adata = read(filename, first_column_names=True, suppress_cache_warning=True)
-    adata.uns["tmax_write"] = tmax / step
-    return adata
+
+    def _init_X0(
+        self, *, dim: int, initType: str, X0mean: np.ndarray | None
+    ) -> np.ndarray:
+        rng = self.rng
+        if initType == "branch":
+            # vary initial conditions around mean
+            X0 = X0mean + (0.05 * rng.random(dim) - 0.025 * np.ones(dim))
+        else:
+            # generate random initial conditions within [0.3,0.7]
+            X0 = 0.4 * rng.random(dim) + 0.3
+        if self.model_key in [5, 6]:
+            X0 = np.array([0.3, 0.3, 0, 0, 0, 0])
+        if self.model_key in [7, 8, 9, 10]:
+            X0 = 0.6 * rng.random(dim) + 0.2
+            X0[2:] = np.zeros(4)
+        return X0
 
 
-def write_data(  # noqa: PLR0912, PLR0913
+def write_data(  # noqa: PLR0913
     X,
     dir=Path("sim/test"),
     *,
@@ -340,29 +371,15 @@ def write_data(  # noqa: PLR0912, PLR0913
                 np.savetxt(f"{dir}/coupl_{id}.txt", Coupl, header=header, fmt="%10.6f")
         # write model file
         if varNames and Coupl is not None:
-            with (dir / f"model_{id}.txt").open("w") as f:
-                f.write('# For each "variable = ", there must be a right hand side: \n')
-                f.write(
-                    "# either an empty string or a python-style logical expression \n"
-                )
-                f.write('# involving variable names, "or", "and", "(", ")". \n')
-                f.write("# The order of equations matters! \n")
-                f.write("# \n")
-                f.write(f"# modelType = {modelType}\n")
-                f.write(f"# invTimeStep = {invTimeStep}\n")
-                f.write("# \n")
-                f.write("# boolean update rules: \n")
-                for k, v in boolRules.items():
-                    f.write(f"{k} = {v}\n")
-                # write coupling via names
-                f.write("# coupling list: \n")
-                names = list(varNames.keys())
-                for gp in range(dim):
-                    for g in range(dim):
-                        if np.abs(Coupl[gp, g]) > 1e-10:
-                            f.write(
-                                f"{names[gp]:10} {names[g]:10} {Coupl[gp, g]:10.3} \n"
-                            )
+            _write_model_file(
+                dir / f"model_{id}.txt",
+                varNames=varNames,
+                Coupl=Coupl,
+                boolRules=boolRules,
+                modelType=modelType,
+                invTimeStep=invTimeStep,
+                dim=dim,
+            )
     # write simulated data
     # the binary mode option in the following line is a fix for python 3
     # variable names
@@ -377,6 +394,37 @@ def write_data(  # noqa: PLR0912, PLR0913
             header=("" if append else header),
             fmt=["%4.f"] + ["%7.4f" for i in range(dim)],
         )
+
+
+def _write_model_file(
+    path: Path,
+    *,
+    varNames: Mapping[str, int],
+    Coupl: np.ndarray,
+    boolRules: Mapping[str, str],
+    modelType: str,
+    invTimeStep: int,
+    dim: int,
+) -> None:
+    with path.open("w") as f:
+        f.write('# For each "variable = ", there must be a right hand side: \n')
+        f.write("# either an empty string or a python-style logical expression \n")
+        f.write('# involving variable names, "or", "and", "(", ")". \n')
+        f.write("# The order of equations matters! \n")
+        f.write("# \n")
+        f.write(f"# modelType = {modelType}\n")
+        f.write(f"# invTimeStep = {invTimeStep}\n")
+        f.write("# \n")
+        f.write("# boolean update rules: \n")
+        for k, v in boolRules.items():
+            f.write(f"{k} = {v}\n")
+        # write coupling via names
+        f.write("# coupling list: \n")
+        names = list(varNames.keys())
+        for gp in range(dim):
+            for g in range(dim):
+                if np.abs(Coupl[gp, g]) > 1e-10:
+                    f.write(f"{names[gp]:10} {names[g]:10} {Coupl[gp, g]:10.3} \n")
 
 
 class GRNsim:

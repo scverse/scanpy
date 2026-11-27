@@ -386,8 +386,10 @@ def test_recipe_plotting() -> None:
     adata = AnnData(rng.integers(0, 1000, (1000, 1000)))
 
     # These shouldn't throw an error
-    sc.pp.recipe_seurat(adata.copy(), plot=True)
-    sc.pp.recipe_zheng17(adata.copy(), plot=True)
+    with pytest.warns(FutureWarning, match=r"recipe_seurat is deprecated"):
+        sc.pp.recipe_seurat(adata.copy(), plot=True)
+    with pytest.warns(FutureWarning, match=r"recipe_zheng17 is deprecated"):
+        sc.pp.recipe_zheng17(adata.copy(), plot=True)
 
 
 def test_regress_out_ordinal():
@@ -407,8 +409,6 @@ def test_regress_out_ordinal():
     np.testing.assert_array_equal(single, multi)
 
 
-# genes with equal means in both categories have a constant regressor (collinear with the intercept)
-@pytest.mark.filterwarnings("ignore:The design matrix is rank-deficient:UserWarning")
 @pytest.mark.parametrize("dtype", [np.uint32, np.float64, np.uint64])
 def test_regress_out_int(data_dir: Path, dtype: type[np.generic]):
     adata = pbmc3k()[:200, :200].copy()
@@ -503,6 +503,21 @@ def test_regress_out_constants():
     assert_equal(adata, adata_copy)
 
 
+def test_regress_out_near_constant_covariate_is_stable():
+    t = np.array([-3.0, -1.0, 1.0, 3.0])
+    residual = np.array([1.0, -1.0, -1.0, 1.0])
+    adata = AnnData(
+        np.column_stack([10.0 + 2.0 * t + residual, 5.0 - t + 2.0 * residual]),
+        obs={"covariate": 2.0 + 1e-7 * t},
+    )
+
+    sc.pp.regress_out(adata, covariates="covariate")
+
+    np.testing.assert_allclose(
+        adata.X, np.column_stack([residual, 2 * residual]), atol=1e-6
+    )
+
+
 @pytest.mark.parametrize(
     ("keys", "test_file", "atol"),
     [
@@ -535,6 +550,57 @@ def test_regress_out_constants_equivalent():
     sc.pp.regress_out(b, "cat")
 
     np.testing.assert_equal(a[:, b.var_names].X, b.X)
+
+
+@pytest.mark.parametrize("categorical", [True, False], ids=["categorical", "singular"])
+def test_regress_out_matches_per_gene_glm(*, categorical: bool) -> None:
+    """The least-squares fallback gives the residuals a per-gene GLM did."""
+    import statsmodels.api as sm
+
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=(60, 5)).astype(np.float32)
+    x[:, 2] = 3  # constant genes are left as they are
+    if categorical:
+        batch = pd.Categorical(rng.choice([*"abc"], 60), categories=[*"abc", "unused"])
+        obs = {"batch": batch}
+        means = pd.DataFrame(x).groupby(batch.codes).transform("mean").to_numpy()
+        designs = [np.c_[np.ones(60), means[:, j]] for j in range(5)]
+    else:  # `c2` duplicates `c1`, so the design is singular
+        c1 = rng.normal(size=60)
+        obs = {"c1": c1, "c2": 2 * c1}
+        # `[1, c1]` spans the same space as `[1, c1, c2]`, so it has the same residuals
+        designs = [np.c_[np.ones(60), c1]] * 5
+    expected = np.column_stack([
+        col
+        if (col == col[0]).all()
+        else sm.GLM(col, design, family=sm.families.Gaussian()).fit().resid_response
+        for col, design in zip(x.T, designs, strict=True)
+    ])
+
+    adata = AnnData(x, obs=obs)
+    sc.pp.regress_out(adata, covariates=[*obs])
+
+    np.testing.assert_allclose(adata.X, expected, atol=1e-5)
+
+
+def test_regress_out_all_threads() -> None:
+    """`n_jobs=-1` means every thread, and the thread count doesn’t change the result."""
+    rng = np.random.default_rng(0)
+    adata = AnnData(rng.random((100, 20)))
+    adata.obs["batch"] = pd.Categorical(np.repeat(["a", "b"], 50))
+
+    one = sc.pp.regress_out(adata, "batch", n_jobs=1, out=True)
+    every = sc.pp.regress_out(adata, "batch", n_jobs=-1, out=True)
+
+    np.testing.assert_array_equal(one, every)
+
+
+def test_regress_out_categorical_missing() -> None:
+    adata = AnnData(np.arange(6, dtype=np.float32).reshape(3, 2))
+    adata.obs["batch"] = pd.Categorical(["a", None, "b"])
+
+    with pytest.raises(ValueError, match=r"'batch' has missing values in 1 cells"):
+        sc.pp.regress_out(adata, "batch")
 
 
 @pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])

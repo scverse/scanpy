@@ -46,9 +46,10 @@ from ..get._use import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import Callable, Generator, Iterable
     from typing import Any, Literal
 
+    from anndata import Raw
     from numpy.typing import NDArray
 
     from ..get._types import AdRef, LayerAcc, Mask
@@ -258,8 +259,15 @@ def _vars_rest(
     return vars_rest
 
 
+def _expm1_func(adata: AnnData) -> Callable[[NDArray], NDArray]:
+    """Get the inverse of :func:`~scanpy.pp.log1p` with the base used for `adata`."""
+    if (base := adata.uns.get("log1p", {}).get("base")) is not None:
+        return lambda x: np.expm1(x * np.log(base))
+    return np.expm1
+
+
 class _RankGenes:
-    def __init__(  # noqa: PLR0912
+    def __init__(
         self,
         adata: AnnData,
         groups: Iterable[str] | Literal["all"],
@@ -273,50 +281,16 @@ class _RankGenes:
         comp_pts: bool = False,
     ) -> None:
         self.mask_var = mask_var
-        if (base := adata.uns.get("log1p", {}).get("base")) is not None:
-            self.expm1_func = lambda x: np.expm1(x * np.log(base))
-        else:
-            self.expm1_func = np.expm1
+        self.expm1_func = _expm1_func(adata)
         self.group_col = adata.obs[groupby].array
 
-        self.groups_order, self.groups_masks_obs = _utils.select_groups(
-            adata, groups, groupby
+        self.groups_order, self.groups_masks_obs = self._select_groups(
+            adata, groups, groupby, reference=reference
         )
 
-        # Singlet groups cause division by zero errors
-        invalid_groups_selected = set(self.groups_order) & set(
-            adata.obs[groupby].value_counts().loc[lambda x: x < 2].index
+        adata_comp, x = self._get_comp_matrix(
+            adata, use=use, layer=layer, use_raw=use_raw
         )
-
-        if len(invalid_groups_selected) > 0:
-            msg = (
-                f"Could not calculate statistics for groups {', '.join(invalid_groups_selected)} "
-                "since they only contain one sample."
-            )
-            raise ValueError(msg)
-
-        adata_comp = adata
-        if use is not None:
-            if use_raw:
-                msg = "Cannot specify `use` and have `use_raw=True`."
-                raise ValueError(msg)
-            x = _get_arr(adata_comp, use)
-        elif layer is not None:
-            if use_raw:
-                msg = "Cannot specify `layer` and have `use_raw=True`."
-                raise ValueError(msg)
-            x = adata_comp.layers[layer]
-        else:
-            if use_raw and adata.raw is not None:
-                adata_comp = adata.raw
-            x = adata_comp.X
-        raise_not_implemented_error_if_backed_type(x, "rank_genes_groups")
-        if isinstance(x, HasArrayNamespace) and not isinstance(x, np.ndarray):
-            x = np.asarray(x)
-
-        # for correct getnnz calculation
-        if isinstance(x, CSBase):
-            x.eliminate_zeros()
 
         if self.mask_var is not None:
             self.X = x[:, self.mask_var]
@@ -344,6 +318,81 @@ class _RankGenes:
         # for logreg only
         self.grouping_mask = adata.obs[groupby].isin(self.groups_order)
         self.grouping = adata.obs.loc[self.grouping_mask, groupby]
+
+    @staticmethod
+    def _select_groups(
+        adata: AnnData,
+        groups: Iterable[str] | Literal["all"],
+        groupby: str,
+        *,
+        reference: str,
+    ) -> tuple[list[str], NDArray[np.bool]]:
+        """Select groups to compare (and the reference), check that they're valid."""
+        if groups == "all":
+            groups_order = "all"
+        elif isinstance(groups, str | int):
+            msg = "Specify a sequence of groups"
+            raise ValueError(msg)
+        else:
+            groups_order = list(groups)
+            if isinstance(groups_order[0], int):
+                groups_order = [str(n) for n in groups_order]
+            if reference != "rest" and reference not in set(groups_order):
+                groups_order += [reference]
+        if reference != "rest" and reference not in adata.obs[groupby].cat.categories:
+            cats = adata.obs[groupby].cat.categories.tolist()
+            msg = f"reference = {reference} needs to be one of groupby = {cats}."
+            raise ValueError(msg)
+
+        groups_order, groups_masks_obs = _utils.select_groups(
+            adata, groups_order, groupby
+        )
+
+        # Singlet groups cause division by zero errors
+        invalid_groups_selected = set(groups_order) & set(
+            adata.obs[groupby].value_counts().loc[lambda x: x < 2].index
+        )
+
+        if len(invalid_groups_selected) > 0:
+            msg = (
+                f"Could not calculate statistics for groups {', '.join(invalid_groups_selected)} "
+                "since they only contain one sample."
+            )
+            raise ValueError(msg)
+        return groups_order, groups_masks_obs
+
+    @staticmethod
+    def _get_comp_matrix(
+        adata: AnnData,
+        *,
+        use: LayerAcc | str | None,
+        layer: str | None,
+        use_raw: bool,
+    ) -> tuple[AnnData | Raw, Any]:
+        """Get the AnnData (or Raw) to compare and its expression matrix."""
+        adata_comp = adata
+        if use is not None:
+            if use_raw:
+                msg = "Cannot specify `use` and have `use_raw=True`."
+                raise ValueError(msg)
+            x = _get_arr(adata_comp, use)
+        elif layer is not None:
+            if use_raw:
+                msg = "Cannot specify `layer` and have `use_raw=True`."
+                raise ValueError(msg)
+            x = adata_comp.layers[layer]
+        else:
+            if use_raw and adata.raw is not None:
+                adata_comp = adata.raw
+            x = adata_comp.X
+        raise_not_implemented_error_if_backed_type(x, "rank_genes_groups")
+        if isinstance(x, HasArrayNamespace) and not isinstance(x, np.ndarray):
+            x = np.asarray(x)
+
+        # for correct getnnz calculation
+        if isinstance(x, CSBase):
+            x.eliminate_zeros()
+        return adata_comp, x
 
     def _basic_stats(
         self, *, exponentiate_values: bool = False, need_var: bool = False
@@ -707,6 +756,35 @@ class _RankGenes:
             mean_in_log_space=mean_in_log_space,
         )
 
+    def to_uns(self) -> dict[str, Any]:
+        """Convert the computed statistics to the format stored in `.uns`."""
+        res: dict[str, Any] = {}
+        if self.pts is not None:
+            groups_names = [str(name) for name in self.groups_order]
+            res["pts"] = pd.DataFrame(
+                self.pts.T, index=self.var_names, columns=groups_names
+            )
+        if self.pts_rest is not None:
+            res["pts_rest"] = pd.DataFrame(
+                self.pts_rest.T, index=self.var_names, columns=groups_names
+            )
+
+        self.stats.columns = self.stats.columns.swaplevel()
+
+        dtypes = {
+            "names": "O",
+            "scores": "float32",
+            "logfoldchanges": "float32",
+            "pvals": "float64",
+            "pvals_adj": "float64",
+        }
+
+        for col in self.stats.columns.levels[0]:
+            res[col] = self.stats[col].to_records(
+                index=False, column_dtypes=dtypes[col]
+            )
+        return res
+
 
 def _build_stats_dataframe(
     rg: _RankGenes,
@@ -773,6 +851,22 @@ def _build_stats_dataframe(
     return df
 
 
+def _resolve_method(method: DETest | Default | None) -> DETest:
+    # If scanpy presets are used for v2, use illico - prevents the presets from showing the `wilcoxon_illico` method and allows us to silently replace `wilcoxon`'s implementation.
+    if method is None or isinstance(method, Default):
+        method = settings.preset.rank_genes_groups.method
+        if settings.preset is Preset.ScanpyV2Preview:
+            method = "wilcoxon_illico"
+    # Otherwise, nudge people to use the presets.
+    elif "illico" in method:
+        msg = (
+            "`wilcoxon_illico` flavor will be removed in scanpy 2.0 and be simply the new `wilcoxon` implementation."
+            "To remove theis warning, you can locally do `with sc.settings.override(preset=sc.Preset.ScanpyV2Preview)`."
+        )
+        warn(msg, DeprecationWarning)
+    return method
+
+
 @_doc_params(
     mask=doc_mask("Select subset of genes to use in statistical tests.", dim="var"),
     use=doc_use(
@@ -791,7 +885,7 @@ def _build_stats_dataframe(
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("use_raw", DEPR_RAW)
 @deprecated_copy
-def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
+def rank_genes_groups(  # noqa: PLR0913
     adata: AnnData,
     groupby: AdRef | str,
     *,
@@ -944,18 +1038,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
     if isinstance(tie_correct, Default):
         tie_correct = settings.preset.rank_genes_groups.tie_correct
-    # If scanpy presets are used for v2, use illico - prevents the presets from showing the `wilcoxon_illico` method and allows us to silently replace `wilcoxon`'s implementation.
-    if method is None or isinstance(method, Default):
-        method = settings.preset.rank_genes_groups.method
-        if settings.preset is Preset.ScanpyV2Preview:
-            method = "wilcoxon_illico"
-    # Otherwise, nudge people to use the presets.
-    elif "illico" in method:
-        msg = (
-            "`wilcoxon_illico` flavor will be removed in scanpy 2.0 and be simply the new `wilcoxon` implementation."
-            "To remove theis warning, you can locally do `with sc.settings.override(preset=sc.Preset.ScanpyV2Preview)`."
-        )
-        warn(msg, DeprecationWarning)
+    method = _resolve_method(method)
 
     mask_var = _check_mask(adata, mask, "var")
 
@@ -977,23 +1060,6 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         msg = f"Correction method must be one of {avail_corr}."
         raise ValueError(msg)
     _utils.sanitize_anndata(adata)
-    # for clarity, rename variable
-    if groups == "all":
-        groups_order = "all"
-    elif isinstance(groups, str | int):
-        msg = "Specify a sequence of groups"
-        raise ValueError(msg)
-    else:
-        groups_order = list(groups)
-        if isinstance(groups_order[0], int):
-            groups_order = [str(n) for n in groups_order]
-        if reference != "rest" and reference not in set(groups_order):
-            groups_order += [reference]
-    if reference != "rest" and reference not in adata.obs[groupby].cat.categories:
-        cats = adata.obs[groupby].cat.categories.tolist()
-        msg = f"reference = {reference} needs to be one of groupby = {cats}."
-        raise ValueError(msg)
-
     res: dict[str, Any] = {}
     res["params"] = dict(
         groupby=groupby,
@@ -1006,7 +1072,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     test_obj = _RankGenes(
         adata,
-        groups_order,
+        groups,
         groupby,
         mask_var=mask_var,
         reference=reference,
@@ -1043,30 +1109,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
             **kwds,
         )
 
-    if test_obj.pts is not None:
-        groups_names = [str(name) for name in test_obj.groups_order]
-        res["pts"] = pd.DataFrame(
-            test_obj.pts.T, index=test_obj.var_names, columns=groups_names
-        )
-    if test_obj.pts_rest is not None:
-        res["pts_rest"] = pd.DataFrame(
-            test_obj.pts_rest.T, index=test_obj.var_names, columns=groups_names
-        )
-
-    test_obj.stats.columns = test_obj.stats.columns.swaplevel()
-
-    dtypes = {
-        "names": "O",
-        "scores": "float32",
-        "logfoldchanges": "float32",
-        "pvals": "float64",
-        "pvals_adj": "float64",
-    }
-
-    for col in test_obj.stats.columns.levels[0]:
-        res[col] = test_obj.stats[col].to_records(
-            index=False, column_dtypes=dtypes[col]
-        )
+    res |= test_obj.to_uns()
 
     if key is True:
         logg.info("    finished", time=start)
@@ -1098,6 +1141,44 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
     return n_nonzero / x.shape[0]
 
 
+def _get_var_idx(
+    adata: AnnData,
+    var_names: pd.api.extensions.ExtensionArray,
+    *,
+    key: str,
+    group: str,
+    use_raw: bool,
+) -> NDArray[np.intp]:
+    """Get positions of ranked genes, raising if any are missing (see #1487).
+
+    `get_indexer` returns -1 for missing names, which would silently select
+    the last gene. `var_names` must not contain NaN (see `_expand`).
+    """
+    var_idx = (adata.raw if use_raw else adata).var_names.get_indexer(var_names)
+    if not (missing := var_idx < 0).any():
+        return var_idx
+    msg = (
+        f"Genes {list(var_names[missing][:5])!r} from `adata.uns[{key!r}]` "
+        f"(group {group!r}) are not in `adata{'.raw' if use_raw else ''}.var_names`. "
+        "Were genes removed after `rank_genes_groups`, or was it run with a different "
+        "`use_raw` or layer? Rerun `rank_genes_groups` on this object, or pass the "
+        "same `use_raw` / `use` it was run with."
+    )
+    raise KeyError(msg)
+
+
+def _expand(
+    values: NDArray[np.number], present: NDArray[np.bool]
+) -> NDArray[np.floating]:
+    """Put `values` at the `present` positions and NaN elsewhere.
+
+    NaN names (from an already filtered result) get NaN, so they stay filtered out.
+    """
+    out = np.full(len(present), np.nan)
+    out[present] = values
+    return out
+
+
 @_doc_params(
     use=doc_use(
         "Which matrix to compute fractions and fold changes from. "
@@ -1115,7 +1196,7 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
     ),
 )
 @deprecated_arg("use_raw", DEPR_RAW)
-def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
+def filter_rank_genes_groups(  # noqa: PLR0913
     adata: AnnData,
     *,
     key: str | None = None,
@@ -1145,7 +1226,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     The log2 fold changes and fractions of expressing cells are taken from
     the :func:`~scanpy.tl.rank_genes_groups` results if they are stored there
     (`'logfoldchanges'`, and `'pts'` and `'pts_rest'` if `pts=True` was passed),
-    `groupby` and `use_raw` are the same as for that call,
+    `groupby`, `use_raw`, and the selected layer are the same as for that call,
     and it compared each group to `reference='rest'`.
     Otherwise, they are computed from the expression values,
     comparing each group to all other cells.
@@ -1204,9 +1285,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
         kind="uns",
         default="rank_genes_groups_filtered",
     )
-    if key is None:
-        key = "rank_genes_groups"
-
+    key = "rank_genes_groups" if key is None else key
     groupby = _obs_col(groupby, param="groupby")
     if groupby is None:
         groupby = adata.uns[key]["params"]["groupby"]
@@ -1221,6 +1300,8 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
         adata.uns[key]["params"]["groupby"] == groupby
         and adata.uns[key]["params"]["reference"] == "rest"
         and adata.uns[key]["params"]["use_raw"] == use_raw
+        and adata.uns[key]["params"].get("layer")
+        == _use_to_uns(use, rep=False).get("layer")
     )
 
     use_logfolds = same_params and "logfoldchanges" in adata.uns[key]
@@ -1248,11 +1329,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
             columns=gene_names.columns,
             index=gene_names.index,
         )
-
-        if (base := adata.uns.get("log1p", {}).get("base")) is not None:
-            expm1_func = lambda x: np.expm1(x * np.log(base))
-        else:
-            expm1_func = np.expm1
+        expm1_func = _expm1_func(adata)
 
     logg.info(
         f"Filtering genes using: "
@@ -1264,33 +1341,41 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     for cluster in gene_names.columns:
         # iterate per column
         var_names = gene_names[cluster].array
+        # names are NaN where a previous filter removed them
+        present = pd.notna(var_names)
 
         if not use_logfolds or not use_fraction:
-            var_idx = (adata.raw if use_raw else adata).var_names.get_indexer(var_names)
-            sub_x = x[:, var_idx]
+            sub_x = x[
+                :,
+                _get_var_idx(
+                    adata, var_names[present], key=key, group=cluster, use_raw=use_raw
+                ),
+            ]
             in_group = (adata.obs[groupby] == cluster).to_numpy()
             x_in = sub_x[in_group]
             x_out = sub_x[~in_group]
 
         if use_fraction:
-            fraction_in_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts"][cluster].loc[var_names].array
-            )
-            fraction_out_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts_rest"][cluster].loc[var_names].array
+            frac_in, frac_out = (
+                adata.uns[key][k][cluster].loc[var_names[present]]
+                for k in ("pts", "pts_rest")
             )
         else:
-            fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac(x_in)
-            fraction_out_cluster_matrix.loc[:, cluster] = _calc_frac(x_out)
+            frac_in, frac_out = _calc_frac(x_in), _calc_frac(x_out)
+        fraction_in_cluster_matrix.loc[:, cluster] = _expand(frac_in, present)
+        fraction_out_cluster_matrix.loc[:, cluster] = _expand(frac_out, present)
 
         if not use_logfolds:
             # compute mean value
             mean_in_cluster = np.ravel(x_in.mean(0))
             mean_out_cluster = np.ravel(x_out.mean(0))
             # compute fold change
-            fold_change_matrix.loc[:, cluster] = np.log2(
-                (expm1_func(mean_in_cluster) + 1e-9)
-                / (expm1_func(mean_out_cluster) + 1e-9)
+            fold_change_matrix.loc[:, cluster] = _expand(
+                np.log2(
+                    (expm1_func(mean_in_cluster) + 1e-9)
+                    / (expm1_func(mean_out_cluster) + 1e-9)
+                ),
+                present,
             )
 
     if compare_abs:

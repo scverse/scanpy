@@ -41,4 +41,10 @@ def download(url: str, path: Path) -> None:
         registry={path.name: None},
         urls={path.name: url},
         retry_if_failed=3,
-    ).fetch(path.name, progressbar=True)
+    ).fetch(
+        path.name,
+        # some servers (e.g. EBI) reject the default `python-requests/*` user agent
+        downloader=pooch.HTTPDownloader(
+            progressbar=True, headers={"User-Agent": "scanpy"}
+        ),
+    )

@@ -44,7 +44,7 @@ def _get_arr(
 ) -> Any: ...
 
 
-def _get_arr(  # noqa: PLR0911, PLR0912
+def _get_arr(
     adata: AnnData,
     use: ArrAcc | str | Collection[ArrAcc | str] | None = None,
     *,
@@ -79,6 +79,16 @@ def _get_arr(  # noqa: PLR0911, PLR0912
             data = data.T
         return data
 
+    return _get_arr_legacy(adata, dim=dim, **choices)
+
+
+def _get_arr_legacy(
+    adata: AnnData,
+    *,
+    dim: Literal["obs", "var"] | None = None,
+    **choices: Unpack[_Rep],
+) -> Any:
+    """Get a 2D array aligned with `dim` via old-style choices (`layer`, `use_raw`, …)."""
     # https://github.com/scverse/scanpy/issues/1546
     if not isinstance(use_raw := choices.get("use_raw", False), bool):
         msg = f"use_raw expected to be bool, was {type(use_raw)}."

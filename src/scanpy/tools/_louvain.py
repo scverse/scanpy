@@ -75,7 +75,7 @@ if TYPE_CHECKING:
 @deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
 @deprecated_arg("obsp", DEPR_OBSP_GRAPH)
 @deprecated_copy
-def louvain(  # noqa: PLR0912, PLR0913, PLR0915
+def louvain(  # noqa: PLR0913
     adata: AnnData,
     resolution: float | None = None,
     *,
@@ -176,45 +176,24 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
             restrict_categories=restrict_categories,
             adjacency=adjacency,
         )
+    if flavor == "igraph" and resolution is not None:
+        logg.warning('`resolution` parameter has no effect for flavor "igraph"')
     if flavor in {"vtraag", "igraph"}:
-        if flavor == "igraph" and resolution is not None:
-            logg.warning('`resolution` parameter has no effect for flavor "igraph"')
-        if directed and flavor == "igraph":
-            directed = False
-        if not directed:
-            logg.debug("    using the undirected graph")
-        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
-        weights = np.array(g.es["weight"]).astype(np.float64) if use_weights else None
-        if flavor == "vtraag":
-            import louvain
-
-            if partition_type is None:
-                partition_type = louvain.RBConfigurationVertexPartition
-            if resolution is not None:
-                partition_kwargs["resolution_parameter"] = resolution
-            if use_weights:
-                partition_kwargs["weights"] = weights
-            partition_kwargs["seed"] = random_state
-            logg.info('    using the "louvain" package of Traag (2017)')
-            part = louvain.find_partition(
-                g,
-                partition_type,
-                **partition_kwargs,
-            )
-            # adata.uns['louvain_quality'] = part.quality()
-        else:
-            part = g.community_multilevel(weights=weights)
-        groups = np.array(part.membership)
+        # only used by “vtraag”
+        if resolution is not None:
+            partition_kwargs["resolution_parameter"] = resolution
+        partition_kwargs["seed"] = random_state
+        groups = _igraph_membership(
+            adjacency,
+            vtraag=flavor == "vtraag",
+            # “igraph” only supports undirected graphs
+            directed=directed and flavor != "igraph",
+            use_weights=use_weights,
+            partition_type=partition_type,
+            partition_kwargs=partition_kwargs,
+        )
     elif flavor == "taynaud":
-        # this is deprecated
-        import community
-        import networkx as nx
-
-        g = nx.Graph(adjacency)
-        partition = community.best_partition(g)
-        groups = np.zeros(len(partition), dtype=int)
-        for k, v in partition.items():
-            groups[k] = v
+        groups = _taynaud_membership(adjacency)
     else:
         msg = '`flavor` needs to be "vtraag" or "igraph" or "taynaud".'
         raise ValueError(msg)
@@ -248,3 +227,45 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
         ),
     )
     return None
+
+
+def _igraph_membership(
+    adjacency: CSBase,
+    *,
+    vtraag: bool,
+    directed: bool,
+    use_weights: bool,
+    partition_type: type[MutableVertexPartition] | None,
+    partition_kwargs: dict[str, Any],
+) -> np.ndarray:
+    """Cluster using the “louvain” package (`vtraag=True`) or igraph’s implementation."""
+    if not directed:
+        logg.debug("    using the undirected graph")
+    g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
+    weights = np.array(g.es["weight"]).astype(np.float64) if use_weights else None
+    if not vtraag:
+        return np.array(g.community_multilevel(weights=weights).membership)
+
+    import louvain
+
+    if partition_type is None:
+        partition_type = louvain.RBConfigurationVertexPartition
+    if use_weights:
+        partition_kwargs["weights"] = weights
+    logg.info('    using the "louvain" package of Traag (2017)')
+    part = louvain.find_partition(g, partition_type, **partition_kwargs)
+    # adata.uns['louvain_quality'] = part.quality()
+    return np.array(part.membership)
+
+
+def _taynaud_membership(adjacency: CSBase) -> np.ndarray:
+    # this is deprecated
+    import community
+    import networkx as nx
+
+    g = nx.Graph(adjacency)
+    partition = community.best_partition(g)
+    groups = np.zeros(len(partition), dtype=int)
+    for k, v in partition.items():
+        groups[k] = v
+    return groups

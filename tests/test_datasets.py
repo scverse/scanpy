@@ -70,11 +70,29 @@ def test_pbmc3k():
 
 
 @pytest.mark.internet
-def test_pbmc3k_processed():
-    with warnings.catch_warnings(record=True) as records:
+@pytest.mark.parametrize(
+    "preset",
+    [sc.Preset.ScanpyV1, pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2)],
+)
+def test_pbmc3k_processed(preset: sc.Preset):
+    with (
+        sc.settings.override(preset=preset),
+        warnings.catch_warnings(record=True) as records,
+    ):
         adata = sc.datasets.pbmc3k_processed()
-    assert adata.shape == (2638, 1838)
-    assert adata.raw.shape == (2638, 13714)
+    if preset is sc.Preset.ScanpyV1:
+        assert adata.shape == (2638, 1838)
+        assert adata.raw.shape == (2638, 13714)
+        assert "louvain" in adata.obs
+        assert set(adata.obsm) == {"X_pca", "X_tsne", "X_umap", "X_draw_graph_fr"}
+    else:
+        assert adata.shape == (2638, 13714)
+        assert adata.raw is None
+        assert adata.var["highly_variable"].sum() == 1838
+        assert {"cell_type", "leiden"} <= set(adata.obs)
+        assert set(adata.obsm) == {"pca", "tsne", "umap", "graph_fr"}
+        assert set(adata.varm) == {"pca"}
+        assert "graph_fr" in adata.uns
 
     assert len(records) == 0
 
@@ -198,12 +216,10 @@ def test_download_failure() -> None:
 
 @pytest.fixture
 def fake_downloader(monkeypatch: pytest.MonkeyPatch) -> Callable[[Downloader], None]:
-    """Let a test stand in for the downloader pooch would pick for a URL."""
+    """Let a test stand in for the downloader that `download` hands to pooch."""
 
     def use(downloader: Downloader) -> None:
-        monkeypatch.setattr(
-            pooch.core, "choose_downloader", lambda url, progressbar=False: downloader
-        )
+        monkeypatch.setattr(pooch, "HTTPDownloader", lambda **_: downloader)
 
     return use
 
