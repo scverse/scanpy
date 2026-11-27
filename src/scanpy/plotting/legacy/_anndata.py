@@ -21,6 +21,7 @@ from ..._compat import CSBase
 from ..._settings import Default, settings
 from ..._utils import (
     _doc_params,
+    _get_basis_key,
     check_use_raw,
     get_literal_vals,
     own_deprecations,
@@ -57,8 +58,6 @@ if TYPE_CHECKING:
 
     from ._utils import ColorLike, DensityNorm, _FontSize, _FontWeight, _LegendLoc
 
-# TODO: is that all?
-type _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
 type _VarNames = str | Sequence[str]
 
 
@@ -105,7 +104,7 @@ def scatter(  # noqa: PLR0913
     layers: str | Collection[str] | None = None,
     sort_order: bool = True,
     alpha: float | None = None,
-    basis: _Basis | None = None,
+    basis: str | None = None,
     groups: str | Iterable[str] | None = None,
     components: str | Collection[str] | None = None,
     projection: Literal["2d", "3d"] = "2d",
@@ -150,7 +149,11 @@ def scatter(  # noqa: PLR0913
         `x`, `y` and `color`. If `layers` is a string, then it is expanded to
         `(layers, layers, layers)`.
     basis
-        String that denotes a plotting tool that computed coordinates.
+        Key in :attr:`~anndata.AnnData.obsm` containing coordinates, e.g.
+        `'umap'`, `'X_umap'`, or a custom key. The exact key is used if present,
+        otherwise `'X_' + basis` is tried, as in :func:`~scanpy.pl.embedding`.
+        For `'diffmap'` and `'X_diffmap'`, the first (trivial) diffusion
+        component is skipped.
     {scatter_temp}
     {show_save_ax}
 
@@ -260,7 +263,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
     layers: str | Collection[str] | None = None,
     sort_order: bool = True,
     alpha: float | None = None,
-    basis: _Basis | None = None,
+    basis: str | None = None,
     groups: str | Iterable[str] | None = None,
     components: str | Collection[str] | None = None,
     projection: Literal["2d", "3d"] = "2d",
@@ -320,17 +323,15 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
         title = [title]
     highlights = adata.uns.get("highlights", [])
     if basis is not None:
-        try:
-            # ignore the '0th' diffusion component
-            if basis == "diffmap":
-                components += 1
-            xy = adata.obsm[f"X_{basis}"][:, components]
-            # correct the component vector for use in labeling etc.
-            if basis == "diffmap":
-                components -= 1
-        except KeyError:
-            msg = f"compute coordinates using visualization tool {basis} first"
-            raise KeyError(msg) from None
+        basis_key = _get_basis_key(adata, basis)
+        if basis_key is None:
+            msg = f"Could not find {basis!r} or 'X_{basis}' in .obsm"
+            raise KeyError(msg)
+        # Normalize only after lookup, for component selection and labels.
+        basis_name = basis.removeprefix("X_")
+        # Ignore the '0th' diffusion component without changing its label.
+        offset = 1 if basis_name == "diffmap" else 0
+        xy = adata.obsm[basis_key][:, components + offset]
     elif x is not None and y is not None:
         x_arr, y_arr = (
             _obs_vector_compat(adata, k, use_raw=use_raw, layer=layer)
@@ -357,18 +358,18 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
     if basis is not None:
         component_name = (
             "DC"
-            if basis == "diffmap"
+            if basis_name == "diffmap"
             else "tSNE"
-            if basis == "tsne"
+            if basis_name == "tsne"
             else "UMAP"
-            if basis == "umap"
+            if basis_name == "umap"
             else "PC"
-            if basis == "pca"
+            if basis_name == "pca"
             else "TriMap"
-            if basis == "trimap"
-            else basis.replace("draw_graph_", "").upper()
-            if "draw_graph" in basis
-            else basis
+            if basis_name == "trimap"
+            else basis_name.replace("draw_graph_", "").upper()
+            if "draw_graph" in basis_name
+            else basis_name
         )
     else:
         component_name = None
