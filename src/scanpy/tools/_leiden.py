@@ -206,8 +206,6 @@ def leiden(  # noqa: PLR0913
         n_jobs=n_jobs,
         clustering_args=clustering_args,
     )
-    if flavor != "networkit":
-        _utils.ensure_igraph()
     clustering_args = dict(clustering_args)
     if n_jobs is None:
         # unseeded runs needn’t be reproducible, so they can be parallel
@@ -514,7 +512,7 @@ def _directed_node_weights(
     )
 
 
-def _validate_flavor(  # noqa: PLR0912
+def _validate_flavor(
     flavor: str | None,
     *,
     partition_type: object | None,
@@ -534,6 +532,7 @@ def _validate_flavor(  # noqa: PLR0912
     ignored = [] if n_jobs is None or flavor == "networkit" else ["n_jobs"]
     match flavor:
         case "igraph":
+            _utils.ensure_igraph()
             if partition_type is not None:
                 msg = "Do not pass in partition_type argument when using igraph."
                 raise ValueError(msg)
@@ -546,24 +545,7 @@ def _validate_flavor(  # noqa: PLR0912
                 raise ValueError(msg)
             ignored.extend(clustering_args)
         case "leidenalg":
-            msg = (
-                "The `igraph` and `networkit` implementations of leiden clustering are *orders of magnitude faster*. "
-                "Set the flavor argument to (and install if needed) 'igraph' or 'networkit' to use them."
-            )
-            if was_default:
-                msg += (
-                    "\nIn the future, the default backend for leiden will be igraph instead of leidenalg. "
-                    "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`."
-                )
-            if not multiplex:
-                warn(msg, FutureWarning if was_default else UserWarning)
-            try:
-                import leidenalg  # noqa: F401
-            except ImportError as e:
-                e.add_note(
-                    "Please install `scanpy[leiden]` (or `leidenalg` directly) and try again."
-                )
-                raise
+            _check_leidenalg(was_default=was_default, multiplex=multiplex)
         case _:
             msg = f"flavor must be either 'igraph', 'leidenalg', or 'networkit', but {flavor!r} was passed."
             raise ValueError(msg)
@@ -573,6 +555,28 @@ def _validate_flavor(  # noqa: PLR0912
             raise ValueError(msg)
         warn(f"{msg} This will raise an error in the future.", FutureWarning)
     return flavor, is_directed
+
+
+def _check_leidenalg(*, was_default: bool, multiplex: bool) -> None:
+    _utils.ensure_igraph()
+    msg = (
+        "The `igraph` and `networkit` implementations of leiden clustering are *orders of magnitude faster*. "
+        "Set the flavor argument to (and install if needed) 'igraph' or 'networkit' to use them."
+    )
+    if was_default:
+        msg += (
+            "\nIn the future, the default backend for leiden will be igraph instead of leidenalg. "
+            "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`."
+        )
+    if not multiplex:
+        warn(msg, FutureWarning if was_default else UserWarning)
+    try:
+        import leidenalg  # noqa: F401
+    except ImportError as e:
+        e.add_note(
+            "Please install `scanpy[leiden]` (or `leidenalg` directly) and try again."
+        )
+        raise
 
 
 def _resolve_directed(directed: bool | Default | None, *, flavor: str) -> bool:  # noqa: FBT001
