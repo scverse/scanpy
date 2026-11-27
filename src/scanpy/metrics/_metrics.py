@@ -125,7 +125,7 @@ def modularity(
     use: GraphAcc | str | None = None,
     mode: Literal["calculate", "update", "retrieve"] = "calculate",
     neighbors_key: str | None = None,
-) -> float: ...
+) -> float | list[float]: ...
 
 
 @_doc_params(use=doc_use_neighbors())
@@ -140,7 +140,7 @@ def modularity(
     mode: Literal["calculate", "update", "retrieve"] = "calculate",
     # deprecated
     neighbors_key: str | None = None,
-) -> float:
+) -> float | list[float]:
     """Compute the modularity of a graph given its connectivities and labels.
 
     Parameters
@@ -165,6 +165,7 @@ def modularity(
     Returns
     -------
     The modularity of the graph based on the provided clustering.
+    A list with `mode='retrieve'` if :func:`~scanpy.tl.leiden` clustered several graphs.
     """
     if isinstance(adata_or_connectivities, AnnData):
         if is_directed:
@@ -196,7 +197,7 @@ def modularity_adata(
     use: GraphAcc | str | None,
     neighbors_key: str | None,
     mode: Literal["calculate", "update", "retrieve"],
-) -> float:
+) -> float | list[float]:
     if mode in {"retrieve", "update"} and not isinstance(labels, str):
         msg = "`labels` must be a string when `mode` is `'retrieve'` or `'update'`"
         raise ValueError(msg)

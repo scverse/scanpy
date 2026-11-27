@@ -324,12 +324,19 @@ def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool) -> Graph:
 def get_networkit_from_adjacency(adjacency: CSBase, *, weighted: bool = True):
     """Get a NetworKit graph from an adjacency matrix.
 
+    Each edge has the weight in the upper triangle,
+    or with ScanpyV2Preview the larger weight of both directions.
     Used func:`networkit.GraphFromCsr` (networkit/networkit#1422)
     """
     import networkit as nk
     import scipy.sparse as sps
 
+    import scanpy as sc
+
     assert adjacency.shape is not None
+    if sc.settings.preset is sc.Preset.ScanpyV2Preview:
+        adjacency = sps.csr_array(adjacency)  # noqa: TID251
+        adjacency = adjacency.maximum(adjacency.T)
     upper = sps.triu(adjacency, k=1).tocsr()
     return nk.GraphFromCsr(upper, directed=False, weighted=weighted)
 

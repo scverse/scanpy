@@ -188,6 +188,97 @@ def test_leiden_directed_default(
     assert _resolve_directed(Default(), flavor=flavor) is (flavor in directed_flavors)
 
 
+@needs.anndata_acc
+@needs.igraph
+@needs.leidenalg
+@pytest.mark.parametrize(
+    "preset",
+    [sc.Preset.ScanpyV1, pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2)],
+)
+@pytest.mark.parametrize(
+    ("layer_weights", "resolution", "expected"),
+    [
+        pytest.param([1, 0], [1, 50], "a", id="first"),
+        pytest.param([0, 1], [50, 1], "b", id="second"),
+        pytest.param([1, 0], [50, 1], "singletons", id="resolution"),
+    ],
+)
+def test_leiden_multiplex(
+    preset: sc.Preset,
+    layer_weights: list[float],
+    resolution: list[float],
+    expected: Literal["a", "b", "singletons"],
+) -> None:
+    from anndata.acc import A
+
+    # two graphs of cliques with different groupings
+    groups = dict(a=np.arange(40) // 20, b=np.arange(40) % 2)
+    obsp = {k: (g[:, None] == g) & ~np.eye(40, dtype=bool) for k, g in groups.items()}
+    groups["singletons"] = np.arange(40)
+    adata = AnnData(
+        np.zeros((40, 1)), obsp={k: v.astype(float) for k, v in obsp.items()}
+    )
+    with sc.settings.override(preset=preset):
+        labels = sc.tl.leiden(
+            adata,
+            resolution,
+            use=[A.obsp["a"], A.obsp["b"]],
+            layer_weights=layer_weights,
+            flavor="leidenalg",
+            out=True,
+        )
+    assert normalized_mutual_info_score(labels, groups[expected]) == 1
+
+
+@needs.anndata_acc
+@needs.igraph
+@needs.leidenalg
+@pytest.mark.parametrize(
+    "preset",
+    [sc.Preset.ScanpyV1, pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2)],
+)
+def test_leiden_multiplex_default_flavor(
+    adata_neighbors: AnnData, preset: sc.Preset
+) -> None:
+    from anndata.acc import A
+
+    with (
+        sc.settings.override(preset=preset),
+        nullcontext()
+        if preset is sc.Preset.ScanpyV1
+        else pytest.raises(ValueError, match=r"several graphs at once needs"),
+    ):
+        sc.tl.leiden(adata_neighbors, use=[A.obsp["connectivities"]] * 2)
+
+
+@needs.anndata_acc
+@needs.igraph
+@needs.leidenalg
+@pytest.mark.parametrize(
+    ("n_graphs", "kwargs", "match"),
+    [
+        pytest.param(
+            2,
+            dict(flavor="leidenalg", layer_weights=[1, 1, 1]),
+            r"one `layer_weights` per graph",
+            id="layer_weights",
+        ),
+        pytest.param(
+            1, dict(layer_weights=[1]), r"needs several graphs", id="one_graph"
+        ),
+        pytest.param(0, {}, r"at least one graph", id="no_graph"),
+    ],
+)
+def test_leiden_multiplex_invalid(
+    adata_neighbors: AnnData, n_graphs: int, kwargs: dict[str, object], match: str
+) -> None:
+    from anndata.acc import A
+
+    use = [A.obsp["connectivities"]] * n_graphs
+    with pytest.raises(ValueError, match=match):
+        sc.tl.leiden(adata_neighbors, use=use, **kwargs)
+
+
 @needs.igraph
 def test_leiden_wrong_flavor(adata_neighbors):
     with pytest.raises(ValueError, match=r"flavor must be.*'igraph'.*'leidenalg'.*but"):
@@ -205,6 +296,52 @@ def test_leiden_igraph_partition_type(adata_neighbors):
             flavor="igraph",
             partition_type=leidenalg.RBConfigurationVertexPartition,
         )
+
+
+@pytest.mark.parametrize(
+    "preset",
+    [sc.Preset.ScanpyV1, pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2)],
+)
+@pytest.mark.parametrize(
+    ("flavor", "kwargs", "match"),
+    [
+        pytest.param("igraph", dict(n_jobs=2), r"n_jobs", marks=needs.igraph),
+        pytest.param(
+            "networkit",
+            dict(objective_function="CPM"),
+            r"ignores objective_function",
+            marks=needs.networkit,
+        ),
+    ],
+)
+def test_leiden_ignored_args(
+    adata_neighbors: AnnData,
+    preset: sc.Preset,
+    flavor: str,
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    with (
+        sc.settings.override(preset=preset),
+        pytest.warns(FutureWarning, match=match)
+        if preset is sc.Preset.ScanpyV1
+        else pytest.raises(ValueError, match=match),
+    ):
+        sc.tl.leiden(adata_neighbors, flavor=flavor, **kwargs)
+
+
+@needs.scanpy2
+@needs.networkit
+def test_leiden_networkit_one_direction() -> None:
+    """With ScanpyV2Preview, edges stored in one direction only are kept."""
+    from anndata.acc import A
+
+    groups = np.arange(40) // 20
+    clique = (groups[:, None] == groups) & ~np.eye(40, dtype=bool)
+    adata = AnnData(np.zeros((40, 1)), obsp=dict(lower=np.tril(clique).astype(float)))
+    with sc.settings.override(preset=sc.Preset.ScanpyV2Preview):
+        labels = sc.tl.leiden(adata, flavor="networkit", use=A.obsp["lower"], out=True)
+    assert normalized_mutual_info_score(labels, groups) == 1
 
 
 @pytest.fixture(
