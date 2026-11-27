@@ -13,7 +13,7 @@ from scipy import sparse
 import scanpy as sc
 from scanpy.neighbors import NeighborsResult
 from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
+from testing.scanpy._pytest.params import ARRAY_TYPES_MEM, as_dense_jax_array
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -46,6 +46,7 @@ TRANSFORMS: dict[str, Callable[..., object]] = {
     ),
     "regress_out": lambda adata, **kw: sc.pp.regress_out(adata, "batch", **kw),
 }
+
 # transforms with several outputs: `out=True` returns them all (name of the matrix output)
 MULTI = {"scale": "scaled", "normalize_total": "normalized"}
 
@@ -54,11 +55,16 @@ MULTI = {"scale": "scaled", "normalize_total": "normalized"}
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 @pytest.mark.parametrize("name", TRANSFORMS)
 def test_out_writes_elsewhere(
-    adata: AnnData, name: str, array_type: Callable[[np.ndarray], object]
+    request: pytest.FixtureRequest,
+    adata: AnnData,
+    name: str,
+    array_type: Callable[[np.ndarray], object],
 ) -> None:
     """`out` writes to its own destination and leaves `use`’s source alone."""
     from anndata.acc import A
 
+    if array_type is as_dense_jax_array and name == "regress_out":
+        request.applymarker(pytest.mark.xfail(reason="regress_out not jax compatible"))
     adata.layers["counts"] = array_type(adata.layers["counts"])
     before = _orig(adata).copy()
     TRANSFORMS[name](adata, use=A.layers["counts"], out=A.layers["result"])
@@ -71,11 +77,16 @@ def test_out_writes_elsewhere(
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 @pytest.mark.parametrize("name", TRANSFORMS)
 def test_out_none_returns(
-    adata: AnnData, name: str, array_type: Callable[[np.ndarray], object]
+    request: pytest.FixtureRequest,
+    adata: AnnData,
+    name: str,
+    array_type: Callable[[np.ndarray], object],
 ) -> None:
     """`out=True` returns the result without touching `adata`."""
     from anndata.acc import A
 
+    if array_type is as_dense_jax_array and name == "regress_out":
+        request.applymarker(pytest.mark.xfail(reason="regress_out not jax compatible"))
     adata.layers["counts"] = array_type(adata.layers["counts"])
     before = _orig(adata).copy()
     res = TRANSFORMS[name](adata, use=A.layers["counts"], out=True)

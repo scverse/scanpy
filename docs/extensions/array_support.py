@@ -18,7 +18,11 @@ if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
 
-ALL_INNER = list(_docs.parse(["np", "sp"], inner=True))
+ALL_INNER = list(_docs.parse(["np", "sp", "xp"], inner=True))
+FOOTNOTE_SYMBOLS = "*†‡§¶#"
+
+type Entry = tuple[list[str], list[str]] | tuple[list[str], list[str], dict[str, str]]
+type Notes = dict[_docs.ArrayType, nodes.footnote]
 
 
 class ArraySupport(SphinxDirective):
@@ -27,18 +31,50 @@ class ArraySupport(SphinxDirective):
     required_arguments: ClassVar = 1
 
     @property
-    def _array_support(self) -> dict[str, tuple[list[str], list[str]]]:
+    def _array_support(self) -> dict[str, Entry]:
         return self.config.array_support
+
+    def _parse_entry(
+        self, fn: str, footnotes: list[nodes.footnote]
+    ) -> tuple[list[_docs.ArrayType], Notes]:
+        """Parse `fn`’s entry into array types and footnotes per type.
+
+        Footnotes are built by hand and appended to `footnotes`:
+        docutils’ auto-numbering doesn’t work inside MyST’s `eval-rst`.
+        """
+        include, exclude, texts = (*self._array_support[fn], {})[:3]
+        notes: Notes = {}
+        for tag, text in texts.items():
+            footnote = nodes.footnote(
+                "",
+                nodes.label("", FOOTNOTE_SYMBOLS[len(footnotes)]),
+                nodes.paragraph("", "", *self.parse_inline(text)[0]),
+                ids=[nodes.make_id(f"array-support-{fn}-{tag}")],
+                classes=["brackets"],
+            )
+            footnotes.append(footnote)
+            notes |= dict.fromkeys(_docs.parse([tag]), footnote)
+        return list(_docs.parse(include, exclude)), notes
+
+    @staticmethod
+    def _footnote_ref(footnote: nodes.footnote) -> nodes.footnote_reference:
+        [fid] = footnote["ids"]
+        ref_id = f"{fid}-ref-{len(footnote['backrefs'])}"
+        footnote["backrefs"].append(ref_id)
+        label = footnote[0].astext()
+        return nodes.footnote_reference(
+            "", label, ids=[ref_id], refid=fid, classes=["brackets"]
+        )
 
     def run(self) -> list[nodes.Node]:  # noqa: D102
         if self.arguments[0] == "all":
             return self._render_overview()
 
-        if not self.arguments[0] not in self._array_support:
-            self.error(
-                f"API not in `array_support`, add it in `docs/conf.py`: {self.arguments[0]}"
-            )
-        array_types = list(_docs.parse(*self._array_support[self.arguments[0]]))
+        if self.arguments[0] not in self._array_support:
+            msg = f"API not in `array_support`, add it in `docs/conf.py`: {self.arguments[0]}"
+            raise self.error(msg)
+        footnotes: list[nodes.footnote] = []
+        array_types, notes = self._parse_entry(self.arguments[0], footnotes)
         headers = (
             "Array type",
             "supported",
@@ -54,19 +90,23 @@ class ArraySupport(SphinxDirective):
             ))
 
         title = nodes.title("", "", *self.parse_inline(":ref:`array-support`")[0])
-        rows = self._render_support_data(data)
-        return self._render_table(headers, rows, title=title)
+        rows = list(self._render_support_data(data, notes))
+        return [*self._render_table(headers, rows, title=title), *footnotes]
 
     def _render_overview(self) -> list[nodes.Node]:
         headers = ["Function", *(at.rst(short=True) for at in ALL_INNER)]
         rows: list[nodes.row] = []
-        for fn, (include, exclude) in self._array_support.items():
+        footnotes: list[nodes.footnote] = []
+        for fn in self._array_support:
             row_header, _ = self.parse_inline(f":func:`scanpy.{fn}`")
-            ats = frozenset(_docs.parse(include, exclude))
+            array_types, notes = self._parse_entry(fn, footnotes)
+            ats = frozenset(array_types)
             cells: list[Sequence[nodes.Node]] = [
                 row_header,
                 *(
-                    self._render_support(at in ats, dask=dt in ats)
+                    self._render_support(
+                        at in ats, dask=dt in ats, note=notes.get(at, notes.get(dt))
+                    )
                     for at, dt in zip(
                         ALL_INNER, map(_docs.DaskArray, ALL_INNER), strict=True
                     )
@@ -81,12 +121,22 @@ class ArraySupport(SphinxDirective):
                     ),
                 )
             )
-        return self._render_table(headers, rows)
+        return [*self._render_table(headers, rows), *footnotes]
 
     def _render_support_data(
         self,
         data: list[tuple[_docs.Inner, bool, bool]],
+        notes_by_type: Notes,
     ) -> Generator[nodes.row]:
+        def notes(
+            *ats: _docs.Inner,
+        ) -> tuple[nodes.footnote | None, nodes.footnote | None]:
+            # `one` drops the footnote if merged rows had different ones
+            return (
+                one({notes_by_type.get(at) for at in ats}),
+                one({notes_by_type.get(_docs.DaskArray(at)) for at in ats}),
+            )
+
         for t, group in groupby(data, key=lambda r: type(r[0])):
             group = list(group)  # noqa: PLW2901
             if (  # if all sparse types have the same support, just one row
@@ -106,22 +156,33 @@ class ArraySupport(SphinxDirective):
                     nodes.inline("", "}"),
                 ]
                 header = [nodes.literal("", "", *refs)]
-                yield self._render_row(header, support=support, in_dask=in_dask)
+                yield self._render_row(
+                    header,
+                    support=support,
+                    in_dask=in_dask,
+                    notes=notes(*(at for at, _, _ in group)),
+                )
             else:  # otherwise, show them individually
                 for array_type, support, in_dask in group:
                     yield self._render_row(
                         self._render_array_type(array_type),
                         support=support,
                         in_dask=in_dask,
+                        notes=notes(array_type),
                     )
 
     def _render_row(
-        self, header: Sequence[nodes.Node], *, support: bool, in_dask: bool
+        self,
+        header: Sequence[nodes.Node],
+        *,
+        support: bool,
+        in_dask: bool,
+        notes: tuple[nodes.footnote | None, nodes.footnote | None],
     ) -> nodes.row:
         cells: list[Sequence[nodes.Node]] = [
             header,
-            self._render_support(support),
-            self._render_support(in_dask),
+            self._render_support(support, note=notes[0]),
+            self._render_support(in_dask, note=notes[1]),
         ]
         children = (nodes.entry("", nodes.paragraph("", "", *cell)) for cell in cells)
         return nodes.row("", *children)
@@ -158,11 +219,13 @@ class ArraySupport(SphinxDirective):
         /,
         *,
         dask: bool = False,
+        note: nodes.footnote | None = None,
     ) -> Sequence[nodes.Node]:
         dask_expl = "Also supports this type as chunk in a dask Array"
         return [
             nodes.Text(("✅" if support else "❌") + " " * dask),
             *([nodes.abbreviation(text="⚡", explanation=dask_expl)] if dask else []),
+            *([self._footnote_ref(note)] if note is not None else []),
         ]
 
     def _render_array_type(self, array_type: _docs.ArrayType, /) -> list[nodes.Node]:

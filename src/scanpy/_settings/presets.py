@@ -40,7 +40,7 @@ type DETest = Literal[
     "logreg", "t-test", "wilcoxon", "wilcoxon_illico", "t-test_overestim_var"
 ]
 type HVGFlavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
-type LeidenFlavor = Literal["leidenalg", "igraph"]
+type LeidenFlavor = Literal["leidenalg", "igraph", "networkit"]
 
 
 @dataclass
@@ -113,7 +113,8 @@ class ScoreGenesPreset(NamedTuple):
 
 class LeidenPreset(NamedTuple):
     flavor: LeidenFlavor
-    directed: bool | None
+    directed: bool | frozenset[LeidenFlavor] | None
+    """A set means “directed for these flavors”."""
 
 
 preset_postprocessors: list[Callable[[], None]] = []
@@ -293,7 +294,9 @@ class Preset(enum.StrEnum):
         """Settings for :func:`~scanpy.tl.leiden`."""  # noqa: D401
         return {
             Preset.ScanpyV1: LeidenPreset(flavor="leidenalg", directed=None),
-            Preset.ScanpyV2Preview: LeidenPreset(flavor="igraph", directed=True),
+            Preset.ScanpyV2Preview: LeidenPreset(
+                flavor="igraph", directed=frozenset({"igraph", "leidenalg"})
+            ),
         }
 
     @contextmanager

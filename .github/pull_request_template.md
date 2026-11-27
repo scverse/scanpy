@@ -14,5 +14,5 @@ Please be sure to follow the guidelines in our contribution guide (https://scanp
 - [ ] LLM or coding agent used: <!-- "none", or the model and version, e.g. "Claude Opus 5.5 via Claude Code" -->
 - [ ] If one was used, I, a human, have reviewed, understood and tested every changed line
 
-[tests]: https://scanpy.readthedocs.io/page/dev/testing.html#writing-tests
-[release notes]: https://scanpy.readthedocs.io/page/dev/documentation.html#adding-to-the-docs
+[tests]: https://scanpy.scverse.org/page/dev/testing.html#writing-tests
+[release notes]: https://scanpy.scverse.org/page/dev/documentation.html#adding-to-the-docs

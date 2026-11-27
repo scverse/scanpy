@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from fast_array_utils.numba import njit
+from fast_array_utils.types import HasArrayNamespace
 from scipy import sparse
 from scverse_misc import Deprecation, deprecated_arg
 
@@ -310,6 +311,8 @@ class _RankGenes:
                 adata_comp = adata.raw
             x = adata_comp.X
         raise_not_implemented_error_if_backed_type(x, "rank_genes_groups")
+        if isinstance(x, HasArrayNamespace) and not isinstance(x, np.ndarray):
+            x = np.asarray(x)
 
         # for correct getnnz calculation
         if isinstance(x, CSBase):
@@ -1095,6 +1098,44 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
     return n_nonzero / x.shape[0]
 
 
+def _get_var_idx(
+    adata: AnnData,
+    var_names: pd.api.extensions.ExtensionArray,
+    *,
+    key: str,
+    group: str,
+    use_raw: bool,
+) -> NDArray[np.intp]:
+    """Get positions of ranked genes, raising if any are missing (see #1487).
+
+    `get_indexer` returns -1 for missing names, which would silently select
+    the last gene. `var_names` must not contain NaN (see `_expand`).
+    """
+    var_idx = (adata.raw if use_raw else adata).var_names.get_indexer(var_names)
+    if not (missing := var_idx < 0).any():
+        return var_idx
+    msg = (
+        f"Genes {list(var_names[missing][:5])!r} from `adata.uns[{key!r}]` "
+        f"(group {group!r}) are not in `adata{'.raw' if use_raw else ''}.var_names`. "
+        "Were genes removed after `rank_genes_groups`, or was it run with a different "
+        "`use_raw` or layer? Rerun `rank_genes_groups` on this object, or pass the "
+        "same `use_raw` / `use` it was run with."
+    )
+    raise KeyError(msg)
+
+
+def _expand(
+    values: NDArray[np.number], present: NDArray[np.bool]
+) -> NDArray[np.floating]:
+    """Put `values` at the `present` positions and NaN elsewhere.
+
+    NaN names (from an already filtered result) get NaN, so they stay filtered out.
+    """
+    out = np.full(len(present), np.nan)
+    out[present] = values
+    return out
+
+
 @_doc_params(
     use=doc_use(
         "Which matrix to compute fractions and fold changes from. "
@@ -1142,7 +1183,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     The log2 fold changes and fractions of expressing cells are taken from
     the :func:`~scanpy.tl.rank_genes_groups` results if they are stored there
     (`'logfoldchanges'`, and `'pts'` and `'pts_rest'` if `pts=True` was passed),
-    `groupby` and `use_raw` are the same as for that call,
+    `groupby`, `use_raw`, and the selected layer are the same as for that call,
     and it compared each group to `reference='rest'`.
     Otherwise, they are computed from the expression values,
     comparing each group to all other cells.
@@ -1218,6 +1259,8 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
         adata.uns[key]["params"]["groupby"] == groupby
         and adata.uns[key]["params"]["reference"] == "rest"
         and adata.uns[key]["params"]["use_raw"] == use_raw
+        and adata.uns[key]["params"].get("layer")
+        == _use_to_uns(use, rep=False).get("layer")
     )
 
     use_logfolds = same_params and "logfoldchanges" in adata.uns[key]
@@ -1261,33 +1304,41 @@ def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     for cluster in gene_names.columns:
         # iterate per column
         var_names = gene_names[cluster].array
+        # names are NaN where a previous filter removed them
+        present = pd.notna(var_names)
 
         if not use_logfolds or not use_fraction:
-            var_idx = (adata.raw if use_raw else adata).var_names.get_indexer(var_names)
-            sub_x = x[:, var_idx]
+            sub_x = x[
+                :,
+                _get_var_idx(
+                    adata, var_names[present], key=key, group=cluster, use_raw=use_raw
+                ),
+            ]
             in_group = (adata.obs[groupby] == cluster).to_numpy()
             x_in = sub_x[in_group]
             x_out = sub_x[~in_group]
 
         if use_fraction:
-            fraction_in_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts"][cluster].loc[var_names].array
-            )
-            fraction_out_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts_rest"][cluster].loc[var_names].array
+            frac_in, frac_out = (
+                adata.uns[key][k][cluster].loc[var_names[present]]
+                for k in ("pts", "pts_rest")
             )
         else:
-            fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac(x_in)
-            fraction_out_cluster_matrix.loc[:, cluster] = _calc_frac(x_out)
+            frac_in, frac_out = _calc_frac(x_in), _calc_frac(x_out)
+        fraction_in_cluster_matrix.loc[:, cluster] = _expand(frac_in, present)
+        fraction_out_cluster_matrix.loc[:, cluster] = _expand(frac_out, present)
 
         if not use_logfolds:
             # compute mean value
             mean_in_cluster = np.ravel(x_in.mean(0))
             mean_out_cluster = np.ravel(x_out.mean(0))
             # compute fold change
-            fold_change_matrix.loc[:, cluster] = np.log2(
-                (expm1_func(mean_in_cluster) + 1e-9)
-                / (expm1_func(mean_out_cluster) + 1e-9)
+            fold_change_matrix.loc[:, cluster] = _expand(
+                np.log2(
+                    (expm1_func(mean_in_cluster) + 1e-9)
+                    / (expm1_func(mean_out_cluster) + 1e-9)
+                ),
+                present,
             )
 
     if compare_abs:

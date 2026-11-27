@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, ClassVar, overload
 
 import numpy as np
 import pandas as pd
+from fast_array_utils.types import HasArrayNamespace
 from scverse_misc import Deprecation
 
 from .._compat import CSRBase, DaskArray, SpBase, fullname, warn
@@ -15,8 +16,6 @@ from ..get._use import _get_arr, _get_vec, _resolve_obs
 from ..neighbors._common import _use_graph
 
 if TYPE_CHECKING:
-    from typing import NoReturn
-
     from anndata import AnnData
     from numpy.typing import NDArray
 
@@ -88,11 +87,11 @@ def _graph_and_vals(
     obsp: str | None,
 ) -> tuple[CSRBase, _Vals]:
     """Resolve the graph and values of `gearys_c`/`morans_i` called on an `AnnData`."""
-    from anndata.acc import A
-
     g = _use_graph(adata, use, obsp=use_graph, neighbors_key=neighbors_key)
 
     if isinstance(vals, str):
+        from anndata.acc import A
+
         vals = A.resolve(vals)
     if isinstance(vals, AdRef):
         if use_raw or layer is not None or obsm is not None or obsp is not None:
@@ -118,10 +117,12 @@ def _resolve_vals[T: NDArray | DaskArray](val: T) -> T: ...
 def _resolve_vals(val: SpBase) -> CSRBase: ...
 @overload
 def _resolve_vals(val: pd.DataFrame | pd.Series) -> NDArray: ...
+@overload
+def _resolve_vals(val: HasArrayNamespace) -> NDArray: ...
 
 
 @singledispatch
-def _resolve_vals(val: object) -> NoReturn:
+def _resolve_vals(val: object):
     msg = f"Unsupported type {type(val)}"
     raise TypeError(msg)
 
@@ -148,6 +149,12 @@ def _(val: SpBase) -> CSRBase:
 @_resolve_vals.register(pd.Series)
 def _(val: pd.DataFrame | pd.Series) -> NDArray:
     return val.to_numpy()
+
+
+@_resolve_vals.register(HasArrayNamespace)
+def _resolve_vals_array_api(val: HasArrayNamespace) -> NDArray:
+    # Moran's I / Geary's C use numba kernels, so convert at the boundary
+    return np.asarray(val)
 
 
 def _vals_heterogeneous[V: NDArray | CSRBase](
