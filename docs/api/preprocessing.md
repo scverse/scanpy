@@ -36,17 +36,6 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
    pp.downsample_counts
 ```
 
-## Recipes
-
-```{eval-rst}
-.. autosummary::
-   :nosignatures:
-   :toctree: generated/
-
-   pp.recipe_zheng17
-   pp.recipe_seurat
-```
-
 (pp-data-integration)=
 
 ## Data integration

@@ -386,8 +386,10 @@ def test_recipe_plotting() -> None:
     adata = AnnData(rng.integers(0, 1000, (1000, 1000)))
 
     # These shouldn't throw an error
-    sc.pp.recipe_seurat(adata.copy(), plot=True)
-    sc.pp.recipe_zheng17(adata.copy(), plot=True)
+    with pytest.warns(FutureWarning, match=r"recipe_seurat is deprecated"):
+        sc.pp.recipe_seurat(adata.copy(), plot=True)
+    with pytest.warns(FutureWarning, match=r"recipe_zheng17 is deprecated"):
+        sc.pp.recipe_zheng17(adata.copy(), plot=True)
 
 
 def test_regress_out_ordinal():

@@ -90,7 +90,8 @@ def scanorama_integrate(
     >>> import scanpy as sc
     >>> import scanpy.external as sce
     >>> adata = sc.datasets.pbmc3k()
-    >>> sc.pp.recipe_zheng17(adata)
+    >>> sc.pp.normalize_total(adata)
+    >>> sc.pp.log1p(adata)
     >>> sc.pp.pca(adata)
 
     We now arbitrarily assign a batch metadata variable to each cell
