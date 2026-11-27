@@ -1863,7 +1863,11 @@ def test_umap_mask_equal(tmp_path, check_same_image):
     mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
     ax = sc.pl.umap(pbmc, size=8.0, show=False)
-    sc.pl.umap(pbmc[mask_obs], size=8.0, color="LDHB", ax=ax, show=False)
+    fig = sc.pl.umap(
+        pbmc[mask_obs], size=8.0, color="LDHB", ax=ax, show=False, return_fig=True
+    )
+    # `return_fig` with a passed `ax` returns the figure containing it
+    assert fig is ax.get_figure()
     plt.savefig(p1 := tmp_path / "umap_mask_fig1.png")
     plt.close()
 

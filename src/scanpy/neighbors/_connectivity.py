@@ -14,7 +14,7 @@ from ._common import (
 )
 
 
-def gauss[D: (NDArray[np.float32 | np.float64], CSRBase)](  # noqa: PLR0912
+def gauss[D: (NDArray[np.float32 | np.float64], CSRBase)](
     distances: D, n_neighbors: int, *, knn: bool
 ) -> D:
     """Derive gaussian connectivities between data points from their distances.
@@ -56,48 +56,65 @@ def gauss[D: (NDArray[np.float32 | np.float64], CSRBase)](  # noqa: PLR0912
         # the last item is already in its sorted position through argpartition
         # we have decay beyond the n_neighbors neighbors
         sigmas_sq = distances_sq[:, -1] / 4
-    sigmas = np.sqrt(sigmas_sq)
 
     # compute the symmetric weight matrix
     if not isinstance(distances, CSRBase):
-        num = 2 * np.multiply.outer(sigmas, sigmas)
-        den = np.add.outer(sigmas_sq, sigmas_sq)
-        w = np.sqrt(num / den) * np.exp(-d_sq / den)
-        # make the weight matrix sparse
-        if not knn:
-            mask = w > 1e-14
-            w[~mask] = 0
-        else:
-            # restrict number of neighbors to ~k
-            # build a symmetric mask
-            mask = np.zeros(d_sq.shape, dtype=bool)
-            for i, row in enumerate(indices):
-                mask[i, row] = True
-                for j in row:
-                    if i not in set(indices[j]):
-                        w[j, i] = w[i, j]
-                        mask[j, i] = True
-            # set all entries that are not nearest neighbors to zero
-            w[~mask] = 0
+        return _gauss_weights_dense(d_sq, indices, sigmas_sq, knn=knn)
+    assert isinstance(d_sq, CSRBase)
+    return _gauss_weights_sparse(d_sq, indices, sigmas_sq)
+
+
+def _gauss_weights_dense(
+    d_sq: NDArray[np.float32 | np.float64],
+    indices: NDArray[np.integer],
+    sigmas_sq: NDArray[np.floating],
+    *,
+    knn: bool,
+) -> NDArray[np.float32 | np.float64]:
+    sigmas = np.sqrt(sigmas_sq)
+    num = 2 * np.multiply.outer(sigmas, sigmas)
+    den = np.add.outer(sigmas_sq, sigmas_sq)
+    w = np.sqrt(num / den) * np.exp(-d_sq / den)
+    # make the weight matrix sparse
+    if not knn:
+        mask = w > 1e-14
+        w[~mask] = 0
     else:
-        assert isinstance(d_sq, CSRBase)
-        # need to copy the distance matrix here; what follows is inplace
-        w = d_sq.copy()
-        for i in range(len(d_sq.indptr[:-1])):
-            row = d_sq.indices[d_sq.indptr[i] : d_sq.indptr[i + 1]]
-            num = 2 * sigmas[i] * sigmas[row]
-            den = sigmas_sq[i] + sigmas_sq[row]
-            w.data[d_sq.indptr[i] : d_sq.indptr[i + 1]] = np.sqrt(num / den) * np.exp(
-                -d_sq.data[d_sq.indptr[i] : d_sq.indptr[i + 1]] / den
-            )
-        w = w.tolil()
+        # restrict number of neighbors to ~k
+        # build a symmetric mask
+        mask = np.zeros(d_sq.shape, dtype=bool)
         for i, row in enumerate(indices):
+            mask[i, row] = True
             for j in row:
                 if i not in set(indices[j]):
                     w[j, i] = w[i, j]
-        w = w.tocsr()
-
+                    mask[j, i] = True
+        # set all entries that are not nearest neighbors to zero
+        w[~mask] = 0
     return w
+
+
+def _gauss_weights_sparse(
+    d_sq: CSRBase,
+    indices: NDArray[np.integer],
+    sigmas_sq: NDArray[np.floating],
+) -> CSRBase:
+    sigmas = np.sqrt(sigmas_sq)
+    # need to copy the distance matrix here; what follows is inplace
+    w = d_sq.copy()
+    for i in range(len(d_sq.indptr[:-1])):
+        row = d_sq.indices[d_sq.indptr[i] : d_sq.indptr[i + 1]]
+        num = 2 * sigmas[i] * sigmas[row]
+        den = sigmas_sq[i] + sigmas_sq[row]
+        w.data[d_sq.indptr[i] : d_sq.indptr[i + 1]] = np.sqrt(num / den) * np.exp(
+            -d_sq.data[d_sq.indptr[i] : d_sq.indptr[i + 1]] / den
+        )
+    w = w.tolil()
+    for i, row in enumerate(indices):
+        for j in row:
+            if i not in set(indices[j]):
+                w[j, i] = w[i, j]
+    return w.tocsr()
 
 
 def umap(

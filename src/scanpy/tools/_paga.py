@@ -18,8 +18,11 @@ from ..neighbors._common import _neighbors_view
 from ._docs import doc_use_neighbors
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
     from typing import Any, Literal
 
+    import networkx as nx
+    import pandas as pd
     from anndata import AnnData
 
     from ..get._types import AdRef, GraphAcc
@@ -420,7 +423,7 @@ class PAGAComparePathsResult(NamedTuple):
 
 
 @deprecated(Deprecation("1.13.0"))
-def paga_compare_paths(  # noqa: PLR0912, PLR0915
+def paga_compare_paths(
     adata1: AnnData,
     adata2: AnnData,
     adjacency_key: str = "connectivities",
@@ -497,14 +500,8 @@ def paga_compare_paths(  # noqa: PLR0912, PLR0915
             f"compare shortest paths between leafs ({on1_g1}, {on2_g1}) "
             f"in graph1 and ({on1_g2}, {on2_g2}) in graph2:"
         )
-        try:
-            path1 = [str(x) for x in nx.shortest_path(g1, int(r), int(s))]
-        except nx.NetworkXNoPath:
-            path1 = None
-        try:
-            path2 = [str(x) for x in nx.shortest_path(g2, int(r2), int(s2))]
-        except nx.NetworkXNoPath:
-            path2 = None
+        path1 = _shortest_path(g1, r, s)
+        path2 = _shortest_path(g2, r2, s2)
         if path1 is None and path2 is None:
             # consistent behavior
             n_paths += 1
@@ -518,79 +515,116 @@ def paga_compare_paths(  # noqa: PLR0912, PLR0915
             n_paths += 1
             n_steps += 1
             continue
-        if len(path1) >= len(path2):
-            path_mapped = [asso_groups1[l] for l in path1]
-            path_compare = path2
-            path_compare_id = 2
-            path_compare_orig_names = [
-                [orig_names2[int(s)] for s in l] for l in path_compare
-            ]
-            path_mapped_orig_names = [
-                [orig_names2[int(s)] for s in l] for l in path_mapped
-            ]
-        else:
-            path_mapped = [asso_groups2[l] for l in path2]
-            path_compare = path1
-            path_compare_id = 1
-            path_compare_orig_names = [
-                [orig_names1[int(s)] for s in l] for l in path_compare
-            ]
-            path_mapped_orig_names = [
-                [orig_names1[int(s)] for s in l] for l in path_mapped
-            ]
-        n_agreeing_steps_path = 0
-        ip_progress = 0
-        for il, l in enumerate(path_compare[:-1]):
-            for ip, p in enumerate(path_mapped):
-                if (
-                    ip < ip_progress
-                    or l not in p
-                    or not (
-                        ip + 1 < len(path_mapped)
-                        and path_compare[il + 1] in path_mapped[ip + 1]
-                    )
-                ):
-                    continue
-                # make sure that a step backward leads us to the same value of l
-                # in case we "jumped"
-                logg.debug(
-                    f"found matching step ({l} -> {path_compare_orig_names[il + 1]}) "
-                    f"at position {il} in path{path_compare_id} and position {ip} in path_mapped"
-                )
-                consistent_history = True
-                for iip in range(ip, ip_progress, -1):
-                    if l not in path_mapped[iip - 1]:
-                        consistent_history = False
-                if consistent_history:
-                    # here, we take one step further back (ip_progress - 1); it's implied that this
-                    # was ok in the previous step
-                    poss = list(range(ip - 1, ip_progress - 2, -1))
-                    logg.debug(
-                        f"    step(s) backward to position(s) {poss} "
-                        "in path_mapped are fine, too: valid step"
-                    )
-                    n_agreeing_steps_path += 1
-                    ip_progress = ip + 1
-                    break
-        n_steps_path = len(path_compare) - 1
+        n_agreeing_steps_path, n_steps_path = _compare_paths(
+            path1,
+            path2,
+            asso_groups1=asso_groups1,
+            asso_groups2=asso_groups2,
+            orig_names1=orig_names1,
+            orig_names2=orig_names2,
+        )
         n_agreeing_steps += n_agreeing_steps_path
         n_steps += n_steps_path
         n_paths += 1
         if n_agreeing_steps_path == n_steps_path:
             n_agreeing_paths += 1
 
-        # only for the output, use original names
-        path1_orig_names = [orig_names1[int(s)] for s in path1]
-        path2_orig_names = [orig_names2[int(s)] for s in path2]
-        logg.debug(
-            f"      path1 = {path1_orig_names},\n"
-            f"path_mapped = {[list(p) for p in path_mapped_orig_names]},\n"
-            f"      path2 = {path2_orig_names},\n"
-            f"-> n_agreeing_steps = {n_agreeing_steps_path} / n_steps = {n_steps_path}.",
-        )
     return PAGAComparePathsResult(
         frac_steps=n_agreeing_steps / n_steps if n_steps > 0 else np.nan,
         n_steps=n_steps if n_steps > 0 else np.nan,
         frac_paths=n_agreeing_paths / n_paths if n_steps > 0 else np.nan,
         n_paths=n_paths if n_steps > 0 else np.nan,
     )
+
+
+def _shortest_path(g: nx.Graph, source: str, target: str) -> list[str] | None:
+    import networkx as nx
+
+    try:
+        return [str(x) for x in nx.shortest_path(g, int(source), int(target))]
+    except nx.NetworkXNoPath:
+        return None
+
+
+def _compare_paths(
+    path1: list[str],
+    path2: list[str],
+    *,
+    asso_groups1: Mapping[str, Sequence[str]],
+    asso_groups2: Mapping[str, Sequence[str]],
+    orig_names1: pd.Index,
+    orig_names2: pd.Index,
+) -> tuple[int, int]:
+    """Compare two paths, returning the number of agreeing and total steps."""
+    # map the longer path onto the other graph and compare it to the shorter one
+    if len(path1) >= len(path2):
+        path_mapped = [asso_groups1[l] for l in path1]
+        path_compare, path_compare_id, orig_names = path2, 2, orig_names2
+    else:
+        path_mapped = [asso_groups2[l] for l in path2]
+        path_compare, path_compare_id, orig_names = path1, 1, orig_names1
+    path_compare_orig_names = [[orig_names[int(s)] for s in l] for l in path_compare]
+    path_mapped_orig_names = [[orig_names[int(s)] for s in l] for l in path_mapped]
+    n_agreeing_steps_path = _count_agreeing_steps(
+        path_compare,
+        path_mapped,
+        path_compare_orig_names=path_compare_orig_names,
+        path_compare_id=path_compare_id,
+    )
+    n_steps_path = len(path_compare) - 1
+
+    # only for the output, use original names
+    path1_orig_names = [orig_names1[int(s)] for s in path1]
+    path2_orig_names = [orig_names2[int(s)] for s in path2]
+    logg.debug(
+        f"      path1 = {path1_orig_names},\n"
+        f"path_mapped = {[list(p) for p in path_mapped_orig_names]},\n"
+        f"      path2 = {path2_orig_names},\n"
+        f"-> n_agreeing_steps = {n_agreeing_steps_path} / n_steps = {n_steps_path}.",
+    )
+    return n_agreeing_steps_path, n_steps_path
+
+
+def _count_agreeing_steps(
+    path_compare: list[str],
+    path_mapped: list,
+    *,
+    path_compare_orig_names: list[list],
+    path_compare_id: int,
+) -> int:
+    """Count steps in `path_compare` that are consistent with `path_mapped`."""
+    n_agreeing_steps_path = 0
+    ip_progress = 0
+    for il, l in enumerate(path_compare[:-1]):
+        for ip, p in enumerate(path_mapped):
+            if (
+                ip < ip_progress
+                or l not in p
+                or not (
+                    ip + 1 < len(path_mapped)
+                    and path_compare[il + 1] in path_mapped[ip + 1]
+                )
+            ):
+                continue
+            # make sure that a step backward leads us to the same value of l
+            # in case we "jumped"
+            logg.debug(
+                f"found matching step ({l} -> {path_compare_orig_names[il + 1]}) "
+                f"at position {il} in path{path_compare_id} and position {ip} in path_mapped"
+            )
+            consistent_history = True
+            for iip in range(ip, ip_progress, -1):
+                if l not in path_mapped[iip - 1]:
+                    consistent_history = False
+            if consistent_history:
+                # here, we take one step further back (ip_progress - 1); it's implied that this
+                # was ok in the previous step
+                poss = list(range(ip - 1, ip_progress - 2, -1))
+                logg.debug(
+                    f"    step(s) backward to position(s) {poss} "
+                    "in path_mapped are fine, too: valid step"
+                )
+                n_agreeing_steps_path += 1
+                ip_progress = ip + 1
+                break
+    return n_agreeing_steps_path
