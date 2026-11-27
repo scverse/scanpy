@@ -486,7 +486,8 @@ def _get_mean_bins(
     if flavor == "seurat":
         bins = n_bins
     elif flavor == "cell_ranger":
-        bins = np.r_[-np.inf, np.percentile(means, np.arange(10, 105, 5)), np.inf]
+        percentiles = np.arange(2, n_bins + 1) * 100 / n_bins
+        bins = np.r_[-np.inf, np.percentile(means, percentiles), np.inf]
     else:
         msg = '`flavor` needs to be "seurat" or "cell_ranger"'
         raise ValueError(msg)
@@ -767,6 +768,7 @@ def highly_variable_genes(  # noqa: PLR0913
         done with respect to each bin. If just a single gene falls into a bin,
         the normalized dispersion is artificially set to 1. You'll be informed
         about this if you set `settings.verbosity = 4`.
+        With `flavor='cell_ranger'`, bins are equally populated and the lowest two are merged :cite:p:`Zheng2017`.
     flavor
         Choose the flavor for identifying highly variable genes
         (default depends on :attr:`scanpy.settings.preset` property :attr:`~scanpy.Preset.highly_variable_genes`).

@@ -16,6 +16,7 @@ from pandas.testing import assert_frame_equal, assert_index_equal
 
 import scanpy as sc
 from scanpy._compat import CSRBase
+from scanpy.preprocessing._highly_variable_genes import _get_mean_bins
 from testing.scanpy._helpers import _check_check_values_warnings
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
@@ -683,6 +684,12 @@ def test_cellranger_n_top_genes_inf_dispersion():
     is_inf = np.isposinf(adata.var["dispersions_norm"])
     assert is_inf.sum() > 5
     assert (adata.var["highly_variable"] == is_inf).all()
+
+
+@pytest.mark.parametrize("n_bins", [5, 20, 50])
+def test_cellranger_n_bins(n_bins: int) -> None:
+    bins = _get_mean_bins(pd.Series(np.arange(1000)), "cell_ranger", n_bins)
+    assert bins.nunique() == n_bins - 1
 
 
 def test_cutoff_info():
