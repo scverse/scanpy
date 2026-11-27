@@ -623,7 +623,7 @@ class BasePlot:
             self.vboundnorm.norm,
         )
 
-    def make_figure(self) -> None:  # noqa: PLR0912, PLR0915
+    def make_figure(self) -> None:
         r"""Render the image but does not call :func:`matplotlib.pyplot.show`.
 
         Useful when several plots are put together into one figure.
@@ -645,6 +645,34 @@ class BasePlot:
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels', ax=ax1).make_figure()
 
         """
+        mainplot_height, mainplot_width = self._init_figure_size()
+        gs = self._make_figure_grid(mainplot_width)
+        self._add_fig_title(gs[0, 0])
+        mainplot_gs = self._make_mainplot_grid(
+            gs[0, 0], mainplot_height, mainplot_width - self.group_extra_size
+        )
+        main_ax = self.fig.add_subplot(mainplot_gs[2, 0])
+        return_ax_dict = {
+            "mainplot_ax": main_ax,
+            **self._plot_group_extra_and_var_groups(mainplot_gs, main_ax),
+        }
+
+        # plot the mainplot
+        normalize = self._mainplot(main_ax)
+
+        # code from pandas.plot in add_totals adds
+        # minor ticks that need to be removed
+        main_ax.yaxis.set_tick_params(which="minor", left=False, right=False)
+        main_ax.xaxis.set_tick_params(which="minor", top=False, bottom=False, length=0)
+        main_ax.set_zorder(100)
+        if self.legends_width > 0:
+            legend_ax = self.fig.add_subplot(gs[0, 1])
+            self._plot_legend(legend_ax, return_ax_dict, normalize)
+
+        self.ax_dict = return_ax_dict
+
+    def _init_figure_size(self) -> tuple[float, float]:
+        """Set figure height and width if unset, and return main plot height and width."""
         category_height = self.DEFAULT_CATEGORY_HEIGHT
         category_width = self.DEFAULT_CATEGORY_WIDTH
 
@@ -667,13 +695,14 @@ class BasePlot:
             mainplot_height = self.height
 
             mainplot_width = self.width - (self.legends_width + self.group_extra_size)
+        return mainplot_height, mainplot_width
 
-        return_ax_dict = {}
-        # define a layout of 1 rows x 2 columns
-        #   first ax is for the main figure.
-        #   second ax is to plot legends
+    def _make_figure_grid(self, mainplot_width: float) -> gridspec.GridSpecBase:
+        """Create `self.fig` with a layout of 1 rows x 2 columns.
+
+        First ax is for the main figure, second ax is to plot legends.
+        """
         legends_width_spacer = 0.7 / self.width
-
         self.fig, gs = make_grid_spec(
             self.ax or (self.width, self.height),
             nrows=1,
@@ -681,7 +710,33 @@ class BasePlot:
             wspace=legends_width_spacer,
             width_ratios=[mainplot_width + self.group_extra_size, self.legends_width],
         )
+        return gs
 
+    def _add_fig_title(self, spec: gridspec.SubplotSpec) -> None:
+        if self.fig_title is None or self.fig_title.strip() == "":
+            return
+        # for the figure title use the ax that contains
+        # all the main graphical elements (main plot, dendrogram etc)
+        # otherwise the title may overlay with the figure.
+        # also, this puts the title centered on the main figure and not
+        # centered between the main figure and the legends
+        _ax = self.fig.add_subplot(spec)
+        _ax.axis("off")
+        _ax.set_title(self.fig_title)
+
+    def _make_mainplot_grid(
+        self, spec: gridspec.SubplotSpec, mainplot_height: float, mainplot_width: float
+    ) -> gridspec.GridSpecFromSubplotSpec:
+        """Divide the main plot area into three rows and two columns.
+
+        First row is an spacer that is adjusted in case the
+        legends need more height than the main plot.
+        Second row is for brackets (if needed).
+        Third row is for mainplot and dendrogram/totals
+        (legend goes in a separate area).
+        If axes are swapped, rows and columns are swapped.
+        """
+        category_height = self.DEFAULT_CATEGORY_HEIGHT
         if self.var_groups:
             # add some space in case 'brackets' want to be plotted on top of the image
             if self.are_axes_swapped:
@@ -692,7 +747,6 @@ class BasePlot:
         else:
             var_groups_height = 0
 
-        mainplot_width = mainplot_width - self.group_extra_size
         spacer_height = self.height - var_groups_height - mainplot_height
         if not self.are_axes_swapped:
             height_ratios = [spacer_height, var_groups_height, mainplot_height]
@@ -701,91 +755,64 @@ class BasePlot:
         else:
             height_ratios = [spacer_height, self.group_extra_size, mainplot_height]
             width_ratios = [mainplot_width, var_groups_height]
-            # gridspec is the same but rows and columns are swapped
 
-        if self.fig_title is not None and self.fig_title.strip() != "":
-            # for the figure title use the ax that contains
-            # all the main graphical elements (main plot, dendrogram etc)
-            # otherwise the title may overlay with the figure.
-            # also, this puts the title centered on the main figure and not
-            # centered between the main figure and the legends
-            _ax = self.fig.add_subplot(gs[0, 0])
-            _ax.axis("off")
-            _ax.set_title(self.fig_title)
-
-        # the main plot is divided into three rows and two columns
-        # first row is an spacer that is adjusted in case the
-        #           legends need more height than the main plot
-        # second row is for brackets (if needed),
-        # third row is for mainplot and dendrogram/totals (legend goes in gs[0,1]
-        # defined earlier)
-        mainplot_gs = gridspec.GridSpecFromSubplotSpec(
+        return gridspec.GridSpecFromSubplotSpec(
             nrows=3,
             ncols=2,
             wspace=self.wspace,
             hspace=0.0,
-            subplot_spec=gs[0, 0],
+            subplot_spec=spec,
             width_ratios=width_ratios,
             height_ratios=height_ratios,
         )
-        main_ax = self.fig.add_subplot(mainplot_gs[2, 0])
-        return_ax_dict["mainplot_ax"] = main_ax
-        if not self.are_axes_swapped:
-            if self.plot_group_extra is not None:
-                group_extra_ax = self.fig.add_subplot(mainplot_gs[2, 1], sharey=main_ax)
-                group_extra_orientation = "right"
-            if self.var_groups:
-                gene_groups_ax = self.fig.add_subplot(mainplot_gs[1, 0], sharex=main_ax)
-                var_group_orientation = "top"
-        else:
-            if self.plot_group_extra:
-                group_extra_ax = self.fig.add_subplot(mainplot_gs[1, 0], sharex=main_ax)
-                group_extra_orientation = "top"
-            if self.var_groups:
-                gene_groups_ax = self.fig.add_subplot(mainplot_gs[2, 1], sharey=main_ax)
-                var_group_orientation = "right"
+
+    def _plot_group_extra_and_var_groups(
+        self, mainplot_gs: gridspec.GridSpecFromSubplotSpec, main_ax: Axes
+    ) -> dict[str, Axes]:
+        """Add and plot dendrogram/totals and var group brackets next to the main plot."""
+        # position, shared axis, and orientation of the axes right of / above main_ax
+        right = mainplot_gs[2, 1], dict(sharey=main_ax), "right"
+        top = mainplot_gs[1, 0], dict(sharex=main_ax), "top"
+        (
+            (extra_spec, extra_kw, extra_orientation),
+            (var_spec, var_kw, var_orientation),
+        ) = (top, right) if self.are_axes_swapped else (right, top)
+
+        ax_dict: dict[str, Axes] = {}
+        if self.plot_group_extra is not None:
+            ax_dict["group_extra_ax"] = self.fig.add_subplot(extra_spec, **extra_kw)
+        if self.var_groups:
+            ax_dict["gene_group_ax"] = self.fig.add_subplot(var_spec, **var_kw)
 
         if self.plot_group_extra is not None:
-            if self.plot_group_extra["kind"] == "dendrogram":
-                _plot_dendrogram(
-                    group_extra_ax,
-                    self.adata,
-                    self.groupby,
-                    dendrogram_key=self.plot_group_extra["dendrogram_key"],
-                    ticks=self.plot_group_extra["dendrogram_ticks"],
-                    orientation=group_extra_orientation,
-                )
-            if self.plot_group_extra["kind"] == "group_totals":
-                self._plot_totals(group_extra_ax, group_extra_orientation)
-
-            return_ax_dict["group_extra_ax"] = group_extra_ax
-
+            self._plot_group_extra(ax_dict["group_extra_ax"], extra_orientation)
         # plot group legends on top or left of main_ax (if given)
         if self.var_groups:
             _plot_var_groups_brackets(
-                gene_groups_ax,
+                ax_dict["gene_group_ax"],
                 var_groups=self.var_groups,
                 rotation=self.var_group_rotation,
                 left_adjustment=0.2,
                 right_adjustment=0.7,
-                orientation=var_group_orientation,
+                orientation=var_orientation,
                 wide=True,
             )
-            return_ax_dict["gene_group_ax"] = gene_groups_ax
+        return ax_dict
 
-        # plot the mainplot
-        normalize = self._mainplot(main_ax)
-
-        # code from pandas.plot in add_totals adds
-        # minor ticks that need to be removed
-        main_ax.yaxis.set_tick_params(which="minor", left=False, right=False)
-        main_ax.xaxis.set_tick_params(which="minor", top=False, bottom=False, length=0)
-        main_ax.set_zorder(100)
-        if self.legends_width > 0:
-            legend_ax = self.fig.add_subplot(gs[0, 1])
-            self._plot_legend(legend_ax, return_ax_dict, normalize)
-
-        self.ax_dict = return_ax_dict
+    def _plot_group_extra(
+        self, group_extra_ax: Axes, orientation: Literal["top", "right"]
+    ) -> None:
+        if self.plot_group_extra["kind"] == "dendrogram":
+            _plot_dendrogram(
+                group_extra_ax,
+                self.adata,
+                self.groupby,
+                dendrogram_key=self.plot_group_extra["dendrogram_key"],
+                ticks=self.plot_group_extra["dendrogram_ticks"],
+                orientation=orientation,
+            )
+        if self.plot_group_extra["kind"] == "group_totals":
+            self._plot_totals(group_extra_ax, orientation)
 
     def show(self, *, return_axes: bool | None = None) -> dict[str, Axes] | None:
         """Show the figure.

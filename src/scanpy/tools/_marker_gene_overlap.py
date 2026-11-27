@@ -14,7 +14,8 @@ from .._utils._doctests import doctest_needs
 from ..get._out import _legacy_out
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from collections.abc import Iterable, Mapping
+    from typing import Any, Literal
 
     from anndata import AnnData
 
@@ -71,6 +72,89 @@ def _calc_jaccard(markers1: dict, markers2: dict):
     return jacc_results
 
 
+def _check_adj_pval_threshold(
+    rgg: Mapping[str, Any], adj_pval_threshold: float, *, top_n_markers: int | None
+) -> float:
+    if "pvals_adj" not in rgg:
+        msg = (
+            "Could not find adjusted p-value data. "
+            "Please run `sc.tl.rank_genes_groups()` with a "
+            "method that outputs adjusted p-values."
+        )
+        raise ValueError(msg)
+
+    if adj_pval_threshold < 0:
+        logg.warning(
+            "`adj_pval_threshold` was set below 0. Threshold will be set to 0."
+        )
+        adj_pval_threshold = 0
+    elif adj_pval_threshold > 1:
+        logg.warning(
+            "`adj_pval_threshold` was set above 1. Threshold will be set to 1."
+        )
+        adj_pval_threshold = 1
+
+    if top_n_markers is not None:
+        logg.warning(
+            "Both `adj_pval_threshold` and `top_n_markers` is set. "
+            "`adj_pval_threshold` will be ignored."
+        )
+    return adj_pval_threshold
+
+
+def _data_markers(
+    rgg: Mapping[str, Any],
+    cluster_ids: Iterable[str],
+    *,
+    top_n_markers: int | None,
+    adj_pval_threshold: float | None,
+) -> dict[str, set]:
+    data_markers = dict()
+    for group in cluster_ids:
+        if top_n_markers is not None:
+            n_genes = min(top_n_markers, rgg["names"].shape[0])
+            data_markers[group] = set(rgg["names"][group][:n_genes])
+        elif adj_pval_threshold is not None:
+            n_genes = (rgg["pvals_adj"][group] < adj_pval_threshold).sum()
+            data_markers[group] = set(rgg["names"][group][:n_genes])
+            if n_genes == 0:
+                logg.warning(
+                    "No marker genes passed the significance threshold of "
+                    f"{adj_pval_threshold} for cluster {group!r}."
+                )
+        # Use top 100 markers as default if top_n_markers = None
+        else:
+            data_markers[group] = set(rgg["names"][group][:100])
+    return data_markers
+
+
+def _calc_overlap(
+    reference_markers: dict[str, set],
+    data_markers: dict[str, set],
+    *,
+    method: _Method,
+    normalize: Literal["reference", "data"] | None,
+) -> np.ndarray:
+    if method == "overlap_coef":
+        return _calc_overlap_coef(reference_markers, data_markers)
+    if method == "jaccard":
+        return _calc_jaccard(reference_markers, data_markers)
+    marker_match = _calc_overlap_count(reference_markers, data_markers)
+    if normalize == "reference":
+        # Ensure rows sum to 1
+        ref_lengths = np.array([
+            len(reference_markers[m_group]) for m_group in reference_markers
+        ])
+        return np.nan_to_num(marker_match / ref_lengths[:, np.newaxis])
+    if normalize == "data":
+        # Ensure columns sum to 1
+        data_lengths = np.array([
+            len(data_markers[dat_group]) for dat_group in data_markers
+        ])
+        return np.nan_to_num(marker_match / data_lengths)
+    return marker_match
+
+
 # writing the result was never implemented, so there’s nothing to replace these with
 _DEPR_NO_WRITE = Deprecation("1.13.0", "Omit it, the result can only be returned.")
 
@@ -78,7 +162,7 @@ _DEPR_NO_WRITE = Deprecation("1.13.0", "Omit it, the result can only be returned
 @doctest_needs("leidenalg")
 @deprecated_arg("key_added", _DEPR_NO_WRITE)
 @deprecated_arg("inplace", _DEPR_NO_WRITE)
-def marker_gene_overlap(  # noqa: PLR0912, PLR0915
+def marker_gene_overlap(
     adata: AnnData,
     reference_markers: dict[str, set] | dict[str, list],
     *,
@@ -182,7 +266,17 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
         )
         raise ValueError(msg)
 
-    avail_methods = {"overlap_count", "overlap_coef", "jaccard", "enrich"}
+    if method == "enrich":
+        # This would need a fisher's exact test or hypergeometric test,
+        # which requires knowledge of the size of the space from which
+        # the reference marker gene set was taken.
+        # This is at best approximately known.
+        msg = (
+            "`method='enrich'` is not implemented, "
+            "use one of 'overlap_count', 'overlap_coef', or 'jaccard'."
+        )
+        raise NotImplementedError(msg)
+    avail_methods = {"overlap_count", "overlap_coef", "jaccard"}
     if method not in avail_methods:
         msg = f"Method must be one of {avail_methods}."
         raise ValueError(msg)
@@ -212,30 +306,9 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
             raise ValueError(msg) from e
 
     if adj_pval_threshold is not None:
-        if "pvals_adj" not in adata.uns[key]:
-            msg = (
-                "Could not find adjusted p-value data. "
-                "Please run `sc.tl.rank_genes_groups()` with a "
-                "method that outputs adjusted p-values."
-            )
-            raise ValueError(msg)
-
-        if adj_pval_threshold < 0:
-            logg.warning(
-                "`adj_pval_threshold` was set below 0. Threshold will be set to 0."
-            )
-            adj_pval_threshold = 0
-        elif adj_pval_threshold > 1:
-            logg.warning(
-                "`adj_pval_threshold` was set above 1. Threshold will be set to 1."
-            )
-            adj_pval_threshold = 1
-
-        if top_n_markers is not None:
-            logg.warning(
-                "Both `adj_pval_threshold` and `top_n_markers` is set. "
-                "`adj_pval_threshold` will be ignored."
-            )
+        adj_pval_threshold = _check_adj_pval_threshold(
+            adata.uns[key], adj_pval_threshold, top_n_markers=top_n_markers
+        )
 
     if top_n_markers is not None and top_n_markers < 1:
         logg.warning(
@@ -244,53 +317,18 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
         top_n_markers = 1
 
     # Get data-derived marker genes in a dictionary of sets
-    data_markers = dict()
     cluster_ids = adata.uns[key]["names"].dtype.names
-
-    for group in cluster_ids:
-        if top_n_markers is not None:
-            n_genes = min(top_n_markers, adata.uns[key]["names"].shape[0])
-            data_markers[group] = set(adata.uns[key]["names"][group][:n_genes])
-        elif adj_pval_threshold is not None:
-            n_genes = (adata.uns[key]["pvals_adj"][group] < adj_pval_threshold).sum()
-            data_markers[group] = set(adata.uns[key]["names"][group][:n_genes])
-            if n_genes == 0:
-                logg.warning(
-                    "No marker genes passed the significance threshold of "
-                    f"{adj_pval_threshold} for cluster {group!r}."
-                )
-        # Use top 100 markers as default if top_n_markers = None
-        else:
-            data_markers[group] = set(adata.uns[key]["names"][group][:100])
+    data_markers = _data_markers(
+        adata.uns[key],
+        cluster_ids,
+        top_n_markers=top_n_markers,
+        adj_pval_threshold=adj_pval_threshold,
+    )
 
     # Find overlaps
-    if method == "overlap_count":
-        marker_match = _calc_overlap_count(reference_markers, data_markers)
-        if normalize == "reference":
-            # Ensure rows sum to 1
-            ref_lengths = np.array([
-                len(reference_markers[m_group]) for m_group in reference_markers
-            ])
-            marker_match = marker_match / ref_lengths[:, np.newaxis]
-            marker_match = np.nan_to_num(marker_match)
-        elif normalize == "data":
-            # Ensure columns sum to 1
-            data_lengths = np.array([
-                len(data_markers[dat_group]) for dat_group in data_markers
-            ])
-            marker_match = marker_match / data_lengths
-            marker_match = np.nan_to_num(marker_match)
-    elif method == "overlap_coef":
-        marker_match = _calc_overlap_coef(reference_markers, data_markers)
-    elif method == "jaccard":
-        marker_match = _calc_jaccard(reference_markers, data_markers)
-
-    # Note:
-    # Could add an 'enrich' option here
-    # (fisher's exact test or hypergeometric test),
-    # but that would require knowledge of the size of the space from which
-    # the reference marker gene set was taken.
-    # This is at best approximately known.
+    marker_match = _calc_overlap(
+        reference_markers, data_markers, method=method, normalize=normalize
+    )
 
     # Create a pandas dataframe with the results
     marker_groups = list(reference_markers.keys())

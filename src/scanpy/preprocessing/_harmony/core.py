@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from itertools import pairwise
 from typing import TYPE_CHECKING, NamedTuple
 
@@ -47,7 +48,7 @@ N_CHUNKS = 32
 _SOLVE_CHUNK = 8
 
 
-def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
+def harmonize(  # noqa: PLR0913
     x: NDArray[np.floating],
     batch_df: pd.DataFrame,
     batch_key: str | Sequence[str],
@@ -79,55 +80,358 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
     Returns the corrected embedding and a dict with the Harmony objective per round
     (``objectives``) and the clustering iterations per round (``iterations``).
     """
-    stabilized = flavor == "harmony2"
-    if seeding is None:
-        seeding = "afkmc2" if stabilized else "kmeans"
-    for name, value, allowed in (
-        ("flavor", flavor, ("harmony1", "harmony2")),
-        ("stop_rule", stop_rule, tuple(STOP_RULES)),
-        ("seeding", seeding, SEEDINGS),
-        ("penalty_combine", penalty_combine, ("product", "sum")),
-    ):
-        if value not in allowed:
-            msg = f"{name} must be one of {allowed}, got {value!r}."
-            raise ValueError(msg)
-    finite_pos = lambda v: np.isfinite(v) and v > 0  # noqa: E731
-    for ok, msg in (
-        (max_iter_harmony >= 1, "max_iter_harmony must be >= 1"),
-        (
-            max_iter_clustering is None or max_iter_clustering >= 1,
-            "max_iter_clustering must be >= 1",
-        ),
-        (finite_pos(sigma), f"sigma must be a finite positive number, got {sigma}."),
-        (
-            0 < block_proportion <= 1,
-            f"block_proportion must be in (0, 1], got {block_proportion}.",
-        ),
-        (
-            not stabilized or finite_pos(alpha),
-            f"alpha must be a finite positive number when flavor='harmony2', got {alpha}.",
-        ),
-        (
-            not stabilized
-            or batch_prune_threshold is None
-            or 0 <= batch_prune_threshold <= 1,
-            f"batch_prune_threshold must be in [0, 1] or None, got {batch_prune_threshold}.",
-        ),
-        (
-            stabilized or finite_pos(ridge_lambda),
-            f"ridge_lambda must be a finite positive number when flavor='harmony1', got {ridge_lambda}.",
-        ),
-        (
-            seeding_lloyd_steps >= 0,
-            f"seeding_lloyd_steps must be >= 0, got {seeding_lloyd_steps}.",
-        ),
-        (
-            seeding_cells_per_cluster is None or seeding_cells_per_cluster >= 1,
-            f"seeding_cells_per_cluster must be >= 1 or None, got {seeding_cells_per_cluster}.",
-        ),
-    ):
-        if not ok:
-            raise ValueError(msg)
+    params = _HarmonyParams(
+        flavor=flavor,
+        n_clusters=n_clusters,
+        sigma=sigma,
+        theta=theta,
+        tau=tau,
+        ridge_lambda=ridge_lambda,
+        alpha=alpha,
+        batch_prune_threshold=batch_prune_threshold,
+        block_proportion=block_proportion,
+        max_iter_harmony=max_iter_harmony,
+        max_iter_clustering=max_iter_clustering,
+        tol_harmony=tol_harmony,
+        tol_clustering=tol_clustering,
+        stop_rule=stop_rule,
+        seeding=seeding,
+        penalty_combine=penalty_combine,
+        seeding_lloyd_steps=seeding_lloyd_steps,
+        seeding_cells_per_cluster=seeding_cells_per_cluster,
+        recompute_counts=recompute_counts,
+        low_memory=low_memory,
+    )
+    x = _check_input(x)
+    rng = np.random.default_rng(rng)
+
+    codes, n_levels = _get_batch_codes(batch_df, batch_key)
+    # all-zero cells have no direction on the unit sphere: leave them out and return them unchanged
+    keep = np.any(x != 0, axis=1)
+    harmony = _Harmony(*_drop_zero_cells(x, codes, keep), n_levels, rng, params)
+    z_hat, info = harmony.run()
+    if not keep.all():
+        x_all = x.copy()
+        x_all[keep] = z_hat
+        return x_all, info
+    return z_hat, info
+
+
+@dataclass(frozen=True, kw_only=True)
+class _HarmonyParams:
+    """Validated parameters of :func:`harmonize`, see there."""
+
+    flavor: str
+    n_clusters: int | None
+    sigma: float
+    theta: float | Sequence[float]
+    tau: int
+    ridge_lambda: float
+    alpha: float
+    batch_prune_threshold: float | None
+    block_proportion: float
+    max_iter_harmony: int
+    max_iter_clustering: int | None
+    tol_harmony: float | None
+    tol_clustering: float | None
+    stop_rule: str
+    seeding: str | None
+    penalty_combine: str
+    seeding_lloyd_steps: int
+    seeding_cells_per_cluster: int | None
+    recompute_counts: bool
+    low_memory: bool
+
+    def __post_init__(self) -> None:
+        """Raise a :class:`ValueError` for the first invalid parameter."""
+        for name, value, allowed in (
+            ("flavor", self.flavor, ("harmony1", "harmony2")),
+            ("stop_rule", self.stop_rule, tuple(STOP_RULES)),
+            ("seeding", self.seeding_method, SEEDINGS),
+            ("penalty_combine", self.penalty_combine, ("product", "sum")),
+        ):
+            if value not in allowed:
+                msg = f"{name} must be one of {allowed}, got {value!r}."
+                raise ValueError(msg)
+        finite_pos = lambda v: np.isfinite(v) and v > 0  # noqa: E731
+        for ok, msg in (
+            (self.max_iter_harmony >= 1, "max_iter_harmony must be >= 1"),
+            (
+                self.max_iter_clustering is None or self.max_iter_clustering >= 1,
+                "max_iter_clustering must be >= 1",
+            ),
+            (
+                finite_pos(self.sigma),
+                f"sigma must be a finite positive number, got {self.sigma}.",
+            ),
+            (
+                0 < self.block_proportion <= 1,
+                f"block_proportion must be in (0, 1], got {self.block_proportion}.",
+            ),
+            (
+                not self.stabilized or finite_pos(self.alpha),
+                f"alpha must be a finite positive number when flavor='harmony2', got {self.alpha}.",
+            ),
+            (
+                not self.stabilized
+                or self.batch_prune_threshold is None
+                or 0 <= self.batch_prune_threshold <= 1,
+                f"batch_prune_threshold must be in [0, 1] or None, got {self.batch_prune_threshold}.",
+            ),
+            (
+                self.stabilized or finite_pos(self.ridge_lambda),
+                f"ridge_lambda must be a finite positive number when flavor='harmony1', got {self.ridge_lambda}.",
+            ),
+            (
+                self.seeding_lloyd_steps >= 0,
+                f"seeding_lloyd_steps must be >= 0, got {self.seeding_lloyd_steps}.",
+            ),
+            (
+                self.seeding_cells_per_cluster is None
+                or self.seeding_cells_per_cluster >= 1,
+                f"seeding_cells_per_cluster must be >= 1 or None, got {self.seeding_cells_per_cluster}.",
+            ),
+        ):
+            if not ok:
+                raise ValueError(msg)
+
+    @property
+    def stabilized(self) -> bool:
+        return self.flavor == "harmony2"
+
+    @property
+    def seeding_method(self) -> str:
+        if self.seeding is not None:
+            return self.seeding
+        return "afkmc2" if self.stabilized else "kmeans"
+
+    @property
+    def sum_penalties(self) -> bool:
+        return self.penalty_combine == "sum"
+
+    @property
+    def window(self) -> int:
+        """Window of the clustering convergence test."""
+        return STOP_RULES[self.stop_rule][0]
+
+    @property
+    def record_always(self) -> bool:
+        """Whether to record every round’s objective or only those where clustering converged."""
+        return STOP_RULES[self.stop_rule][1]
+
+    @property
+    def iteration_limits(self) -> tuple[int, float, float]:
+        """``max_iter_clustering``, ``tol_clustering``, and ``tol_harmony``, unset ones filled from ``_DEFAULTS``."""
+        d_iter, d_tol_c, d_tol_h = _DEFAULTS[
+            "harmony1" if self.stop_rule.startswith("paper") else self.flavor
+        ]
+        return (
+            d_iter if self.max_iter_clustering is None else self.max_iter_clustering,
+            d_tol_c if self.tol_clustering is None else self.tol_clustering,
+            d_tol_h if self.tol_harmony is None else self.tol_harmony,
+        )
+
+
+class _Harmony:
+    """State of one Harmony run on the cells that are not all-zero.
+
+    ``r`` (cells x K) holds the soft cluster assignments, ``o`` (levels x K) and ``r_sum`` (K,) the cluster
+    sizes per batch level and overall, ``e`` their expected values, ``y_t`` (d x K) the centroids,
+    and ``z_hat`` the corrected embedding.
+    """
+
+    y_t: np.ndarray
+    e: np.ndarray
+    w: np.ndarray
+
+    def __init__(
+        self,
+        x: NDArray[np.floating],
+        codes: NDArray[np.int32],
+        n_levels: NDArray[np.int32],
+        rng: np.random.Generator,
+        params: _HarmonyParams,
+    ) -> None:
+        ft = x.dtype.type
+        self.x, self.codes, self.n_levels, self.rng = x, codes, n_levels, rng
+        self.p = params
+
+        n_cells = x.shape[0]
+        n_batches = int(n_levels.sum())
+        self.plan = _correction_plan(codes, n_batches)
+        self.n_b = np.bincount(codes.ravel(), minlength=n_batches).astype(ft)
+        self.pr_b = self.n_b / ft(n_cells)
+        self.theta_b = _get_theta_array(params.theta, n_levels, x.dtype).ravel()
+        self.k = _n_clusters(params.n_clusters, n_cells)
+        if params.tau > 0:
+            self.theta_b = (
+                self.theta_b * (1 - np.exp(-self.n_b / (self.k * params.tau)) ** 2)
+            ).astype(ft)
+
+        self.z_norm = _normalize_rows_l2(x)
+        self.term = ft(-2.0 / params.sigma)
+        self.r = np.zeros((n_cells, self.k), dtype=ft)
+        self.o = np.zeros((n_batches, self.k), dtype=ft)
+        self.r_sum = np.zeros(self.k, dtype=ft)
+        self.bounds = _block_bounds(n_cells, params.block_proportion)
+        self.scatter = _use_scatter(n_batches, codes.shape[1], int(self.bounds[1]))
+        # low_memory: z_hat shares z_norm's buffer and is rebuilt once at the end
+        self.z_hat = self.z_norm if params.low_memory else np.empty_like(x)
+
+    def run(self) -> tuple[NDArray[np.floating], dict]:
+        """Alternate clustering and correction until convergence; return the corrected embedding and info."""
+        max_iter_clustering, tol_clustering, tol_harmony = self.p.iteration_limits
+        objs_harmony = [self.init_clusters()]
+        info = dict(objectives=objs_harmony, iterations=[])
+        with tqdm(
+            range(self.p.max_iter_harmony),
+            disable=settings.verbosity < Verbosity.info,
+        ) as bar:
+            for i in bar:
+                objs, done = self.cluster(
+                    max_iter=max_iter_clustering, tol=tol_clustering
+                )
+                info["iterations"].append(len(objs))
+                if done or self.p.record_always:
+                    objs_harmony.append(objs[-1])
+                self.correct()
+                if _converged(objs_harmony, tol_harmony, window=1, signed=True):
+                    log.info(f"Harmony converged in {i + 1} iterations")
+                    break
+            else:
+                log.info(
+                    f"Harmony did not converge after {self.p.max_iter_harmony} iterations."
+                )
+        return self.result(), info
+
+    def init_clusters(self) -> float:
+        """Seed the centroids and assign the cells in one un-penalised pass as a single block; return the objective."""
+        ft = self.x.dtype.type
+        n_cells, n_batches = self.x.shape[0], self.pr_b.size
+        y = _seed_centroids(
+            self.z_norm,
+            self.k,
+            self.rng,
+            seeding=self.p.seeding_method,
+            lloyd_steps=self.p.seeding_lloyd_steps,
+            cells_per_cluster=self.p.seeding_cells_per_cluster,
+        )
+        dist, ent, _, self.y_t = _cluster_pass(
+            self.z_norm,
+            np.ascontiguousarray(y.T),
+            self.r,
+            self.codes,
+            self.o,
+            self.r_sum,
+            self.pr_b,
+            np.zeros(n_batches, dtype=ft),
+            np.arange(n_cells),
+            np.array([0, n_cells]),
+            self.term,
+            self.p.stabilized,
+            N_CHUNKS,
+            _use_scatter(n_batches, self.codes.shape[1], n_cells),
+            self.p.sum_penalties,
+            True,  # noqa: FBT003
+        )
+        return self._objective(dist, ent)
+
+    def cluster(self, *, max_iter: int, tol: float) -> tuple[list[float], bool]:
+        """Iterate the block-wise clustering; return the objective per iteration and whether it converged."""
+        window = self.p.window
+        objs: list[float] = []
+        done = False
+        for it in range(max_iter):
+            perm = self.rng.permutation(self.x.shape[0])
+            # sort each block's cells so the kernel reads z_norm and r in ascending order;
+            # block membership is unchanged, only the order within a block differs
+            for lo, hi in pairwise(self.bounds):
+                perm[lo:hi].sort()
+            dist, ent, o_fresh, self.y_t = _cluster_pass(
+                self.z_norm,
+                self.y_t,
+                self.r,
+                self.codes,
+                self.o,
+                self.r_sum,
+                self.pr_b,
+                self.theta_b,
+                perm,
+                self.bounds,
+                self.term,
+                self.p.stabilized,
+                N_CHUNKS,
+                self.scatter,
+                self.p.sum_penalties,
+                # the correction recomputes the centroids after the last iteration
+                it < max_iter - 1,
+            )
+            if self.p.recompute_counts:
+                self.o[:] = o_fresh
+                self.r_sum[:] = o_fresh[: self.n_levels[0]].sum(axis=0)
+            objs.append(self._objective(dist, ent))
+            if done := _converged(objs, tol, window=window, signed=window > 1):
+                break
+        return objs, done
+
+    def _objective(self, dist: float, ent: float) -> float:
+        """Update the expected counts ``e`` and return the objective with the diversity penalty."""
+        self.e = self.pr_b[:, None] * self.r_sum[None, :]
+        diversity = _diversity(
+            self.o, self.e, self.theta_b, self.p.sigma, stabilized=self.p.stabilized
+        )
+        return dist + self.p.sigma * ent + diversity
+
+    def correct(self) -> None:
+        """Regress the batch effects out of ``x`` into ``z_hat`` and recompute the centroids on it."""
+        lam = _compute_lambda_kb(
+            self.e,
+            o=self.o,
+            n_b=self.n_b,
+            alpha=self.p.alpha,
+            threshold=self.p.batch_prune_threshold,
+            ridge_lambda=self.p.ridge_lambda,
+            dynamic_lambda=self.p.stabilized,
+        )
+        self.w = _correction_weights(self.x, self.r, self.plan, self.n_levels, lam)
+        self.y_t = _apply_correction(
+            self.x,
+            self.r,
+            self.plan.cat,
+            self.w,
+            self.z_hat,
+            self.z_norm,
+            N_CHUNKS,
+            True,  # noqa: FBT003
+        )
+
+    def result(self) -> NDArray[np.floating]:
+        """Return the corrected embedding of the cells, building it if ``low_memory``."""
+        if self.p.low_memory:
+            _apply_correction(
+                self.x,
+                self.r,
+                self.plan.cat,
+                self.w,
+                self.z_hat,
+                self.z_norm,
+                N_CHUNKS,
+                False,  # noqa: FBT003
+            )
+        return self.z_hat
+
+
+def _n_clusters(n_clusters: int | None, n_cells: int) -> int:
+    """Validate ``n_clusters`` or derive it from the number of cells."""
+    k = max(2, int(min(100, n_cells / 30))) if n_clusters is None else n_clusters
+    if not 1 <= k <= n_cells:
+        msg = f"n_clusters must be between 1 and the number of cells ({n_cells}), got {k}."
+        raise ValueError(msg)
+    return k
+
+
+def _check_input(x: NDArray[np.floating]) -> NDArray[np.floating]:
+    """Validate the embedding and return it C-contiguous."""
     x = np.ascontiguousarray(x)
     if x.dtype not in (np.float32, np.float64):
         msg = f"dtype must be float32 or float64, got {x.dtype}."
@@ -138,24 +442,16 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
     if not np.isfinite(x).all():
         msg = "Input data contains non-finite values."
         raise ValueError(msg)
-    ft = x.dtype.type
-    window, record_always = STOP_RULES[stop_rule]
-    sum_penalties = penalty_combine == "sum"
-    d_iter, d_tol_c, d_tol_h = _DEFAULTS[
-        "harmony1" if stop_rule.startswith("paper") else flavor
-    ]
-    max_iter_clustering = d_iter if max_iter_clustering is None else max_iter_clustering
-    tol_clustering = d_tol_c if tol_clustering is None else tol_clustering
-    tol_harmony = d_tol_h if tol_harmony is None else tol_harmony
-    rng = np.random.default_rng(rng)
-    info = dict(objectives=[], iterations=[])
+    return x
 
-    codes, n_levels = _get_batch_codes(batch_df, batch_key)
+
+def _drop_zero_cells(
+    x: NDArray[np.floating], codes: NDArray[np.int32], keep: NDArray[np.bool]
+) -> tuple[NDArray[np.floating], NDArray[np.int32]]:
+    """Leave out the all-zero cells (not ``keep``): they have no direction on the unit sphere."""
     if codes.shape[0] != x.shape[0]:  # the kernels index codes without bounds checks
         msg = f"batch_df has {codes.shape[0]} rows but x has {x.shape[0]} cells."
         raise ValueError(msg)
-    # all-zero cells have no direction on the unit sphere: leave them out and return them unchanged
-    x_all, keep = x, np.any(x != 0, axis=1)
     if not keep.all():
         warn(
             f"{(~keep).sum()} cells have an all-zero embedding; "
@@ -163,33 +459,30 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
             UserWarning,
         )
         x, codes = np.ascontiguousarray(x[keep]), np.ascontiguousarray(codes[keep])
-    n_cells = x.shape[0]
-    if n_cells == 0:
+    if x.shape[0] == 0:
         msg = "No cell has a non-zero embedding."
         raise ValueError(msg)
-    n_batches = int(n_levels.sum())
-    plan = _correction_plan(codes, n_batches)
-    n_b = np.bincount(codes.ravel(), minlength=n_batches).astype(ft)
-    pr_b = n_b / ft(n_cells)
-    theta_b = _get_theta_array(theta, n_levels, x.dtype).ravel()
-    k = max(2, int(min(100, n_cells / 30))) if n_clusters is None else n_clusters
-    if not 1 <= k <= n_cells:
-        msg = f"n_clusters must be between 1 and the number of cells ({n_cells}), got {k}."
-        raise ValueError(msg)
-    if tau > 0:
-        theta_b = (theta_b * (1 - np.exp(-n_b / (k * tau)) ** 2)).astype(ft)
+    return x, codes
 
-    z_norm = _normalize_rows_l2(x)
+
+def _seed_centroids(
+    z_norm: np.ndarray,
+    k: int,
+    rng: np.random.Generator,
+    *,
+    seeding: str,
+    lloyd_steps: int,
+    cells_per_cluster: int | None,
+) -> np.ndarray:
+    """Seed the centroids (k x d) by ``seeding``, optionally polished by ``lloyd_steps`` Lloyd steps."""
+    ft = z_norm.dtype.type
     # optional subsample for the parts of seeding that iterate over cells (KMeans, Lloyd polish);
     # the other seeders read all cells and ignore the cap
     z_seed = z_norm
-    uses_cap = seeding == "kmeans" or seeding_lloyd_steps > 0
-    if (
-        uses_cap
-        and seeding_cells_per_cluster is not None
-        and n_cells > seeding_cells_per_cluster * k
-    ):
-        cells = rng.choice(n_cells, seeding_cells_per_cluster * k, replace=False)
+    uses_cap = seeding == "kmeans" or lloyd_steps > 0
+    n_cells = z_norm.shape[0]
+    if uses_cap and cells_per_cluster is not None and n_cells > cells_per_cluster * k:
+        cells = rng.choice(n_cells, cells_per_cluster * k, replace=False)
         z_seed = z_norm[np.sort(cells)]
     if seeding == "kmeans":
         km = KMeans(
@@ -204,113 +497,9 @@ def harmonize(  # noqa: PLR0912, PLR0913, PLR0915
         y = _seed_afkmc2(z_norm, k, rng)
     else:
         y = _seed_paper_nearest(z_norm, k, rng)
-    if seeding_lloyd_steps:
-        y = _lloyd_spherical(z_seed, y, seeding_lloyd_steps)
-
-    # initial r: one un-penalised pass over all cells as a single block
-    term = ft(-2.0 / sigma)
-    r = np.zeros((n_cells, k), dtype=ft)
-    o = np.zeros((n_batches, k), dtype=ft)
-    r_sum = np.zeros(k, dtype=ft)
-    dist, ent, _, y_t = _cluster_pass(
-        z_norm,
-        np.ascontiguousarray(y.T),
-        r,
-        codes,
-        o,
-        r_sum,
-        pr_b,
-        np.zeros(n_batches, dtype=ft),
-        np.arange(n_cells),
-        np.array([0, n_cells]),
-        term,
-        stabilized,
-        N_CHUNKS,
-        _use_scatter(n_batches, codes.shape[1], n_cells),
-        sum_penalties,
-        True,  # noqa: FBT003
-    )
-    e = pr_b[:, None] * r_sum[None, :]
-    objs_harmony = [
-        dist + sigma * ent + _diversity(o, e, theta_b, sigma, stabilized=stabilized)
-    ]
-
-    bounds = _block_bounds(n_cells, block_proportion)
-    scatter = _use_scatter(n_batches, codes.shape[1], int(bounds[1]))
-    # low_memory: z_hat shares z_norm's buffer and is rebuilt once at the end
-    z_hat = z_norm if low_memory else np.empty_like(x)
-    with tqdm(
-        range(max_iter_harmony), disable=settings.verbosity < Verbosity.info
-    ) as bar:
-        for i in bar:
-            objs: list[float] = []
-            done = False
-            for it in range(max_iter_clustering):
-                perm = rng.permutation(n_cells)
-                # sort each block's cells so the kernel reads z_norm and r in ascending order;
-                # block membership is unchanged, only the order within a block differs
-                for lo, hi in pairwise(bounds):
-                    perm[lo:hi].sort()
-                dist, ent, o_fresh, y_t = _cluster_pass(
-                    z_norm,
-                    y_t,
-                    r,
-                    codes,
-                    o,
-                    r_sum,
-                    pr_b,
-                    theta_b,
-                    perm,
-                    bounds,
-                    term,
-                    stabilized,
-                    N_CHUNKS,
-                    scatter,
-                    sum_penalties,
-                    # the correction recomputes the centroids after the last iteration
-                    it < max_iter_clustering - 1,
-                )
-                if recompute_counts:
-                    o[:] = o_fresh
-                    r_sum[:] = o_fresh[: n_levels[0]].sum(axis=0)
-                e = pr_b[:, None] * r_sum[None, :]
-                objs.append(
-                    dist
-                    + sigma * ent
-                    + _diversity(o, e, theta_b, sigma, stabilized=stabilized)
-                )
-                if done := _converged(
-                    objs, tol_clustering, window=window, signed=window > 1
-                ):
-                    break
-            info["iterations"].append(len(objs))
-            if done or record_always:
-                objs_harmony.append(objs[-1])
-
-            lam = _compute_lambda_kb(
-                e,
-                o=o,
-                n_b=n_b,
-                alpha=alpha,
-                threshold=batch_prune_threshold,
-                ridge_lambda=ridge_lambda,
-                dynamic_lambda=stabilized,
-            )
-            w = _correction_weights(x, r, plan, n_levels, lam)
-            y_t = _apply_correction(x, r, plan.cat, w, z_hat, z_norm, N_CHUNKS, True)  # noqa: FBT003
-            if _converged(objs_harmony, tol_harmony, window=1, signed=True):
-                log.info(f"Harmony converged in {i + 1} iterations")
-                break
-        else:
-            log.info(f"Harmony did not converge after {max_iter_harmony} iterations.")
-    info["objectives"] = objs_harmony
-    if low_memory:
-        _apply_correction(x, r, plan.cat, w, z_hat, z_norm, N_CHUNKS, False)  # noqa: FBT003
-    if not keep.all():
-        x_all = x_all.copy()
-        x_all[keep] = z_hat
-        z_hat = x_all
-    return z_hat, info
+    if lloyd_steps:
+        y = _lloyd_spherical(z_seed, y, lloyd_steps)
+    return y
 
 
 def _get_batch_codes(
@@ -537,7 +726,7 @@ def _correction_weights(
     return np.ascontiguousarray(w, dtype=x.dtype)
 
 
-def _solve_correction(  # noqa: PLR0915
+def _solve_correction(
     s: np.ndarray,
     o_joint: np.ndarray,
     levels: np.ndarray,
@@ -554,79 +743,117 @@ def _solve_correction(  # noqa: PLR0915
     from cluster k (its coefficient is 0). Runs in float64, ``_SOLVE_CHUNK`` clusters at a time,
     so the dense systems stay at chunk x m x n_big.
     """
-    n_clusters, n_pc = s.shape[1:]
-    offsets = np.concatenate([[0], np.cumsum(n_levels)])
-    big = int(np.argmax(n_levels))
-    n_big = int(n_levels[big])
-    big_lv = np.arange(offsets[big], offsets[big + 1])
-    others = [c for c in range(len(n_levels)) if c != big]
-    big_of_joint = levels[:, big] - offsets[big]
-    small = np.concatenate(
-        [np.arange(offsets[c], offsets[c + 1]) for c in others]
-        + [np.empty(0, dtype=np.int64)]
-    ).astype(np.int64)
-    m = 1 + small.size  # intercept and the levels that are not eliminated
-    row_of_level = np.full(int(offsets[-1]), -1)
-    row_of_level[small] = 1 + np.arange(small.size)
-    # rows[j] = the rows of the small system that joint category j belongs to:
-    # the intercept and one level per other key
-    rows = np.concatenate(
-        [np.zeros((len(levels), 1), dtype=np.int64), row_of_level[levels[:, others]]],
-        axis=1,
-    )
-
+    layout = _SchurLayout.from_levels(levels, n_levels)
     o_all = o_joint.astype(np.float64)  # J x K
     s = s.astype(np.float64)  # L x K x d
     lam = lam.astype(np.float64)
     w = np.zeros(s.shape)
+    n_clusters = s.shape[1]
     for k0 in range(0, n_clusters, _SOLVE_CHUNK):
         ks = slice(k0, min(k0 + _SOLVE_CHUNK, n_clusters))
-        o = o_all[:, ks]  # J x c
-        c = o.shape[1]
-        kl = np.arange(c)
-        pruned = lam[:, ks] >= _SUPPRESS_PENALTY
-        lam_big, pruned_big = lam[big_lv, ks].T, pruned[big_lv].T  # c x n_big
-        lam_small, pruned_small = lam[small, ks].T, pruned[small].T  # c x small
-        row_k = kl * m + rows[:, :, None]  # J x C x c
-        o_big = _masses(kl * n_big + big_of_joint[:, None], o, (c, n_big))
-        gram = _masses(row_k[:, :, None] * m + rows[:, None, :, None], o, (c, m, m))
-        coupling = _masses(  # mass shared by a small row and a big level
-            row_k * n_big + big_of_joint[:, None, None], o, (c, m, n_big)
-        )
-        rhs_big = s[big_lv, ks].transpose(1, 0, 2)  # c x n_big x d
-        rhs = np.empty((c, m, n_pc))
-        rhs[:, 0] = rhs_big.sum(axis=1)
-        rhs[:, 1:] = s[small, ks].transpose(1, 0, 2)
-
-        diag = o_big + lam_big
-        # 0 drops the level
-        d_inv = np.where(
-            pruned_big | (diag <= 0), 0.0, 1.0 / np.where(diag > 0, diag, 1.0)
-        )
-        idx = np.arange(1, m)
-        gram[:, idx, idx] += np.where(pruned_small, 0.0, lam_small)
-        # a pruned small level: empty row and column, unit diagonal after elimination
-        kk, ss = np.nonzero(pruned_small)
-        gram[kk, ss + 1, :] = 0
-        gram[kk, :, ss + 1] = 0
-        coupling[kk, ss + 1, :] = 0
-        rhs[kk, ss + 1] = 0
-        scaled = coupling * d_inv[:, None, :]  # C D^-1, c x m x n_big
-        schur = gram - scaled @ coupling.transpose(0, 2, 1)
-        rhs -= scaled @ rhs_big
-        schur[kk, ss + 1, ss + 1] = 1
-        empty = gram[:, 0, 0] <= 1e-12  # cluster without cells: no correction
-        schur[empty] = np.eye(m)
-        # positive definite: every unpruned lambda is positive
-        w_small = np.linalg.solve(schur, rhs)  # c x m x d
-        w_big = d_inv[:, :, None] * (rhs_big - coupling.transpose(0, 2, 1) @ w_small)
-        w_small[empty] = 0
-        w_big[empty] = 0
-        w[big_lv, ks] = w_big.transpose(1, 0, 2)
-        w[small, ks] = w_small[:, 1:].transpose(
-            1, 0, 2
-        )  # the intercept is not part of the correction
+        w_big, w_small = _solve_chunk(s[:, ks], o_all[:, ks], lam[:, ks], layout)
+        w[layout.big_lv, ks] = w_big.transpose(1, 0, 2)
+        # the intercept is not part of the correction
+        w[layout.small, ks] = w_small[:, 1:].transpose(1, 0, 2)
     return w
+
+
+class _SchurLayout(NamedTuple):
+    """How :func:`_solve_correction` splits the batch levels.
+
+    The levels of the covariate with the most levels (``big_lv``) are eliminated in closed form;
+    the system that remains has a row for the intercept and one per other (``small``) level.
+    """
+
+    big_lv: np.ndarray
+    big_of_joint: np.ndarray  # each joint category's index among `big_lv`
+    small: np.ndarray
+    rows: (
+        np.ndarray
+    )  # J x C, the rows of the small system that each joint category belongs to
+
+    @classmethod
+    def from_levels(cls, levels: np.ndarray, n_levels: np.ndarray) -> _SchurLayout:
+        offsets = np.concatenate([[0], np.cumsum(n_levels)])
+        big = int(np.argmax(n_levels))
+        big_lv = np.arange(offsets[big], offsets[big + 1])
+        others = [c for c in range(len(n_levels)) if c != big]
+        big_of_joint = levels[:, big] - offsets[big]
+        small = np.concatenate(
+            [np.arange(offsets[c], offsets[c + 1]) for c in others]
+            + [np.empty(0, dtype=np.int64)]
+        ).astype(np.int64)
+        row_of_level = np.full(int(offsets[-1]), -1)
+        row_of_level[small] = 1 + np.arange(small.size)
+        # the intercept and one level per other key
+        rows = np.concatenate(
+            [
+                np.zeros((len(levels), 1), dtype=np.int64),
+                row_of_level[levels[:, others]],
+            ],
+            axis=1,
+        )
+        return cls(big_lv, big_of_joint, small, rows)
+
+    @property
+    def n_big(self) -> int:
+        return self.big_lv.size
+
+    @property
+    def m(self) -> int:
+        """Size of the small system: the intercept and the levels that are not eliminated."""
+        return 1 + self.small.size
+
+
+def _solve_chunk(
+    s: np.ndarray, o: np.ndarray, lam: np.ndarray, layout: _SchurLayout
+) -> tuple[np.ndarray, np.ndarray]:
+    """Solve the normal equations of a chunk of c clusters (see :func:`_solve_correction`).
+
+    Takes ``s`` (L x c x d), the joint masses ``o`` (J x c) and ``lam`` (L x c), all float64.
+    Returns the coefficients of the eliminated levels (c x n_big x d) and of the small system (c x m x d).
+    """
+    big_lv, big_of_joint, small, rows = layout
+    n_big, m = layout.n_big, layout.m
+    c, n_pc = o.shape[1], s.shape[2]
+    kl = np.arange(c)
+    pruned = lam >= _SUPPRESS_PENALTY
+    lam_big, pruned_big = lam[big_lv].T, pruned[big_lv].T  # c x n_big
+    lam_small, pruned_small = lam[small].T, pruned[small].T  # c x small
+    row_k = kl * m + rows[:, :, None]  # J x C x c
+    o_big = _masses(kl * n_big + big_of_joint[:, None], o, (c, n_big))
+    gram = _masses(row_k[:, :, None] * m + rows[:, None, :, None], o, (c, m, m))
+    coupling = _masses(  # mass shared by a small row and a big level
+        row_k * n_big + big_of_joint[:, None, None], o, (c, m, n_big)
+    )
+    rhs_big = s[big_lv].transpose(1, 0, 2)  # c x n_big x d
+    rhs = np.empty((c, m, n_pc))
+    rhs[:, 0] = rhs_big.sum(axis=1)
+    rhs[:, 1:] = s[small].transpose(1, 0, 2)
+
+    diag = o_big + lam_big
+    # 0 drops the level
+    d_inv = np.where(pruned_big | (diag <= 0), 0.0, 1.0 / np.where(diag > 0, diag, 1.0))
+    idx = np.arange(1, m)
+    gram[:, idx, idx] += np.where(pruned_small, 0.0, lam_small)
+    # a pruned small level: empty row and column, unit diagonal after elimination
+    kk, ss = np.nonzero(pruned_small)
+    gram[kk, ss + 1, :] = 0
+    gram[kk, :, ss + 1] = 0
+    coupling[kk, ss + 1, :] = 0
+    rhs[kk, ss + 1] = 0
+    scaled = coupling * d_inv[:, None, :]  # C D^-1, c x m x n_big
+    schur = gram - scaled @ coupling.transpose(0, 2, 1)
+    rhs -= scaled @ rhs_big
+    schur[kk, ss + 1, ss + 1] = 1
+    empty = gram[:, 0, 0] <= 1e-12  # cluster without cells: no correction
+    schur[empty] = np.eye(m)
+    # positive definite: every unpruned lambda is positive
+    w_small = np.linalg.solve(schur, rhs)  # c x m x d
+    w_big = d_inv[:, :, None] * (rhs_big - coupling.transpose(0, 2, 1) @ w_small)
+    w_small[empty] = 0
+    w_big[empty] = 0
+    return w_big, w_small
 
 
 def _masses(idx: np.ndarray, o: np.ndarray, shape: tuple[int, ...]) -> np.ndarray:

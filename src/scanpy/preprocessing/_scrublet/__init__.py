@@ -21,6 +21,8 @@ from . import pipeline
 from .core import Scrublet
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from numpy.typing import NDArray
 
     from ..._utils.random import RNGLike, SeedLike
@@ -72,7 +74,7 @@ SCRUBLET_BASES: ScrubletResult[_SetRep, _SetRep] = ScrubletResult(
 )
 @deprecated_arg("batch_key", DEPR_BATCH_KEY)
 @deprecated_copy
-def scrublet(  # noqa: PLR0913, PLR0915
+def scrublet(  # noqa: PLR0913
     adata: AnnData,
     adata_sim: AnnData | None = None,
     *,
@@ -250,48 +252,18 @@ def scrublet(  # noqa: PLR0913, PLR0915
     adata_obs.obs_names = positions
 
     def _run_scrublet(
-        ad_obs: AnnData, ad_sim: AnnData | None, *, rng: np.random.Generator
-    ):
+        ad_obs: AnnData, ad_sim: AnnData | None, rng: np.random.Generator
+    ) -> tuple[pd.DataFrame, dict[str, object]]:
         # With no adata_sim we assume the regular use case, starting with raw
         # counts and simulating doublets
         if ad_sim is None:
-            pp.filter_genes(ad_obs, min_cells=3)
-            pp.filter_cells(ad_obs, min_genes=3)
-
-            # Doublet simulation will be based on the un-normalised counts, but on the
-            # selection of genes following normalisation and variability filtering. So
-            # we need to save the raw and subset at the same time.
-
-            ad_obs.layers["raw"] = ad_obs.X.copy()
-            pp.normalize_total(ad_obs)
-
-            # HVG process needs log'd data.
-            ad_obs.layers["log1p"] = ad_obs.X.copy()
-            with own_deprecations():
-                pp.log1p(ad_obs, layer="log1p")
-                pp.highly_variable_genes(ad_obs, layer="log1p")
-                del ad_obs.layers["log1p"]
-                ad_obs = ad_obs[:, ad_obs.var["highly_variable"]].copy()
-
-                # Simulate the doublets based on the raw expressions from the
-                # normalised and filtered object.
-
-                ad_sim = scrublet_simulate_doublets(
-                    ad_obs,
-                    layer="raw",
-                    sim_doublet_ratio=sim_doublet_ratio,
-                    synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
-                    rng=rng,
-                )
-            del ad_obs.layers["raw"]
-            if log_transform:
-                pp.log1p(ad_obs)
-                pp.log1p(ad_sim)
-
-            # Now normalise simulated and observed in the same way
-
-            pp.normalize_total(ad_obs, target_sum=1e6)
-            pp.normalize_total(ad_sim, target_sum=1e6)
+            ad_obs, ad_sim = _preprocess_and_simulate(
+                ad_obs,
+                sim_doublet_ratio=sim_doublet_ratio,
+                synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
+                log_transform=log_transform,
+                rng=rng,
+            )
 
         ad_obs = _scrublet_call_doublets(
             adata_obs=ad_obs,
@@ -310,43 +282,23 @@ def scrublet(  # noqa: PLR0913, PLR0915
             verbose=verbose,
         )
 
-        return {"obs": ad_obs.obs, "uns": ad_obs.uns["scrublet"]}
+        return ad_obs.obs, ad_obs.uns["scrublet"]
 
     batch = _ref_arg(batch, batch_key, name="batch", legacy_name="batch_key")
-    if batch is not None:
+    if batch is None:
+        scrubbed_obs, uns = _run_scrublet(adata_obs, adata_sim, rng)
+    else:
         try:
             batch_info = np.asarray(_get_vec(adata, batch, dim="obs", compat=True))
         except KeyError as e:
             msg = f"Could not find `batch` ({batch!r}) in the input AnnData object."
             raise ValueError(msg) from e
-
-        # Run Scrublet independently on batches and return just the
-        # scrublet-relevant parts of the objects to add to the input object
-        batches = np.unique(batch_info)
-        # spawn sub-rngs so this can maybe be parallelized without changing random number generation
-        sub_rngs = rng.spawn(len(batches))
-        scrubbed = [
-            _run_scrublet(
-                adata_obs[batch_info == batch].copy(),
-                adata_sim,
-                rng=sub_rng,
-            )
-            for batch, sub_rng in zip(batches, sub_rngs, strict=True)
-        ]
-        scrubbed_obs = pd.concat([scrub["obs"] for scrub in scrubbed])
+        scrubbed_obs, batches_uns = _scrublet_batched(
+            _run_scrublet, adata_obs, adata_sim, batch_info, rng=rng
+        )
         # Save the .uns from each batch separately, and record that we’ve done
         # batched analysis, so e.g. the plotting function knows what to do.
-        uns = dict(
-            batches=dict(
-                zip(batches, [scrub["uns"] for scrub in scrubbed], strict=True)
-            ),
-            batched_by=_ref_to_uns(batch, batch_info),
-        )
-
-    else:
-        scrubbed = _run_scrublet(adata_obs, adata_sim, rng=rng)
-        scrubbed_obs = scrubbed["obs"]
-        uns = scrubbed["uns"]
+        uns = dict(batches=batches_uns, batched_by=_ref_to_uns(batch, batch_info))
 
     # Copy outcomes to input object from our processed version
     scrubbed_obs = scrubbed_obs.reindex(positions)
@@ -361,6 +313,84 @@ def scrublet(  # noqa: PLR0913, PLR0915
     _write_dests(adata, vals, dests)
     adata.uns[uns_key] = uns
     return None
+
+
+def _scrublet_batched(
+    run: Callable[
+        [AnnData, AnnData | None, np.random.Generator],
+        tuple[pd.DataFrame, dict[str, object]],
+    ],
+    adata_obs: AnnData,
+    adata_sim: AnnData | None,
+    batch_info: np.ndarray,
+    *,
+    rng: np.random.Generator,
+) -> tuple[pd.DataFrame, dict[str, dict[str, object]]]:
+    """Run Scrublet independently on the batches of `adata_obs`.
+
+    Returns just the scrublet-relevant parts of the results: the cells’ annotations and each batch’s `.uns`.
+    """
+    batches = np.unique(batch_info)
+    # spawn sub-rngs so this can maybe be parallelized without changing random number generation
+    sub_rngs = rng.spawn(len(batches))
+    scrubbed = [
+        run(adata_obs[batch_info == batch].copy(), adata_sim, sub_rng)
+        for batch, sub_rng in zip(batches, sub_rngs, strict=True)
+    ]
+    scrubbed_obs = pd.concat([obs for obs, _ in scrubbed])
+    return scrubbed_obs, dict(zip(batches, [uns for _, uns in scrubbed], strict=True))
+
+
+def _preprocess_and_simulate(
+    ad_obs: AnnData,
+    *,
+    sim_doublet_ratio: float,
+    synthetic_doublet_umi_subsampling: float,
+    log_transform: bool,
+    rng: np.random.Generator,
+) -> tuple[AnnData, AnnData]:
+    """Filter and normalize raw counts, select HVGs, and simulate doublets from them.
+
+    Returns the observed and simulated data, normalized in the same way.
+    """
+    pp.filter_genes(ad_obs, min_cells=3)
+    pp.filter_cells(ad_obs, min_genes=3)
+
+    # Doublet simulation will be based on the un-normalised counts, but on the
+    # selection of genes following normalisation and variability filtering. So
+    # we need to save the raw and subset at the same time.
+
+    ad_obs.layers["raw"] = ad_obs.X.copy()
+    pp.normalize_total(ad_obs)
+
+    # HVG process needs log'd data.
+    ad_obs.layers["log1p"] = ad_obs.X.copy()
+    with own_deprecations():
+        pp.log1p(ad_obs, layer="log1p")
+        pp.highly_variable_genes(ad_obs, layer="log1p")
+        del ad_obs.layers["log1p"]
+        ad_obs = ad_obs[:, ad_obs.var["highly_variable"]].copy()
+
+        # Simulate the doublets based on the raw expressions from the
+        # normalised and filtered object.
+
+        ad_sim = scrublet_simulate_doublets(
+            ad_obs,
+            layer="raw",
+            sim_doublet_ratio=sim_doublet_ratio,
+            synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
+            rng=rng,
+        )
+    del ad_obs.layers["raw"]
+    if log_transform:
+        pp.log1p(ad_obs)
+        pp.log1p(ad_sim)
+
+    # Now normalise simulated and observed in the same way
+
+    pp.normalize_total(ad_obs, target_sum=1e6)
+    pp.normalize_total(ad_sim, target_sum=1e6)
+    return ad_obs, ad_sim
 
 
 @_accepts_legacy_random_state(0)

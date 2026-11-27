@@ -664,7 +664,7 @@ def _read_str_tsv(path: Path) -> pd.DataFrame:
 # -------------------------------------------------------------------------------
 
 
-def _read(  # noqa: PLR0912, PLR0915
+def _read(
     filename: Path,
     *,
     backed: Literal["r", "r+"] | None,
@@ -681,22 +681,11 @@ def _read(  # noqa: PLR0912, PLR0915
     if ext is not None and ext not in avail_exts:
         msg = f"Please provide one of the available extensions.\n{avail_exts}"
         raise ValueError(msg)
-    else:
-        ext = is_valid_filename(filename, return_ext=True, ext=ext)
+    ext = is_valid_filename(filename, return_ext=True, ext=ext)
     if backup_url is not None:
         download(backup_url, filename)
-    # read hdf5 files
-    if ext in {"h5", "h5ad"}:
-        if sheet is None:
-            return read_h5ad(filename, backed=backed)
-        else:
-            logg.debug(f"reading sheet {sheet} from file {filename}")
-            return read_hdf(filename, sheet)
-    if ext == "zarr":
-        if sheet is not None:
-            msg = "Cannot read a specific sheet from a zarr file."
-            raise TypeError(msg)
-        return read_zarr(filename)
+    if ext in {"h5", "h5ad", "zarr"}:
+        return _read_h5_zarr(filename, ext, backed=backed, sheet=sheet)
     # read other file types
     path_cache: Path = settings.cachedir / slugify(filename).replace(f".{ext}", ".h5ad")
     if path_cache.suffix in {".gz", ".bz2"}:
@@ -715,36 +704,14 @@ def _read(  # noqa: PLR0912, PLR0915
             "which enables much faster reading from a cache file."
         )
     # do the actual reading
-    if ext in {"xlsx", "xls"}:
-        if sheet is None:
-            msg = "Provide `sheet` parameter when reading '.xlsx' files."
-            raise ValueError(msg)
-        else:
-            adata = read_excel(filename, sheet)
-    elif ext in {"mtx", "mtx.gz"}:
-        kwargs.setdefault("sparse_format", "csr")
-        kwargs.setdefault("dtype", "float32")
-        adata = _read_mtx(filename, **kwargs)
-    elif ext == "csv":
-        if delimiter is None:
-            delimiter = ","
-        adata = read_csv(
-            filename, first_column_names=first_column_names, delimiter=delimiter
-        )
-    elif ext in {"txt", "tab", "data", "tsv"}:
-        if ext == "data":
-            logg.hint(
-                "... assuming '.data' means tab or white-space separated text file"
-            )
-            logg.hint("change this by passing `ext` to sc.read")
-        adata = read_text(filename, delimiter, first_column_names=first_column_names)
-    elif ext == "soft.gz":
-        adata = _read_softgz(filename)
-    elif ext == "loom":
-        adata = read_loom(filename=filename, **kwargs)
-    else:
-        msg = f"Unknown extension {ext}."
-        raise ValueError(msg)
+    adata = _read_by_ext(
+        filename,
+        ext,
+        sheet=sheet,
+        delimiter=delimiter,
+        first_column_names=first_column_names,
+        **kwargs,
+    )
     if cache:
         logg.info(
             f"... writing an {settings.file_format_data} "
@@ -757,6 +724,65 @@ def _read(  # noqa: PLR0912, PLR0915
         # write for faster reading when calling the next time
         adata.write(path_cache, compression=cache_compression)
     return adata
+
+
+def _read_h5_zarr(
+    filename: Path,
+    ext: Literal["h5", "h5ad", "zarr"],
+    *,
+    backed: Literal["r", "r+"] | None,
+    sheet: str | None,
+) -> AnnData:
+    """Read hdf5 and zarr files, which need no cache."""
+    if ext == "zarr":
+        if sheet is not None:
+            msg = "Cannot read a specific sheet from a zarr file."
+            raise TypeError(msg)
+        return read_zarr(filename)
+    if sheet is None:
+        return read_h5ad(filename, backed=backed)
+    logg.debug(f"reading sheet {sheet} from file {filename}")
+    return read_hdf(filename, sheet)
+
+
+def _read_by_ext(
+    filename: Path,
+    ext: str,
+    *,
+    sheet: str | None,
+    delimiter: str | None,
+    first_column_names: bool,
+    **kwargs,
+) -> AnnData:
+    """Read a non-HDF5/zarr file based on its extension."""
+    if ext in {"xlsx", "xls"}:
+        if sheet is None:
+            msg = "Provide `sheet` parameter when reading '.xlsx' files."
+            raise ValueError(msg)
+        return read_excel(filename, sheet)
+    if ext in {"mtx", "mtx.gz"}:
+        kwargs.setdefault("sparse_format", "csr")
+        kwargs.setdefault("dtype", "float32")
+        return _read_mtx(filename, **kwargs)
+    if ext == "csv":
+        if delimiter is None:
+            delimiter = ","
+        return read_csv(
+            filename, first_column_names=first_column_names, delimiter=delimiter
+        )
+    if ext in {"txt", "tab", "data", "tsv"}:
+        if ext == "data":
+            logg.hint(
+                "... assuming '.data' means tab or white-space separated text file"
+            )
+            logg.hint("change this by passing `ext` to sc.read")
+        return read_text(filename, delimiter, first_column_names=first_column_names)
+    if ext == "soft.gz":
+        return _read_softgz(filename)
+    if ext == "loom":
+        return read_loom(filename=filename, **kwargs)
+    msg = f"Unknown extension {ext}."
+    raise ValueError(msg)
 
 
 def _read_softgz(filename: str | bytes | Path | IO[bytes]) -> AnnData:

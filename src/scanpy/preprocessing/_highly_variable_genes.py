@@ -34,12 +34,34 @@ from ._simple import filter_genes
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Concatenate, Literal, Unpack
+    from typing import Concatenate, Literal, Protocol, Unpack
 
     from numpy.typing import NDArray
 
     from .._settings.presets import HVGFlavor
     from ..get._types import AdRef, LayerAcc
+
+    # `skmisc.loess` ships no type hints, these cover the parts we use
+
+    class _LoessOutputs(Protocol):
+        @property
+        def fitted_values(self) -> NDArray[np.float64]: ...
+
+    class _LoessFit(Protocol):
+        @property
+        def outputs(self) -> _LoessOutputs: ...
+        def fit(self) -> None: ...
+
+    class _Loess(Protocol):
+        def __call__(
+            self,
+            x: NDArray[np.floating],
+            y: NDArray[np.floating],
+            /,
+            *,
+            span: float,
+            degree: int,
+        ) -> _LoessFit: ...
 
 
 @singledispatch
@@ -135,7 +157,7 @@ def _sum_and_sum_squares_clipped(
     return squared_batch_counts_sum, batch_counts_sum
 
 
-def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
+def _highly_variable_genes_seurat_v3(
     adata: AnnData,
     *,
     flavor: Literal["seurat_v3", "seurat_v3_paper"] = "seurat_v3",
@@ -191,74 +213,25 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         if batch_key is None
         else pd.Categorical(_get_vec(adata, batch_key, dim="obs", compat=True))
     )
-    norm_gene_vars = []
-
-    adata_agg = AnnData(
-        X=data,
-        var=pd.DataFrame(index=adata.var_names),
-        obs=pd.DataFrame(
-            index=adata.obs_names, data={"__hvg_v3_batch_info__": batch_info}
-        ),
+    aggregated_mean_var = _seurat_v3_batch_mean_var(
+        adata, data, df, batch_info, aggregate_batches=batch_key is not None
     )
-    if batch_key is not None:
-        aggregated_mean_var = aggregate(
-            adata_agg,
-            by=dim_acc("__hvg_v3_batch_info__", dim="obs"),
-            func=["mean", "var"],
-        )
-        aggregated_mean_var.layers["mean"], aggregated_mean_var.layers["var"] = (
-            materialize_as_ndarray(
-                tuple(aggregated_mean_var.layers[l] for l in ["mean", "var"])
-            )
-        )
-    else:
-        aggregated_mean_var = AnnData(
-            var=pd.DataFrame(index=adata.var_names),
-            obs=pd.DataFrame(
-                index=np.array(["one"]), data={"__hvg_v3_batch_info__": np.array([0])}
-            ),
-            layers={
-                "mean": df["means"].to_numpy().reshape((1, -1)),
-                "var": df["variances"].to_numpy().reshape((1, -1)),
-            },
-        )
     batch_info = batch_info.to_numpy()
+    norm_gene_vars = []
     for b in np.unique(batch_info):
-        data_batch = data[batch_info == b]
         mean, var = (
-            aggregated_mean_var[
-                aggregated_mean_var.obs["__hvg_v3_batch_info__"] == b
-            ].layers[l]
+            _dense_vec(
+                aggregated_mean_var[
+                    aggregated_mean_var.obs["__hvg_v3_batch_info__"] == b
+                ].layers[l]
+            )
             for l in ["mean", "var"]
         )
-        if isinstance(mean, CSBase):
-            mean = mean.toarray()
-        mean = mean.ravel()
-        if isinstance(var, CSBase):
-            var = var.toarray()
-        var = var.ravel()
-        estimat_var = np.zeros(data.shape[1], dtype=np.float64)
-        if (not_const := var > 0).any():
-            y = np.log10(var[not_const])
-            x = np.log10(mean[not_const])
-            model = loess(x, y, span=span, degree=2)
-            model.fit()
-            estimat_var[not_const] = model.outputs.fitted_values
-        reg_std = np.sqrt(10**estimat_var)
-
-        # clip large values as in Seurat
-        n_obs = data_batch.shape[0]
-        clip_val = reg_std * np.sqrt(n_obs) + mean
-        squared_batch_counts_sum, batch_counts_sum = clip_square_sum(
-            data_batch, clip_val
+        norm_gene_vars.append(
+            _seurat_v3_norm_gene_var(
+                data[batch_info == b], mean, var, span=span, loess=loess
+            )
         )
-
-        norm_gene_var = (1 / ((n_obs - 1) * np.square(reg_std))) * (
-            (n_obs * np.square(mean))
-            + squared_batch_counts_sum
-            - 2 * batch_counts_sum * mean
-        )
-        norm_gene_vars.append(norm_gene_var)
     if any(isinstance(e, DaskArray) for e in norm_gene_vars):
         import dask.array as da
 
@@ -266,17 +239,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
 
     norm_gene_vars = [ngv.reshape(1, -1) for ngv in norm_gene_vars]
     norm_gene_vars = np.concatenate(norm_gene_vars, axis=0)
-    # argsort twice gives ranks, small rank means most variable
-    ranked_norm_gene_vars = np.argsort(np.argsort(-norm_gene_vars, axis=1), axis=1)
-
-    # this is done in SelectIntegrationFeatures() in Seurat v3
-    ranked_norm_gene_vars = ranked_norm_gene_vars.astype(np.float32)
-    num_batches_high_var = np.sum(
-        (ranked_norm_gene_vars < n_top_genes).astype(int), axis=0
-    )
-    ranked_norm_gene_vars[ranked_norm_gene_vars >= n_top_genes] = np.nan
-    ma_ranked = np.ma.masked_invalid(ranked_norm_gene_vars)
-    median_ranked = np.ma.median(ma_ranked, axis=0).filled(np.nan)
+    num_batches_high_var, median_ranked = _seurat_v3_ranks(norm_gene_vars, n_top_genes)
 
     df = df.assign(
         gene_name=df.index,
@@ -284,24 +247,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         highly_variable_rank=median_ranked,
         variances_norm=np.mean(norm_gene_vars, axis=0),
     )
-    if flavor == "seurat_v3":
-        sort_cols = ["highly_variable_rank", "highly_variable_nbatches"]
-        sort_ascending = [True, False]
-    elif flavor == "seurat_v3_paper":
-        sort_cols = ["highly_variable_nbatches", "highly_variable_rank"]
-        sort_ascending = [False, True]
-    else:
-        msg = f"Did not recognize flavor {flavor}"
-        raise ValueError(msg)
-    sorted_index = (
-        df[sort_cols]
-        .reset_index(drop=True)
-        .sort_values(sort_cols, ascending=sort_ascending, na_position="last")
-        .index
-    )
-    highly_variable = np.zeros(len(df), dtype=bool)
-    highly_variable[sorted_index[: int(n_top_genes)]] = True
-    df["highly_variable"] = highly_variable
+    df["highly_variable"] = _seurat_v3_select(df, flavor, n_top_genes)
 
     if out is not True:
         cols = ["highly_variable", "highly_variable_rank", "means", "variances"]
@@ -331,6 +277,127 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
 
         return df
     return None
+
+
+def _seurat_v3_batch_mean_var(
+    adata: AnnData,
+    data: np.ndarray | CSBase | DaskArray,
+    df: pd.DataFrame,
+    batch_info: pd.Categorical,
+    *,
+    aggregate_batches: bool,
+) -> AnnData:
+    """Per-batch means and variances as layers ``mean`` and ``var``, one obs per batch."""
+    if not aggregate_batches:
+        return AnnData(
+            var=pd.DataFrame(index=adata.var_names),
+            obs=pd.DataFrame(
+                index=np.array(["one"]), data={"__hvg_v3_batch_info__": np.array([0])}
+            ),
+            layers={
+                "mean": df["means"].to_numpy().reshape((1, -1)),
+                "var": df["variances"].to_numpy().reshape((1, -1)),
+            },
+        )
+    adata_agg = AnnData(
+        X=data,
+        var=pd.DataFrame(index=adata.var_names),
+        obs=pd.DataFrame(
+            index=adata.obs_names, data={"__hvg_v3_batch_info__": batch_info}
+        ),
+    )
+    aggregated_mean_var = aggregate(
+        adata_agg,
+        by=dim_acc("__hvg_v3_batch_info__", dim="obs"),
+        func=["mean", "var"],
+    )
+    aggregated_mean_var.layers["mean"], aggregated_mean_var.layers["var"] = (
+        materialize_as_ndarray(
+            tuple(aggregated_mean_var.layers[l] for l in ["mean", "var"])
+        )
+    )
+    return aggregated_mean_var
+
+
+def _dense_vec(x: np.ndarray | CSBase) -> np.ndarray:
+    """Flatten a (possibly sparse) single-row matrix to a dense vector."""
+    if isinstance(x, CSBase):
+        x = x.toarray()
+    return x.ravel()
+
+
+def _seurat_v3_norm_gene_var(
+    data_batch: np.ndarray | CSBase | DaskArray,
+    mean: np.ndarray,
+    var: np.ndarray,
+    *,
+    span: float,
+    loess: _Loess,
+) -> np.ndarray | DaskArray:
+    """Variance of the standardized and clipped counts of one batch, per gene."""
+    estimat_var = np.zeros(data_batch.shape[1], dtype=np.float64)
+    if (not_const := var > 0).any():
+        y = np.log10(var[not_const])
+        x = np.log10(mean[not_const])
+        model = loess(x, y, span=span, degree=2)
+        model.fit()
+        estimat_var[not_const] = model.outputs.fitted_values
+    reg_std = np.sqrt(10**estimat_var)
+
+    # clip large values as in Seurat
+    n_obs = data_batch.shape[0]
+    clip_val = reg_std * np.sqrt(n_obs) + mean
+    squared_batch_counts_sum, batch_counts_sum = clip_square_sum(data_batch, clip_val)
+
+    return (1 / ((n_obs - 1) * np.square(reg_std))) * (
+        (n_obs * np.square(mean))
+        + squared_batch_counts_sum
+        - 2 * batch_counts_sum * mean
+    )
+
+
+def _seurat_v3_ranks(
+    norm_gene_vars: np.ndarray, n_top_genes: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """Per gene, the number of batches it is among the top genes in, and its median rank over those."""
+    # argsort twice gives ranks, small rank means most variable
+    ranked_norm_gene_vars = np.argsort(np.argsort(-norm_gene_vars, axis=1), axis=1)
+
+    # this is done in SelectIntegrationFeatures() in Seurat v3
+    ranked_norm_gene_vars = ranked_norm_gene_vars.astype(np.float32)
+    num_batches_high_var = np.sum(
+        (ranked_norm_gene_vars < n_top_genes).astype(int), axis=0
+    )
+    ranked_norm_gene_vars[ranked_norm_gene_vars >= n_top_genes] = np.nan
+    ma_ranked = np.ma.masked_invalid(ranked_norm_gene_vars)
+    median_ranked = np.ma.median(ma_ranked, axis=0).filled(np.nan)
+    return num_batches_high_var, median_ranked
+
+
+def _seurat_v3_select(
+    df: pd.DataFrame,
+    flavor: Literal["seurat_v3", "seurat_v3_paper"],
+    n_top_genes: int,
+) -> NDArray[np.bool]:
+    """Mask of the top genes by rank and number of batches, prioritized as ``flavor`` says."""
+    if flavor == "seurat_v3":
+        sort_cols = ["highly_variable_rank", "highly_variable_nbatches"]
+        sort_ascending = [True, False]
+    elif flavor == "seurat_v3_paper":
+        sort_cols = ["highly_variable_nbatches", "highly_variable_rank"]
+        sort_ascending = [False, True]
+    else:
+        msg = f"Did not recognize flavor {flavor}"
+        raise ValueError(msg)
+    sorted_index = (
+        df[sort_cols]
+        .reset_index(drop=True)
+        .sort_values(sort_cols, ascending=sort_ascending, na_position="last")
+        .index
+    )
+    highly_variable = np.zeros(len(df), dtype=bool)
+    highly_variable[sorted_index[: int(n_top_genes)]] = True
+    return highly_variable
 
 
 def _write_hvg(adata: AnnData, res: pd.DataFrame, *, uns: dict[str, object]) -> None:

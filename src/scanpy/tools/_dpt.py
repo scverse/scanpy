@@ -426,7 +426,7 @@ class DPT(Neighbors):
         self.segs_adjacency = self.segs_adjacency.tocsr()
         self.segs_connects = self.segs_connects.tocsr()
 
-    def select_segment(self, segs, segs_tips, segs_undecided) -> tuple[int, int]:  # noqa: PLR0912
+    def select_segment(self, segs, segs_tips, segs_undecided) -> tuple[int, int]:
         """Out of a list of line segments, choose segment that has the most distant second data point.
 
         Assume the distance matrix Ddiff is sorted according to seg_idcs.
@@ -451,29 +451,11 @@ class DPT(Neighbors):
                 d_seg = self.distances_dpt[np.ix_(seg, seg)]
             else:
                 d_seg = self.distances_dpt.restrict(seg)
-            third_maximizer = None
-            if segs_undecided[iseg]:
-                # check that none of our tips "connects" with a tip of the
-                # other segments
-                for jseg in range(len(segs)):
-                    if jseg != iseg:
-                        # take the inner tip, the "second tip" of the segment
-                        for itip in range(2):
-                            if (
-                                self.distances_dpt[
-                                    segs_tips[jseg][1], segs_tips[iseg][itip]
-                                ]
-                                < 0.5
-                                * self.distances_dpt[
-                                    segs_tips[iseg][~itip], segs_tips[iseg][itip]
-                                ]
-                            ):
-                                # logg.debug(
-                                #     '    group', iseg, 'with tip', segs_tips[iseg][itip],
-                                #     'connects with', jseg, 'with tip', segs_tips[jseg][1],
-                                # )
-                                # logg.debug('    do not use the tip for "triangulation"')
-                                third_maximizer = itip
+            third_maximizer = (
+                self._find_third_maximizer(segs, segs_tips, iseg)
+                if segs_undecided[iseg]
+                else None
+            )
             # map the global position to the position within the segment
             tips = [np.where(allindices[seg] == tip)[0][0] for tip in segs_tips[iseg]]
             # find the third point on the segment that has maximal
@@ -514,6 +496,30 @@ class DPT(Neighbors):
             return -1, None
         tips3 = scores_tips[iseg, 1:].astype(int)
         return iseg, tips3
+
+    def _find_third_maximizer(self, segs, segs_tips, iseg: int) -> int | None:
+        """Find the tip of segment `iseg` that "connects" with a tip of another segment."""
+        third_maximizer = None
+        # check that none of our tips "connects" with a tip of the
+        # other segments
+        for jseg in range(len(segs)):
+            if jseg != iseg:
+                # take the inner tip, the "second tip" of the segment
+                for itip in range(2):
+                    if (
+                        self.distances_dpt[segs_tips[jseg][1], segs_tips[iseg][itip]]
+                        < 0.5
+                        * self.distances_dpt[
+                            segs_tips[iseg][~itip], segs_tips[iseg][itip]
+                        ]
+                    ):
+                        # logg.debug(
+                        #     '    group', iseg, 'with tip', segs_tips[iseg][itip],
+                        #     'connects with', jseg, 'with tip', segs_tips[jseg][1],
+                        # )
+                        # logg.debug('    do not use the tip for "triangulation"')
+                        third_maximizer = itip
+        return third_maximizer
 
     def postprocess_segments(self):
         """Convert the format of the segment class members."""

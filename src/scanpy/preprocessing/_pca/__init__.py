@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from ..._utils.random import RNGLike, SeedLike
     from ...get._out import OutKind
     from ...get._types import Mask, MultiAcc, RepAcc, _SetRep
+    from ._dask import PCAEighDask
 
 
 type MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
@@ -55,6 +56,16 @@ type SvdSolvPCADenseSklearn = (
 type SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
 type SvdSolvSkearn = (
     SvdSolvPCADenseSklearn | SvdSolvPCASparseSklearn | SvdSolvTruncatedSVDSklearn
+)
+
+type _Estimator = (
+    skld.PCA
+    | skld.IncrementalPCA
+    | skld.TruncatedSVD
+    | dmld.PCA
+    | dmld.IncrementalPCA
+    | dmld.TruncatedSVD
+    | PCAEighDask
 )
 
 type SvdSolvPCACustom = Literal["covariance_eigh"]
@@ -131,7 +142,7 @@ def _pca_dests(
 @deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("key_added", DEPR_KEY_ADDED)
 @deprecated_copy
-def pca(  # noqa: PLR0912, PLR0913, PLR0915
+def pca(  # noqa: PLR0913
     data: AnnData | np.ndarray | CSBase,
     n_comps: int | None = None,
     *,
@@ -292,28 +303,15 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             "reproducible across different computational platforms. For exact "
             "reproducibility, choose `svd_solver='arpack'`."
         )
-    if return_anndata := isinstance(data, AnnData):
-        if (
-            (layer is None and obsm is None and use is None)
-            and not chunked
-            and is_backed_type(data.X)
-        ):
-            msg = f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
-            raise NotImplementedError(msg)
-        dests = _out_dests(
-            out,
-            key_added,
-            dests=partial(_pca_dests, multi=multi),
-            kinds=PCA_KINDS,
-            uns=True,
-            default=Default(),
-        )
-        adata = data
-    else:
-        if out is not False:
-            msg = "Argument `out` is only valid if an AnnData object is passed."
-            raise TypeError(msg)
-        adata = AnnData(data)
+    return_anndata = isinstance(data, AnnData)
+    adata, dests = _input_adata(
+        data,
+        out=out,
+        key_added=key_added,
+        multi=multi,
+        uses_x=layer is None and obsm is None and use is None,
+        chunked=chunked,
+    )
 
     mask = _mask_arg(mask, mask_var, dim="var")
     if not isinstance(mask, Default) and mask is not None and multi:
@@ -335,137 +333,21 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         msg = f"PCA is not implemented for matrices of type {type(x)} from layers/obsm"
         raise NotImplementedError(msg)
 
-    if chunked:
-        if not zero_center or svd_solver not in {None, "arpack"}:
-            logg.debug("Ignoring zero_center, rng, svd_solver")
-
-        incremental_pca_kwargs = dict()
-        if isinstance(x, DaskArray):
-            from dask.array import zeros
-            from dask_ml.decomposition import IncrementalPCA
-
-            incremental_pca_kwargs["svd_solver"] = _handle_dask_ml_args(
-                svd_solver, IncrementalPCA
-            )
-        else:
-            from numpy import zeros
-            from sklearn.decomposition import IncrementalPCA
-
-        x_pca = zeros((x.shape[0], n_comps), x.dtype)
-
-        pca_ = IncrementalPCA(n_components=n_comps, **incremental_pca_kwargs)
-
-        for chunk, _, _ in adata_comp.chunked_X(chunk_size):
-            chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
-            pca_.partial_fit(chunk_dense)
-
-        for chunk, start, end in adata_comp.chunked_X(chunk_size):
-            chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
-            x_pca[start:end] = pca_.transform(chunk_dense)
-    elif zero_center:
-        if isinstance(x, CSBase) and svd_solver == "lobpcg":
-            msg = (
-                f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
-                "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
-            )
-            warn(msg, FutureWarning)
-            x_pca, pca_ = _pca_compat_sparse(x, n_comps, solver=svd_solver, rng=rng)
-        else:
-            if not isinstance(x, DaskArray):
-                from sklearn.decomposition import PCA
-
-                svd_solver = _handle_sklearn_args(
-                    svd_solver, PCA, sparse=isinstance(x, CSBase)
-                )
-                pca_ = PCA(
-                    n_components=n_comps,
-                    svd_solver=svd_solver,
-                    random_state=_legacy_random_state(rng),
-                )
-            elif isinstance(x._meta, CSBase) or svd_solver == "covariance_eigh":
-                from ._dask import PCAEighDask
-
-                if svd_solver not in {None, "covariance_eigh"}:
-                    msg = f"Ignoring {svd_solver=} when using a sparse dask array"
-                    warn(msg, UserWarning)
-                pca_ = PCAEighDask(n_components=n_comps)
-            else:
-                from dask_ml.decomposition import PCA
-
-                svd_solver = _handle_dask_ml_args(svd_solver, PCA)
-                pca_ = PCA(
-                    n_components=n_comps,
-                    svd_solver=svd_solver,
-                    random_state=_legacy_random_state(rng),
-                )
-            x_pca = pca_.fit_transform(x)
-    else:
-        if isinstance(x, DaskArray):
-            if isinstance(x._meta, CSBase):
-                msg = (
-                    "`zero_center=False` is not supported for sparse Dask arrays (yet). "
-                    "See <https://github.com/dask/dask-ml/issues/123>."
-                )
-                raise TypeError(msg)
-            from dask_ml.decomposition import TruncatedSVD
-
-            svd_solver = _handle_dask_ml_args(svd_solver, TruncatedSVD)
-        else:
-            from sklearn.decomposition import TruncatedSVD
-
-            svd_solver = _handle_sklearn_args(svd_solver, TruncatedSVD)
-
-        logg.debug(
-            "    without zero-centering: \n"
-            "    the explained variance does not correspond to the exact statistical definition\n"
-            "    the first component, e.g., might be heavily influenced by different means\n"
-            "    the following components often resemble the exact PCA very closely"
-        )
-        pca_ = TruncatedSVD(
-            n_components=n_comps,
-            random_state=_legacy_random_state(rng),
-            algorithm=svd_solver,
-        )
-        x_pca = pca_.fit_transform(x)
+    x_pca, pca_ = _fit(
+        adata_comp,
+        x,
+        n_comps,
+        chunked=chunked,
+        zero_center=zero_center,
+        svd_solver=svd_solver,
+        rng=rng,
+        chunk_size=chunk_size,
+    )
 
     if x_pca.dtype.descr != np.dtype(dtype).descr:
         x_pca = x_pca.astype(dtype)
 
-    if return_anndata:
-        loadings = pca_.components_.T
-        if mask_var is not None and not multi:
-            loadings = np.zeros(shape=(adata.n_vars, n_comps))
-            loadings[mask_var] = pca_.components_.T
-        vals = PcaResult(x_pca, loadings)
-        if dests is True:
-            logg.info("    finished", time=logg_start)
-            return vals
-        key, dests = dests
-        keys = _embedding_keys("pca", key)
-        adata.uns[keys.uns] = dict(
-            params=dict(
-                zero_center=zero_center,
-                mask_var=_ref_to_uns(mask_param, mask_var),
-                **(dict(layer=layer) if layer is not None else {}),
-                **(dict(obsm=obsm) if obsm is not None else {}),
-                **_use_to_uns(use, rep=False),
-            ),
-            variance=pca_.explained_variance_,
-            variance_ratio=pca_.explained_variance_ratio_,
-            **(dict(components=pca_.components_.T) if multi else {}),
-        )
-        _write_dests(adata, vals, dests)
-
-        logg.info("    finished", time=logg_start)
-        logg.debug(
-            "and added\n"
-            f"    {_dest_key(dests.embedding)!r}, the PCA coordinates (adata.obsm)\n"
-            f"    {_dest_key(dests.loadings)!r}, the loadings (adata.varm)\n"
-            f"    'pca_variance', the variance / eigenvalues (adata.uns[{keys.uns!r}])\n"
-            f"    'pca_variance_ratio', the variance ratio (adata.uns[{keys.uns!r}])"
-        )
-        return None
-    else:
+    if not return_anndata:
         logg.info("    finished", time=logg_start)
         if return_info:
             return (
@@ -474,8 +356,220 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                 pca_.explained_variance_ratio_,
                 pca_.explained_variance_,
             )
-        else:
-            return x_pca
+        return x_pca
+
+    loadings = pca_.components_.T
+    if mask_var is not None and not multi:
+        loadings = np.zeros(shape=(adata.n_vars, n_comps))
+        loadings[mask_var] = pca_.components_.T
+    vals = PcaResult(x_pca, loadings)
+    if dests is True:
+        logg.info("    finished", time=logg_start)
+        return vals
+    key, dests = dests
+    keys = _embedding_keys("pca", key)
+    adata.uns[keys.uns] = dict(
+        params=dict(
+            zero_center=zero_center,
+            mask_var=_ref_to_uns(mask_param, mask_var),
+            **(dict(layer=layer) if layer is not None else {}),
+            **(dict(obsm=obsm) if obsm is not None else {}),
+            **_use_to_uns(use, rep=False),
+        ),
+        variance=pca_.explained_variance_,
+        variance_ratio=pca_.explained_variance_ratio_,
+        **(dict(components=pca_.components_.T) if multi else {}),
+    )
+    _write_dests(adata, vals, dests)
+
+    logg.info("    finished", time=logg_start)
+    logg.debug(
+        "and added\n"
+        f"    {_dest_key(dests.embedding)!r}, the PCA coordinates (adata.obsm)\n"
+        f"    {_dest_key(dests.loadings)!r}, the loadings (adata.varm)\n"
+        f"    'pca_variance', the variance / eigenvalues (adata.uns[{keys.uns!r}])\n"
+        f"    'pca_variance_ratio', the variance ratio (adata.uns[{keys.uns!r}])"
+    )
+    return None
+
+
+def _input_adata(
+    data: AnnData | np.ndarray | CSBase,
+    *,
+    out: MultiAcc | str | PcaOut | bool,
+    key_added: str | None,
+    multi: bool,
+    uses_x: bool,
+    chunked: bool,
+) -> tuple[
+    AnnData,
+    tuple[str | Default | None, PcaResult[_SetRep | None, _SetRep | None]]
+    | Literal[True]
+    | None,
+]:
+    """Validate ``data`` and ``out``, return the AnnData to run on and the destinations (``None`` for array input)."""
+    if not isinstance(data, AnnData):
+        if out is not False:
+            msg = "Argument `out` is only valid if an AnnData object is passed."
+            raise TypeError(msg)
+        return AnnData(data), None
+    if uses_x and not chunked and is_backed_type(data.X):
+        msg = f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
+        raise NotImplementedError(msg)
+    dests = _out_dests(
+        out,
+        key_added,
+        dests=partial(_pca_dests, multi=multi),
+        kinds=PCA_KINDS,
+        uns=True,
+        default=Default(),
+    )
+    return data, dests
+
+
+def _fit(
+    adata_comp: AnnData,
+    x: np.ndarray | CSBase | DaskArray,
+    n_comps: int,
+    *,
+    chunked: bool,
+    zero_center: bool,
+    svd_solver: SvdSolver | None,
+    rng: np.random.Generator,
+    chunk_size: int,
+) -> tuple[np.ndarray | DaskArray, _Estimator]:
+    """Fit the PCA model and return the PCA representation of ``x`` and the fitted model."""
+    if chunked:
+        return _fit_chunked(
+            adata_comp,
+            x,
+            n_comps,
+            svd_solver=svd_solver,
+            zero_center=zero_center,
+            chunk_size=chunk_size,
+        )
+    if zero_center:
+        return _fit_centered(x, n_comps, svd_solver=svd_solver, rng=rng)
+    return _fit_uncentered(x, n_comps, svd_solver=svd_solver, rng=rng)
+
+
+def _fit_chunked(
+    adata_comp: AnnData,
+    x: np.ndarray | CSBase | DaskArray,
+    n_comps: int,
+    *,
+    svd_solver: SvdSolver | None,
+    zero_center: bool,
+    chunk_size: int,
+) -> tuple[np.ndarray | DaskArray, _Estimator]:
+    """Fit an incremental PCA chunk by chunk and transform ``adata_comp.X``."""
+    if not zero_center or svd_solver not in {None, "arpack"}:
+        logg.debug("Ignoring zero_center, rng, svd_solver")
+
+    incremental_pca_kwargs = dict()
+    if isinstance(x, DaskArray):
+        from dask.array import zeros
+        from dask_ml.decomposition import IncrementalPCA
+
+        incremental_pca_kwargs["svd_solver"] = _handle_dask_ml_args(
+            svd_solver, IncrementalPCA
+        )
+    else:
+        from numpy import zeros
+        from sklearn.decomposition import IncrementalPCA
+
+    x_pca = zeros((x.shape[0], n_comps), x.dtype)
+
+    pca_ = IncrementalPCA(n_components=n_comps, **incremental_pca_kwargs)
+
+    for chunk, _, _ in adata_comp.chunked_X(chunk_size):
+        chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
+        pca_.partial_fit(chunk_dense)
+
+    for chunk, start, end in adata_comp.chunked_X(chunk_size):
+        chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
+        x_pca[start:end] = pca_.transform(chunk_dense)
+    return x_pca, pca_
+
+
+def _fit_centered(
+    x: np.ndarray | CSBase | DaskArray,
+    n_comps: int,
+    *,
+    svd_solver: SvdSolver | None,
+    rng: np.random.Generator,
+) -> tuple[np.ndarray | DaskArray, _Estimator]:
+    """Fit a PCA with the implicitly or explicitly zero-centered data and transform ``x``."""
+    if isinstance(x, CSBase) and svd_solver == "lobpcg":
+        msg = (
+            f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
+            "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
+        )
+        warn(msg, FutureWarning)
+        return _pca_compat_sparse(x, n_comps, solver=svd_solver, rng=rng)
+    if not isinstance(x, DaskArray):
+        from sklearn.decomposition import PCA
+
+        svd_solver = _handle_sklearn_args(svd_solver, PCA, sparse=isinstance(x, CSBase))
+        pca_ = PCA(
+            n_components=n_comps,
+            svd_solver=svd_solver,
+            random_state=_legacy_random_state(rng),
+        )
+    elif isinstance(x._meta, CSBase) or svd_solver == "covariance_eigh":
+        from ._dask import PCAEighDask
+
+        if svd_solver not in {None, "covariance_eigh"}:
+            msg = f"Ignoring {svd_solver=} when using a sparse dask array"
+            warn(msg, UserWarning)
+        pca_ = PCAEighDask(n_components=n_comps)
+    else:
+        from dask_ml.decomposition import PCA
+
+        svd_solver = _handle_dask_ml_args(svd_solver, PCA)
+        pca_ = PCA(
+            n_components=n_comps,
+            svd_solver=svd_solver,
+            random_state=_legacy_random_state(rng),
+        )
+    return pca_.fit_transform(x), pca_
+
+
+def _fit_uncentered(
+    x: np.ndarray | CSBase | DaskArray,
+    n_comps: int,
+    *,
+    svd_solver: SvdSolver | None,
+    rng: np.random.Generator,
+) -> tuple[np.ndarray | DaskArray, _Estimator]:
+    """Fit a truncated SVD (PCA without zero-centering) and transform ``x``."""
+    if isinstance(x, DaskArray):
+        if isinstance(x._meta, CSBase):
+            msg = (
+                "`zero_center=False` is not supported for sparse Dask arrays (yet). "
+                "See <https://github.com/dask/dask-ml/issues/123>."
+            )
+            raise TypeError(msg)
+        from dask_ml.decomposition import TruncatedSVD
+
+        svd_solver = _handle_dask_ml_args(svd_solver, TruncatedSVD)
+    else:
+        from sklearn.decomposition import TruncatedSVD
+
+        svd_solver = _handle_sklearn_args(svd_solver, TruncatedSVD)
+
+    logg.debug(
+        "    without zero-centering: \n"
+        "    the explained variance does not correspond to the exact statistical definition\n"
+        "    the first component, e.g., might be heavily influenced by different means\n"
+        "    the following components often resemble the exact PCA very closely"
+    )
+    pca_ = TruncatedSVD(
+        n_components=n_comps,
+        random_state=_legacy_random_state(rng),
+        algorithm=svd_solver,
+    )
+    return pca_.fit_transform(x), pca_
 
 
 @overload
