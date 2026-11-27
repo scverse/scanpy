@@ -56,6 +56,7 @@ if TYPE_CHECKING:
     from numbers import Number
     from typing import Literal, Self
 
+    import pandas as pd
     from numpy.typing import NDArray
 
     from .._utils.random import RNGLike, SeedLike
@@ -618,6 +619,65 @@ class _NormalizedRegressors:
         return get_resid(data, self.regressors, coeff)
 
 
+def _regress_out_categorical(
+    x: np.ndarray | CSBase, covariate: pd.Series, *, n_keys: int
+) -> NDArray[np.float64]:
+    """Regress on a single categorical variable: subtract each gene's per-category means."""
+    if n_keys > 1:
+        msg = (
+            "If providing categorical variable, "
+            "only a single one is allowed. For this one "
+            "we regress on the mean for each category."
+        )
+        raise ValueError(msg)
+    logg.debug("... regressing on per-gene means within categories")
+    cat_array = covariate.cat.codes.to_numpy()
+    if n_missing := int((cat_array < 0).sum()):
+        msg = (
+            f"Categorical covariate {covariate.name!r} has missing values in "
+            f"{n_missing} cells. Drop those cells or give them a category."
+        )
+        raise ValueError(msg)
+    x, res = _dense_f64(x)
+    # regressing a gene on `[1, its per-category mean]` leaves exactly
+    # its deviations from that mean
+    _subtract_category_means(res, cat_array, len(covariate.cat.categories))
+    _keep_constant_genes(res, x)
+    return res
+
+
+def _regress_out_ordinal(
+    x: np.ndarray | CSBase, covariates: pd.DataFrame
+) -> NDArray[np.floating]:
+    """Regress on one or several ordinal variables (and an intercept) by linear least squares."""
+    # add column of ones at index 0 (first column)
+    covariates.insert(0, "ones", 1.0)
+    normalized = _NormalizedRegressors(covariates.to_numpy())
+    # non-singular matrix → shortcut
+    if np.linalg.det(normalized.gram) != 0:
+        return normalized.regress_out(x)
+    # singular: least squares for all genes at once
+    x, res = _dense_f64(x)
+    # `lstsq` handles the singular design; the residuals are unique
+    coeff = np.linalg.lstsq(normalized.regressors, res, rcond=None)[0]
+    res -= normalized.regressors @ coeff
+    _keep_constant_genes(res, x)
+    return res
+
+
+def _dense_f64(x: np.ndarray | CSBase) -> tuple[np.ndarray, NDArray[np.float64]]:
+    """Densify `x` and return it with a float64 copy for the residuals."""
+    x = to_dense(x, order="F") if isinstance(x, CSBase) else x
+    # float64, as the per-gene GLM returned; one gene per column for the kernel
+    return x, np.array(x, dtype=np.float64, order="F")
+
+
+def _keep_constant_genes(res: NDArray[np.float64], x: np.ndarray) -> None:
+    """Restore constant genes: the per-gene GLM skipped them, so they keep their values."""
+    const = (x == x[0]).all(axis=0)
+    res[:, const] = x[:, const]
+
+
 @_doc_params(
     use=doc_use("Which matrix to regress on.", legacy=("layer",)),
     out=doc_out(),
@@ -626,7 +686,7 @@ class _NormalizedRegressors:
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
 @deprecated_arg("keys", Deprecation("1.13.0", "Use `covariates` instead."))
 @deprecated_copy
-def regress_out(  # noqa: PLR0912
+def regress_out(
     adata: AnnData,
     covariates: AdRef | str | Sequence[AdRef | str] | None = None,
     *,
@@ -698,56 +758,48 @@ def regress_out(  # noqa: PLR0912
     if isinstance(x, CSBase):
         logg.info("    sparse input is densified and may lead to high memory use")
 
-    # regress on a single categorical variable
-    variable_is_categorical = False
-    if keys and isinstance((first := covariates.iloc[:, 0]).dtype, CategoricalDtype):
-        if len(keys) > 1:
-            msg = (
-                "If providing categorical variable, "
-                "only a single one is allowed. For this one "
-                "we regress on the mean for each category."
-            )
-            raise ValueError(msg)
-        logg.debug("... regressing on per-gene means within categories")
-        cat_array = first.cat.codes.to_numpy()
-        if n_missing := int((cat_array < 0).sum()):
-            msg = (
-                f"Categorical covariate {first.name!r} has missing values in "
-                f"{n_missing} cells. Drop those cells or give them a category."
-            )
-            raise ValueError(msg)
-        n_categories = len(first.cat.categories)
-        variable_is_categorical = True
-    # regress on one or several ordinal variables
-    else:
-        # add column of ones at index 0 (first column)
-        covariates.insert(0, "ones", 1.0)
-        regressors = covariates.to_numpy()
-        normalized = _NormalizedRegressors(regressors)
-
     with _numba_thread_limit(settings.n_jobs if n_jobs is None else n_jobs):
-        # non-categorical regressors & non-singular matrix → shortcut
-        if not variable_is_categorical and np.linalg.det(normalized.gram) != 0:
-            res = normalized.regress_out(x)
-        else:  # categorical or singular: least squares for all genes at once
-            x = to_dense(x, order="F") if isinstance(x, CSBase) else x
-            # float64, as the per-gene GLM returned; one gene per column for the kernel
-            res = np.array(x, dtype=np.float64, order="F")
-            if variable_is_categorical:
-                # regressing a gene on `[1, its per-category mean]` leaves exactly
-                # its deviations from that mean
-                _subtract_category_means(res, cat_array, n_categories)
-            else:  # `lstsq` handles the singular design; the residuals are unique
-                coeff = np.linalg.lstsq(normalized.regressors, res, rcond=None)[0]
-                res -= normalized.regressors @ coeff
-            # the per-gene GLM skipped constant genes, so they keep their values
-            const = (x == x[0]).all(axis=0)
-            res[:, const] = x[:, const]
+        if keys and isinstance(
+            (first := covariates.iloc[:, 0]).dtype, CategoricalDtype
+        ):
+            res = _regress_out_categorical(x, first, n_keys=len(keys))
+        else:
+            res = _regress_out_ordinal(x, covariates)
 
     logg.info("    finished", time=start)
     if (unwritten := _write_out(adata, res, out=out, use=use, layer=layer)) is not None:
         return unwritten
     return None
+
+
+def _sample_size(
+    fraction: float | None,
+    n: int | None,
+    *,
+    old_n: int,
+    replace: bool,
+    axis_name: str,
+) -> int:
+    """Validate that exactly one of `fraction` and `n` is given, and return the number to sample."""
+    match (fraction, n):
+        case (None, None):
+            msg = "Either `fraction` or `n` must be set."
+            raise TypeError(msg)
+        case (None, _):
+            pass
+        case (_, None):
+            if fraction < 0:
+                msg = f"`{fraction=}` needs to be nonnegative."
+                raise ValueError(msg)
+            if not replace and fraction > 1:
+                msg = f"If `replace=False`, `{fraction=}` needs to be within [0, 1]."
+                raise ValueError(msg)
+            n = int(fraction * old_n)
+            logg.debug(f"... sampled to {n} {axis_name}")
+        case _:
+            msg = "Providing both `fraction` and `n` is not allowed."
+            raise TypeError(msg)
+    return n
 
 
 @overload
@@ -789,7 +841,7 @@ def sample[A: np.ndarray | CSBase | DaskArray](
 
 
 @_doc_params(rng=doc_rng, ref=doc_ref_compat)
-def sample(  # noqa: PLR0912
+def sample(
     data: AnnData | np.ndarray | CSBase | DaskArray,
     fraction: float | None = None,
     *,
@@ -850,30 +902,23 @@ def sample(  # noqa: PLR0912
     if p is not None and p.dtype == bool:
         p = p.astype(np.float64) / p.sum()
     old_n = data.shape[axis]
-    match (fraction, n):
-        case (None, None):
-            msg = "Either `fraction` or `n` must be set."
-            raise TypeError(msg)
-        case (None, _):
-            pass
-        case (_, None):
-            if fraction < 0:
-                msg = f"`{fraction=}` needs to be nonnegative."
-                raise ValueError(msg)
-            if not replace and fraction > 1:
-                msg = f"If `replace=False`, `{fraction=}` needs to be within [0, 1]."
-                raise ValueError(msg)
-            n = int(fraction * old_n)
-            logg.debug(f"... sampled to {n} {axis_name}")
-        case _:
-            msg = "Providing both `fraction` and `n` is not allowed."
-            raise TypeError(msg)
+    n = _sample_size(fraction, n, old_n=old_n, replace=replace, axis_name=axis_name)
     del fraction
 
     # actually do subsampling
     rng = np.random.default_rng(rng)
     indices = rng.choice(old_n, size=n, replace=replace, p=p)
+    return _subset_sampled(data, indices, axis_name=axis_name, copy=copy)
 
+
+def _subset_sampled(
+    data: AnnData | np.ndarray | CSBase | DaskArray,
+    indices: NDArray[np.int64],
+    *,
+    axis_name: Literal["obs", "var"],
+    copy: bool,
+) -> AnnData | tuple[np.ndarray | CSBase | DaskArray, NDArray[np.int64]] | None:
+    """Subset `data` to the sampled `indices` as the overloads of :func:`sample` say."""
     # overload 1: inplace AnnData subset
     if not copy and isinstance(data, AnnData):
         if axis_name == "obs":

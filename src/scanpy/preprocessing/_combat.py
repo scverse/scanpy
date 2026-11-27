@@ -147,7 +147,7 @@ def _standardize_data(
     "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
 )
 @deprecated_arg("key", Deprecation("1.13.0", "Use `batch` instead."))
-def combat(  # noqa: PLR0915
+def combat(
     adata: AnnData,
     batch: AdRef | str | Default = Default("A.obs['batch']"),
     *,
@@ -196,7 +196,40 @@ def combat(  # noqa: PLR0915
     """
     out = _legacy_out(out, "inplace", None if inplace else True)
     use = _resolve_obs(use, rep=True)
-    # check the input
+    batch, covariates = _check_refs(batch, key, covariates)
+
+    # only works on dense matrices so far
+    x = _get_arr(adata, use)
+    x = x.toarray().T if isinstance(x, CSBase) else x.T
+    data = pd.DataFrame(data=x, columns=adata.obs_names)
+
+    sanitize_anndata(adata)
+    model, batch_name, batch_info = _model_df(adata, batch, covariates)
+
+    # standardize across genes using a pooled variance estimator
+    logg.info("Standardizing Data across genes.\n")
+    s_data, design, var_pooled, stand_mean = _standardize_data(model, data, batch_name)
+
+    # fitting the parameters on the standardized data
+    logg.info("Fitting L/S model and finding priors\n")
+    batch_design = design[design.columns[: len(batch_info)]]
+    gamma_star, delta_star = _fit_batch_effects(s_data, batch_design, batch_info)
+
+    logg.info("Adjusting data\n")
+    _remove_batch_effects(s_data, batch_design, batch_info, gamma_star, delta_star)
+    bayesdata = s_data * np.sqrt(var_pooled) + stand_mean
+
+    # put back into the adata object or return
+    x = bayesdata.to_numpy().transpose()
+    return _write_out(adata, x, out=out, use=use)
+
+
+def _check_refs(
+    batch: AdRef | str | Default | None,
+    key: str | None,
+    covariates: Collection[AdRef | str] | None,
+) -> tuple[AdRef | str, list[AdRef | str]]:
+    """Resolve the batch and covariate references and check that they are distinct."""
     if isinstance(batch, Default):
         batch = None if key is not None else dim_acc("batch", dim="obs")
     # `batch` was positional before being renamed from `key`, so keep its strings’ meaning
@@ -209,14 +242,16 @@ def combat(  # noqa: PLR0915
     if len(cov_refs) != len(set(cov_refs)):
         msg = "Covariates must be unique"
         raise ValueError(msg)
+    return batch, covariates
 
-    # only works on dense matrices so far
-    x = _get_arr(adata, use)
-    x = x.toarray().T if isinstance(x, CSBase) else x.T
-    data = pd.DataFrame(data=x, columns=adata.obs_names)
 
-    sanitize_anndata(adata)
+def _model_df(
+    adata: AnnData, batch: AdRef | str, covariates: list[AdRef | str]
+) -> tuple[pd.DataFrame, str, dict[object, np.ndarray]]:
+    """Get the batch and covariates as a data frame with positional column names.
 
+    Returns it, the batch column's name, and the cell indices of each batch (of at least 2 cells).
+    """
     # construct a pandas series of the batch annotation
     try:
         model = _obs_df(adata, [batch, *covariates])
@@ -226,7 +261,6 @@ def combat(  # noqa: PLR0915
     # the display labels may not be valid in patsy formulas, so use positional ones
     batch_name, *_ = model.columns = [f"_{i}" for i in range(model.shape[1])]
     batch_info = model.groupby(batch_name, observed=True).indices
-    n_batch = len(batch_info)
     n_batches = np.array([len(v) for v in batch_info.values()])
 
     # check for batches with fewer than 2 cells
@@ -240,14 +274,35 @@ def combat(  # noqa: PLR0915
             "within-batch variance. Filter these batches before running combat."
         )
         raise ValueError(msg)
+    return model, batch_name, batch_info
 
-    # standardize across genes using a pooled variance estimator
-    logg.info("Standardizing Data across genes.\n")
-    s_data, design, var_pooled, stand_mean = _standardize_data(model, data, batch_name)
 
-    # fitting the parameters on the standardized data
-    logg.info("Fitting L/S model and finding priors\n")
-    batch_design = design[design.columns[:n_batch]]
+def _remove_batch_effects(
+    s_data: pd.DataFrame,
+    batch_design: pd.DataFrame,
+    batch_info: dict[object, np.ndarray],
+    gamma_star: np.ndarray,
+    delta_star: np.ndarray,
+) -> None:
+    """Apply the parametric adjustment to the standardized data in place."""
+    for j, batch_idxs in enumerate(batch_info.values()):
+        # we basically subtract the additive batch effect, rescale by the ratio
+        # of multiplicative batch effect to pooled variance
+        # (the overall gene wise mean is added back afterwards)
+        dsq = np.sqrt(delta_star[j, :])
+        numer = np.array(
+            s_data.iloc[:, batch_idxs]
+            - np.dot(batch_design.iloc[batch_idxs], gamma_star).T
+        )
+        s_data.iloc[:, batch_idxs] = numer / dsq[:, np.newaxis]
+
+
+def _fit_batch_effects(
+    s_data: pd.DataFrame,
+    batch_design: pd.DataFrame,
+    batch_info: dict[object, np.ndarray],
+) -> tuple[np.ndarray, np.ndarray]:
+    """Empirical Bayes estimates of the additive and multiplicative batch effects (batches x genes)."""
     # first estimate of the additive batch effect
     gamma_hat = (
         la.inv(batch_design.T @ batch_design) @ batch_design.T @ s_data.T
@@ -285,29 +340,7 @@ def combat(  # noqa: PLR0915
         gamma_star.append(gamma)
         delta_star.append(delta)
 
-    logg.info("Adjusting data\n")
-    bayesdata = s_data
-    gamma_star = np.array(gamma_star)
-    delta_star = np.array(delta_star)
-
-    # we now apply the parametric adjustment to the standardized data from above
-    # loop over all batches in the data
-    for j, batch_idxs in enumerate(batch_info.values()):
-        # we basically subtract the additive batch effect, rescale by the ratio
-        # of multiplicative batch effect to pooled variance and add the overall gene
-        # wise mean
-        dsq = np.sqrt(delta_star[j, :])
-        numer = np.array(
-            bayesdata.iloc[:, batch_idxs]
-            - np.dot(batch_design.iloc[batch_idxs], gamma_star).T
-        )
-        bayesdata.iloc[:, batch_idxs] = numer / dsq[:, np.newaxis]
-
-    bayesdata = bayesdata * np.sqrt(var_pooled) + stand_mean
-
-    # put back into the adata object or return
-    x = bayesdata.to_numpy().transpose()
-    return _write_out(adata, x, out=out, use=use)
+    return np.array(gamma_star), np.array(delta_star)
 
 
 def _it_sol(

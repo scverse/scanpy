@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 from anndata import AnnData
 
 import scanpy as sc
@@ -51,6 +52,9 @@ def test_marker_overlap_methods():
     assert t4["c0"]["type 1"] == 1.0
     assert t5["c0"]["type 1"] == 0.6
 
+    with pytest.raises(NotImplementedError, match=r"method='enrich'"):
+        sc.tl.marker_gene_overlap(test_data, marker_genes, method="enrich")
+
 
 def test_marker_overlap_subsetting():
     test_data, marker_genes = generate_test_data()
@@ -64,8 +68,6 @@ def test_marker_overlap_subsetting():
 
 def test_marker_overlap_out():
     """Results are returned by default, writing isn’t implemented."""
-    import pytest
-
     test_data, marker_genes = generate_test_data()
     with pytest.raises(NotImplementedError):
         sc.tl.marker_gene_overlap(test_data, marker_genes, out=False)

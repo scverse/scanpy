@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
+    from .._compat import CSCBase
+
 __all__ = ["cellbrowser", "spring_project"]
 
 
@@ -31,7 +33,7 @@ __all__ = ["cellbrowser", "spring_project"]
         "1.13.0", "Use a different viewer like e.g. `vitessce <https://vitessce.io/>`_."
     )
 )
-def spring_project(  # noqa: PLR0912, PLR0915
+def spring_project(
     adata: AnnData,
     project_dir: Path | str,
     embedding_method: str,
@@ -85,20 +87,7 @@ def spring_project(  # noqa: PLR0912, PLR0915
         raise ValueError(msg)
 
     # check that requested 2-D embedding has been generated
-    if embedding_method not in adata.obsm:
-        if f"X_{embedding_method}" in adata.obsm:
-            embedding_method = f"X_{embedding_method}"
-        elif embedding_method in {"graph", "draw_graph"} and (
-            keys := _existing_preset_keys(
-                adata,
-                "draw_graph",
-                layout=adata.uns[embedding_method]["params"]["layout"],
-            )
-        ):
-            embedding_method = keys.obsm
-        else:
-            msg = f"Run the specified embedding method `{embedding_method}` first."
-            raise ValueError(msg)
+    embedding_method = _resolve_embedding_key(adata, embedding_method)
 
     coords = adata.obsm[embedding_method]
 
@@ -115,23 +104,7 @@ def spring_project(  # noqa: PLR0912, PLR0915
     # or if user requires overwrite.
     # To do: check if Alex's h5sparse format will allow fast loading from just
     # one file.
-    write_counts_matrices = True
-    base_dir_filelist = [
-        "counts_norm_sparse_genes.hdf5",
-        "counts_norm_sparse_cells.hdf5",
-        "counts_norm.npz",
-        "total_counts.txt",
-        "genes.txt",
-    ]
-    if all((project_dir / f).is_file() for f in base_dir_filelist):
-        if not overwrite:
-            logg.warning(
-                f"{project_dir} is an existing SPRING folder. A new subplot will be created, but "
-                "you must set `overwrite=True` to overwrite counts matrices."
-            )
-            write_counts_matrices = False
-        else:
-            logg.warning(f"Overwriting the files in {project_dir}.")
+    write_counts_matrices = _should_write_counts(project_dir, overwrite=overwrite)
 
     # Ideally, all genes will be written from adata.raw
     if adata.raw is not None:
@@ -149,49 +122,11 @@ def spring_project(  # noqa: PLR0912, PLR0915
 
     # Write the counts matrices to project directory
     if write_counts_matrices:
-        write_hdf5_genes(x, gene_list, project_dir / "counts_norm_sparse_genes.hdf5")
-        write_hdf5_cells(x, project_dir / "counts_norm_sparse_cells.hdf5")
-        write_sparse_npz(x, project_dir / "counts_norm.npz")
-        with (project_dir / "genes.txt").open("w") as o:
-            for g in gene_list:
-                o.write(f"{g}\n")
-        np.savetxt(project_dir / "total_counts.txt", total_counts)
+        _write_counts_matrices(project_dir, x, gene_list, total_counts)
 
     # Get categorical and continuous metadata
-    categorical_extras = {}
-    continuous_extras = {}
-    if cell_groupings is None:
-        for obs_name in adata.obs:
-            if isinstance(adata.obs[obs_name].dtype, CategoricalDtype):
-                categorical_extras[obs_name] = [str(x) for x in adata.obs[obs_name]]
-    else:
-        if isinstance(cell_groupings, str):
-            cell_groupings = [cell_groupings]
-        for obs_name in cell_groupings:
-            if obs_name not in adata.obs:
-                logg.warning(f"Cell grouping {obs_name!r} is not in adata.obs")
-            elif isinstance(adata.obs[obs_name].dtype, CategoricalDtype):
-                categorical_extras[obs_name] = [str(x) for x in adata.obs[obs_name]]
-            else:
-                logg.warning(
-                    f"Cell grouping {obs_name!r} is not a categorical variable"
-                )
-    if custom_color_tracks is None:
-        for obs_name in adata.obs:
-            if not isinstance(adata.obs[obs_name].dtype, CategoricalDtype):
-                continuous_extras[obs_name] = np.array(adata.obs[obs_name])
-    else:
-        if isinstance(custom_color_tracks, str):
-            custom_color_tracks = [custom_color_tracks]
-        for obs_name in custom_color_tracks:
-            if obs_name not in adata.obs:
-                logg.warning(f"Custom color track {obs_name!r} is not in adata.obs")
-            elif not isinstance(adata.obs[obs_name].dtype, CategoricalDtype):
-                continuous_extras[obs_name] = np.array(adata.obs[obs_name])
-            else:
-                logg.warning(
-                    f"Custom color track {obs_name!r} is not a continuous variable"
-                )
+    categorical_extras = _get_categorical_extras(adata, cell_groupings)
+    continuous_extras = _get_continuous_extras(adata, custom_color_tracks)
 
     # Write continuous colors
     continuous_extras["Uniform"] = np.zeros(x.shape[0])
@@ -223,16 +158,7 @@ def spring_project(  # noqa: PLR0912, PLR0915
     np.save(subplot_dir / "cell_filter.npy", np.arange(x.shape[0]))
 
     # Write 2-D coordinates, after adjusting to roughly match SPRING's default d3js force layout parameters
-    coords = coords - coords.min(axis=0)[None, :]
-    coords = (
-        coords * (np.array([1000, 1000]) / coords.ptp(0))[None, :]
-        + np.array([200, -200])[None, :]
-    )
-    np.savetxt(
-        subplot_dir / "coordinates.txt",
-        np.hstack((np.arange(x.shape[0])[:, None], coords)),
-        fmt="%i,%.6f,%.6f",
-    )
+    coords = _write_coordinates(subplot_dir / "coordinates.txt", coords)
 
     # Write some useful intermediates, if they exist
     if keys := _existing_preset_keys(adata, "pca"):
@@ -253,6 +179,115 @@ def spring_project(  # noqa: PLR0912, PLR0915
 # --------------------------------------------------------------------------------
 # Helper Functions
 # --------------------------------------------------------------------------------
+
+
+def _resolve_embedding_key(adata: AnnData, embedding_method: str) -> str:
+    if embedding_method in adata.obsm:
+        return embedding_method
+    if f"X_{embedding_method}" in adata.obsm:
+        return f"X_{embedding_method}"
+    if embedding_method in {"graph", "draw_graph"} and (
+        keys := _existing_preset_keys(
+            adata,
+            "draw_graph",
+            layout=adata.uns[embedding_method]["params"]["layout"],
+        )
+    ):
+        return keys.obsm
+    msg = f"Run the specified embedding method `{embedding_method}` first."
+    raise ValueError(msg)
+
+
+def _should_write_counts(project_dir: Path, *, overwrite: bool) -> bool:
+    base_dir_filelist = [
+        "counts_norm_sparse_genes.hdf5",
+        "counts_norm_sparse_cells.hdf5",
+        "counts_norm.npz",
+        "total_counts.txt",
+        "genes.txt",
+    ]
+    if all((project_dir / f).is_file() for f in base_dir_filelist):
+        if not overwrite:
+            logg.warning(
+                f"{project_dir} is an existing SPRING folder. A new subplot will be created, but "
+                "you must set `overwrite=True` to overwrite counts matrices."
+            )
+            return False
+        logg.warning(f"Overwriting the files in {project_dir}.")
+    return True
+
+
+def _write_coordinates(filename: Path, coords: np.ndarray) -> np.ndarray:
+    coords = coords - coords.min(axis=0)[None, :]
+    coords = (
+        coords * (np.array([1000, 1000]) / coords.ptp(0))[None, :]
+        + np.array([200, -200])[None, :]
+    )
+    np.savetxt(
+        filename,
+        np.hstack((np.arange(coords.shape[0])[:, None], coords)),
+        fmt="%i,%.6f,%.6f",
+    )
+    return coords
+
+
+def _write_counts_matrices(
+    project_dir: Path,
+    x: CSCBase,
+    gene_list: list[str],
+    total_counts: np.ndarray,
+) -> None:
+    write_hdf5_genes(x, gene_list, project_dir / "counts_norm_sparse_genes.hdf5")
+    write_hdf5_cells(x, project_dir / "counts_norm_sparse_cells.hdf5")
+    write_sparse_npz(x, project_dir / "counts_norm.npz")
+    with (project_dir / "genes.txt").open("w") as o:
+        for g in gene_list:
+            o.write(f"{g}\n")
+    np.savetxt(project_dir / "total_counts.txt", total_counts)
+
+
+def _get_categorical_extras(
+    adata: AnnData, cell_groupings: str | Iterable[str] | None
+) -> dict[str, list[str]]:
+    categorical_extras = {}
+    if cell_groupings is None:
+        for obs_name in adata.obs:
+            if isinstance(adata.obs[obs_name].dtype, CategoricalDtype):
+                categorical_extras[obs_name] = [str(x) for x in adata.obs[obs_name]]
+        return categorical_extras
+    if isinstance(cell_groupings, str):
+        cell_groupings = [cell_groupings]
+    for obs_name in cell_groupings:
+        if obs_name not in adata.obs:
+            logg.warning(f"Cell grouping {obs_name!r} is not in adata.obs")
+        elif isinstance(adata.obs[obs_name].dtype, CategoricalDtype):
+            categorical_extras[obs_name] = [str(x) for x in adata.obs[obs_name]]
+        else:
+            logg.warning(f"Cell grouping {obs_name!r} is not a categorical variable")
+    return categorical_extras
+
+
+def _get_continuous_extras(
+    adata: AnnData, custom_color_tracks: str | Iterable[str] | None
+) -> dict[str, np.ndarray]:
+    continuous_extras = {}
+    if custom_color_tracks is None:
+        for obs_name in adata.obs:
+            if not isinstance(adata.obs[obs_name].dtype, CategoricalDtype):
+                continuous_extras[obs_name] = np.array(adata.obs[obs_name])
+        return continuous_extras
+    if isinstance(custom_color_tracks, str):
+        custom_color_tracks = [custom_color_tracks]
+    for obs_name in custom_color_tracks:
+        if obs_name not in adata.obs:
+            logg.warning(f"Custom color track {obs_name!r} is not in adata.obs")
+        elif not isinstance(adata.obs[obs_name].dtype, CategoricalDtype):
+            continuous_extras[obs_name] = np.array(adata.obs[obs_name])
+        else:
+            logg.warning(
+                f"Custom color track {obs_name!r} is not a continuous variable"
+            )
+    return continuous_extras
 
 
 def _get_edges(adata, neighbors_key=None):

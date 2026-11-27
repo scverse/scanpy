@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import functools
 import operator
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -43,14 +44,15 @@ from .._utils import (
 from .scatterplots import _panel_grid, embedding, pca
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-    from typing import Literal
+    from collections.abc import Iterable, Sequence
+    from typing import Any, Literal
 
     from anndata import AnnData
     from cycler import Cycler
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.figure import Figure
+    from matplotlib.gridspec import GridSpecBase, SubplotSpec
 
     from ...._utils.random import RNGLike, SeedLike
     from .._baseplot_class import BasePlot
@@ -339,7 +341,7 @@ def dpt_groups_pseudotime(
 
 
 @_doc_params(show_save_ax=doc_show_save_ax)
-def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
+def rank_genes_groups(  # noqa: PLR0913
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
     *,
@@ -419,27 +421,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     # set up the figure
     n_panels_x = min(n_panels_per_row, len(group_names))
     n_panels_y = np.ceil(len(group_names) / n_panels_x).astype(int)
-
-    from matplotlib import gridspec
-
-    if ax is None or (sps := ax.get_subplotspec()) is None:
-        fig = (
-            plt.figure(
-                figsize=(
-                    n_panels_x * rcParams["figure.figsize"][0],
-                    n_panels_y * rcParams["figure.figsize"][1],
-                )
-            )
-            if ax is None
-            else ax.get_figure()
-        )
-        gs = gridspec.GridSpec(n_panels_y, n_panels_x, fig, wspace=0.22, hspace=0.3)
-    else:
-        fig = ax.get_figure()
-        gs = sps.subgridspec(n_panels_y, n_panels_x)
-    if fig is None:
-        msg = "passed ax has no associated figure"
-        raise RuntimeError(msg)
+    fig, gs = _rank_genes_groups_grid(ax, n_panels_x, n_panels_y)
 
     axs: list[Axes] = []
     ymin = np.inf
@@ -463,25 +445,15 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
             axs[-1].set_ylim(ymin, ymax)
 
         axs[-1].set_xlim(-0.9, n_genes - 0.1)
-
-        # Mapping to gene_symbols
-        if gene_symbols is not None:
-            if adata.raw is not None and adata.uns[key]["params"]["use_raw"]:
-                gene_names = adata.raw.var[gene_symbols][gene_names]
-            else:
-                gene_names = adata.var[gene_symbols][gene_names]
-
-        # Making labels
-        for ig, gene_name in enumerate(gene_names):
-            axs[-1].text(
-                ig,
-                scores[ig],
-                gene_name,
-                rotation="vertical",
-                verticalalignment="bottom",
-                horizontalalignment="center",
-                fontsize=fontsize,
-            )
+        _rank_genes_groups_gene_labels(
+            axs[-1],
+            adata,
+            gene_names,
+            scores,
+            key=key,
+            gene_symbols=gene_symbols,
+            fontsize=fontsize,
+        )
 
         axs[-1].set_title(f"{group_name} vs. {reference}")
         if count >= n_panels_x * (n_panels_y - 1):
@@ -503,6 +475,64 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     return axs
 
 
+def _rank_genes_groups_grid(
+    ax: Axes | None, n_panels_x: int, n_panels_y: int
+) -> tuple[Figure, GridSpecBase]:
+    """Get figure and grid spec for the panels, given an optional parent `ax`."""
+    from matplotlib import gridspec
+
+    if ax is None or (sps := ax.get_subplotspec()) is None:
+        fig = (
+            plt.figure(
+                figsize=(
+                    n_panels_x * rcParams["figure.figsize"][0],
+                    n_panels_y * rcParams["figure.figsize"][1],
+                )
+            )
+            if ax is None
+            else ax.get_figure()
+        )
+        gs = gridspec.GridSpec(n_panels_y, n_panels_x, fig, wspace=0.22, hspace=0.3)
+    else:
+        fig = ax.get_figure()
+        gs = sps.subgridspec(n_panels_y, n_panels_x)
+    if fig is None:
+        msg = "passed ax has no associated figure"
+        raise RuntimeError(msg)
+    return fig, gs
+
+
+def _rank_genes_groups_gene_labels(
+    ax: Axes,
+    adata: AnnData,
+    gene_names: Sequence[str],
+    scores: Sequence[float],
+    *,
+    key: str,
+    gene_symbols: str | None,
+    fontsize: int,
+) -> None:
+    """Write gene names as vertical labels at their scores."""
+    # Mapping to gene_symbols
+    if gene_symbols is not None:
+        if adata.raw is not None and adata.uns[key]["params"]["use_raw"]:
+            gene_names = adata.raw.var[gene_symbols][gene_names]
+        else:
+            gene_names = adata.var[gene_symbols][gene_names]
+
+    # Making labels
+    for ig, gene_name in enumerate(gene_names):
+        ax.text(
+            ig,
+            scores[ig],
+            gene_name,
+            rotation="vertical",
+            verticalalignment="bottom",
+            horizontalalignment="center",
+            fontsize=fontsize,
+        )
+
+
 def _fig_show_save_or_axes(
     plot_obj: BasePlot,
     *,
@@ -522,7 +552,7 @@ def _fig_show_save_or_axes(
     return plot_obj.get_axes()
 
 
-def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
+def _rank_genes_groups_plot(  # noqa: PLR0913
     adata: AnnData,
     plot_type: str = "heatmap",
     *,
@@ -557,98 +587,33 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
         group_names = [group_names]
 
     if var_names is not None:
-        if isinstance(var_names, Mapping):
-            # get a single list of all gene names in the dictionary
-            var_names_list = functools.reduce(
-                operator.iadd, [list(x) for x in var_names.values()], []
-            )
-        elif isinstance(var_names, str):
-            var_names_list = [var_names]
-        else:
-            var_names_list = var_names
+        var_names_list = _flatten_var_names(var_names)
     else:
-        # set n_genes = 10 as default when none of the options is given
-        if n_genes is None:
-            n_genes = 10
-
-        # dict in which each group is the key and the n_genes are the values
-        var_names = {}
-        var_names_list = []
-        for group in group_names:
-            with own_deprecations():
-                df = rank_genes_groups_df(
-                    adata,
-                    group,
-                    key=key,
-                    gene_symbols=gene_symbols,
-                    log2fc_min=min_logfoldchange,
-                )
-
-            if gene_symbols is not None:
-                df["names"] = df[gene_symbols]
-
-            genes_list = df.names[df.names.notna()].tolist()
-
-            if len(genes_list) == 0:
-                logg.warning(f"No genes found for group {group}")
-                continue
-            genes_list = genes_list[n_genes:] if n_genes < 0 else genes_list[:n_genes]
-            var_names[group] = genes_list
-            var_names_list.extend(genes_list)
+        var_names, var_names_list = _rank_genes_groups_var_names(
+            adata,
+            group_names,
+            # set n_genes = 10 as default when none of the options is given
+            n_genes=10 if n_genes is None else n_genes,
+            key=key,
+            gene_symbols=gene_symbols,
+            min_logfoldchange=min_logfoldchange,
+        )
 
     # by default add dendrogram to plots
     kwds.setdefault("dendrogram", True)
 
     if plot_type in ["dotplot", "matrixplot"]:
-        # these two types of plots can also
-        # show score, logfoldchange and pvalues, in general any value from rank
-        # genes groups
-        title = None
-        values_df = None
-        if values_to_plot is not None:
-            values_df = _get_values_to_plot(
-                adata,
-                values_to_plot,
-                var_names_list,
-                key=key,
-                gene_symbols=gene_symbols,
-            )
-            title = values_to_plot
-            if values_to_plot == "logfoldchanges":
-                title = "log fold change"
-            else:
-                title = values_to_plot.replace("_", " ").replace("pvals", "p-value")
-
-        if plot_type == "dotplot":
-            from .._dotplot import dotplot
-
-            _pl = dotplot(
-                adata,
-                var_names,
-                groupby,
-                dot_color_df=values_df,
-                return_fig=True,
-                gene_symbols=gene_symbols,
-                **kwds,
-            )
-            if title is not None and "colorbar_title" not in kwds:
-                _pl.legend(colorbar_title=title)
-        elif plot_type == "matrixplot":
-            from .._matrixplot import matrixplot
-
-            _pl = matrixplot(
-                adata,
-                var_names,
-                groupby,
-                values_df=values_df,
-                return_fig=True,
-                gene_symbols=gene_symbols,
-                **kwds,
-            )
-
-            if title is not None and "colorbar_title" not in kwds:
-                _pl.legend(title=title)
-
+        _pl = _rank_genes_groups_dot_or_matrixplot(
+            adata,
+            plot_type,
+            var_names,
+            var_names_list,
+            groupby=groupby,
+            values_to_plot=values_to_plot,
+            key=key,
+            gene_symbols=gene_symbols,
+            kwds=kwds,
+        )
         return _fig_show_save_or_axes(_pl, return_fig=return_fig, show=show, save=save)
 
     elif plot_type == "stacked_violin":
@@ -688,6 +653,119 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
             gene_symbols=gene_symbols,
             **kwds,
         )
+
+
+def _rank_genes_groups_dot_or_matrixplot(
+    adata: AnnData,
+    plot_type: Literal["dotplot", "matrixplot"],
+    var_names: Sequence[str] | Mapping[str, Sequence[str]],
+    var_names_list: Sequence[str],
+    *,
+    groupby: str,
+    values_to_plot: str | None,
+    key: str,
+    gene_symbols: str | None,
+    kwds: dict[str, Any],
+) -> BasePlot:
+    # these two types of plots can also
+    # show score, logfoldchange and pvalues, in general any value from rank
+    # genes groups
+    title = None
+    values_df = None
+    if values_to_plot is not None:
+        values_df = _get_values_to_plot(
+            adata,
+            values_to_plot,
+            var_names_list,
+            key=key,
+            gene_symbols=gene_symbols,
+        )
+        title = (
+            "log fold change"
+            if values_to_plot == "logfoldchanges"
+            else values_to_plot.replace("_", " ").replace("pvals", "p-value")
+        )
+
+    if plot_type == "dotplot":
+        from .._dotplot import dotplot
+
+        _pl = dotplot(
+            adata,
+            var_names,
+            groupby,
+            dot_color_df=values_df,
+            return_fig=True,
+            gene_symbols=gene_symbols,
+            **kwds,
+        )
+        if title is not None and "colorbar_title" not in kwds:
+            _pl.legend(colorbar_title=title)
+    elif plot_type == "matrixplot":
+        from .._matrixplot import matrixplot
+
+        _pl = matrixplot(
+            adata,
+            var_names,
+            groupby,
+            values_df=values_df,
+            return_fig=True,
+            gene_symbols=gene_symbols,
+            **kwds,
+        )
+
+        if title is not None and "colorbar_title" not in kwds:
+            _pl.legend(title=title)
+    return _pl
+
+
+def _flatten_var_names(
+    var_names: Sequence[str] | Mapping[str, Sequence[str]],
+) -> Sequence[str]:
+    if isinstance(var_names, Mapping):
+        # get a single list of all gene names in the dictionary
+        return functools.reduce(
+            operator.iadd, [list(x) for x in var_names.values()], []
+        )
+    if isinstance(var_names, str):
+        return [var_names]
+    return var_names
+
+
+def _rank_genes_groups_var_names(
+    adata: AnnData,
+    group_names: Sequence[str],
+    *,
+    n_genes: int,
+    key: str,
+    gene_symbols: str | None,
+    min_logfoldchange: float | None,
+) -> tuple[dict[str, list[str]], list[str]]:
+    """Get the top `n_genes` per group (and a flat list of all of them)."""
+    # dict in which each group is the key and the n_genes are the values
+    var_names = {}
+    var_names_list = []
+    for group in group_names:
+        with own_deprecations():
+            df = rank_genes_groups_df(
+                adata,
+                group,
+                key=key,
+                gene_symbols=gene_symbols,
+                log2fc_min=min_logfoldchange,
+            )
+
+        if gene_symbols is not None:
+            df["names"] = df[gene_symbols]
+
+        genes_list = df.names[df.names.notna()].tolist()
+
+        if len(genes_list) == 0:
+            logg.warning(f"No genes found for group {group}")
+            continue
+        genes_list = genes_list[n_genes:] if n_genes < 0 else genes_list[:n_genes]
+        var_names[group] = genes_list
+        var_names_list.extend(genes_list)
+    return var_names, var_names_list
 
 
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
@@ -1369,10 +1447,166 @@ def sim(
         savefig_or_show("sim_shuffled", save=save, show=show)
 
 
+def _embedding_density_basis_key(
+    adata: AnnData, basis: str, *, key: str | None, groupby: str | None
+) -> tuple[str, str]:
+    basis = basis.lower()
+
+    if basis == "fa":
+        basis = "draw_graph_fa"
+
+    if key is not None and groupby is not None:
+        msg = "either pass key or groupby but not both"
+        raise ValueError(msg)
+
+    if key is None:
+        key = "umap_density"
+    if groupby is not None:
+        key += f"_{groupby}"
+
+    if _get_basis_key(adata, basis) is None:
+        msg = (
+            f"Cannot find the embedded representation `adata.obsm[{basis!r} | 'X_{basis}']`. "
+            "Compute the embedding first."
+        )
+        raise ValueError(msg)
+
+    if key not in adata.obs or f"{key}_params" not in adata.uns:
+        msg = (
+            "Please run `sc.tl.embedding_density()` first and specify the correct key."
+        )
+        raise ValueError(msg)
+    return basis, key
+
+
+def _embedding_density_group(
+    adata: AnnData, group: str | Sequence[str] | None, groupby: str | None
+) -> Sequence[str] | None:
+    # turn group into a list if needed
+    if group == "all":
+        group = None if groupby is None else list(adata.obs[groupby].cat.categories)
+    elif isinstance(group, str):
+        group = [group]
+
+    if group is None and groupby is not None:
+        msg = (
+            "Densities were calculated over an `.obs` covariate. "
+            "Please specify a group from this covariate to plot."
+        )
+        raise ValueError(msg)
+
+    if group is not None and groupby is None:
+        logg.warning(
+            "value of 'group' is ignored because densities "
+            "were not calculated for an `.obs` covariate."
+        )
+        group = None
+    return group
+
+
+def _tmp_density_col_name(adata: AnnData) -> str:
+    """Get a name to store the density values.
+
+    To avoid overwriting a user name a new random name is created.
+    """
+    rng = np.random.default_rng()
+    while True:
+        col_id = rng.integers(1000, 10000)
+        density_col_name = f"_tmp_embedding_density_column_{col_id}_"
+        if density_col_name not in adata.obs.columns:
+            return density_col_name
+
+
+@dataclass(kw_only=True)
+class _EmbeddingDensityPlot:
+    """Plot densities from :func:`~scanpy.tl.embedding_density` via :func:`embedding`."""
+
+    adata: AnnData
+    basis: str
+    key: str
+    groupby: str | None
+    bg_dotsize: int | None
+    fg_dotsize: int | None
+    embedding_kw: dict[str, Any]
+    """Arguments for :func:`embedding`, with `color` set to a temporary density column."""
+    kwargs: dict[str, Any]
+    """Extra arguments for :func:`embedding`."""
+
+    def plot_groups(
+        self,
+        group: Sequence[str],
+        *,
+        title: str | None,
+        hspace: float,
+        wspace: float | None,
+        ncols: int,
+    ) -> tuple[Figure, list[Axes]]:
+        """Plot the density of each group in its own panel."""
+        if wspace is None:
+            #  try to set a wspace that is not too large or too small given the
+            #  current figure size
+            wspace = 0.75 / rcParams["figure.figsize"][0] + 0.02
+        fig, gs = _panel_grid(hspace, wspace, ncols, len(group))
+        axs = [
+            self._plot_group(
+                group_name, gs[count], title=group_name if title is None else title
+            )
+            for count, group_name in enumerate(group)
+        ]
+        return fig, axs
+
+    def plot_all(
+        self, *, title: str | None, ax: Axes | None, return_fig: bool | None
+    ) -> Figure | Axes:
+        """Plot the density over all cells in a single panel."""
+        self.adata.obs[self.embedding_kw["color"]] = self.adata.obs[self.key]
+        return embedding(
+            self.adata,
+            self.basis,
+            **self.embedding_kw,
+            size=np.ones(self.adata.n_obs) * self.fg_dotsize,
+            # Ensure title is blank as default
+            title="" if title is None else title,
+            ax=ax,
+            return_fig=return_fig,
+            **self.kwargs,
+        )
+
+    def _plot_group(
+        self, group_name: str, subplot_spec: SubplotSpec, *, title: str
+    ) -> Axes:
+        if group_name not in self.adata.obs[self.groupby].cat.categories:
+            msg = (
+                "Please specify a group from the `.obs` category "
+                "over which the density was calculated. "
+                f"Invalid group name: {group_name}"
+            )
+            raise ValueError(msg)
+
+        ax = plt.subplot(subplot_spec)
+        # Define plotting data
+        dot_sizes = np.ones(self.adata.n_obs) * self.bg_dotsize
+        group_mask = self.adata.obs[self.groupby] == group_name
+        dens_values = -np.ones(self.adata.n_obs)
+        dens_values[group_mask] = self.adata.obs[self.key][group_mask]
+        self.adata.obs[self.embedding_kw["color"]] = dens_values
+        dot_sizes[group_mask] = np.ones(sum(group_mask)) * self.fg_dotsize
+
+        return embedding(
+            self.adata,
+            self.basis,
+            size=dot_sizes,
+            ax=ax,
+            **self.embedding_kw,
+            title=title,
+            **self.kwargs,
+        )
+
+
 @_doc_params(
     vminmax=doc_vbound_percentile, panels=doc_panels, show_save_ax=doc_show_save_ax
 )
-def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
+def embedding_density(  # noqa: PLR0913
     adata: AnnData,
     basis: str = "umap",
     *,
@@ -1469,32 +1703,7 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     sanitize_anndata(adata)
 
     # Test user inputs
-    basis = basis.lower()
-
-    if basis == "fa":
-        basis = "draw_graph_fa"
-
-    if key is not None and groupby is not None:
-        msg = "either pass key or groupby but not both"
-        raise ValueError(msg)
-
-    if key is None:
-        key = "umap_density"
-    if groupby is not None:
-        key += f"_{groupby}"
-
-    if _get_basis_key(adata, basis) is None:
-        msg = (
-            f"Cannot find the embedded representation `adata.obsm[{basis!r} | 'X_{basis}']`. "
-            "Compute the embedding first."
-        )
-        raise ValueError(msg)
-
-    if key not in adata.obs or f"{key}_params" not in adata.uns:
-        msg = (
-            "Please run `sc.tl.embedding_density()` first and specify the correct key."
-        )
-        raise ValueError(msg)
+    basis, key = _embedding_density_basis_key(adata, basis, key=key, groupby=groupby)
 
     if "components" in kwargs:
         logg.warning(
@@ -1505,131 +1714,49 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
 
     components = adata.uns[f"{key}_params"]["components"]
     groupby = adata.uns[f"{key}_params"]["covariate"]
-
-    # turn group into a list if needed
-    if group == "all":
-        group = None if groupby is None else list(adata.obs[groupby].cat.categories)
-    elif isinstance(group, str):
-        group = [group]
-
-    if group is None and groupby is not None:
-        msg = (
-            "Densities were calculated over an `.obs` covariate. "
-            "Please specify a group from this covariate to plot."
-        )
-        raise ValueError(msg)
-
-    if group is not None and groupby is None:
-        logg.warning(
-            "value of 'group' is ignored because densities "
-            "were not calculated for an `.obs` covariate."
-        )
-        group = None
+    group = _embedding_density_group(adata, group, groupby)
 
     if np.min(adata.obs[key]) < 0 or np.max(adata.obs[key]) > 1:
         msg = "Densities should be scaled between 0 and 1."
         raise ValueError(msg)
 
-    if wspace is None:
-        #  try to set a wspace that is not too large or too small given the
-        #  current figure size
-        wspace = 0.75 / rcParams["figure.figsize"][0] + 0.02
-
     # Make the color map
     color_map = colormaps.get_cmap(color_map).with_extremes(
         over="black", under="lightgray"
     )
-    # a name to store the density values is needed. To avoid
-    # overwriting a user name a new random name is created
-    rng = np.random.default_rng()
-    while True:
-        col_id = rng.integers(1000, 10000)
-        density_col_name = f"_tmp_embedding_density_column_{col_id}_"
-        if density_col_name not in adata.obs.columns:
-            break
-
-    # if group is set, then plot it using multiple panels
-    # (even if only one group is set)
-    if group is not None and not isinstance(group, str) and isinstance(group, Sequence):
-        if ax is not None:
-            msg = "Can only specify `ax` if no `group` sequence is given."
-            raise ValueError(msg)
-        fig, gs = _panel_grid(hspace, wspace, ncols, len(group))
-
-        axs = []
-        for count, group_name in enumerate(group):
-            if group_name not in adata.obs[groupby].cat.categories:
-                msg = (
-                    "Please specify a group from the `.obs` category "
-                    "over which the density was calculated. "
-                    f"Invalid group name: {group_name}"
-                )
-                raise ValueError(msg)
-
-            ax = plt.subplot(gs[count])
-            # Define plotting data
-            dot_sizes = np.ones(adata.n_obs) * bg_dotsize
-            group_mask = adata.obs[groupby] == group_name
-            dens_values = -np.ones(adata.n_obs)
-            dens_values[group_mask] = adata.obs[key][group_mask]
-            adata.obs[density_col_name] = dens_values
-            dot_sizes[group_mask] = np.ones(sum(group_mask)) * fg_dotsize
-
-            _title = group_name if title is None else title
-
-            ax = embedding(
-                adata,
-                basis,
-                dimensions=np.array(components) - 1,  # Saved with 1 based indexing
-                color=density_col_name,
-                color_map=color_map,
-                size=dot_sizes,
-                vmax=vmax,
-                vmin=vmin,
-                vcenter=vcenter,
-                norm=norm,
-                save=False,
-                title=_title,
-                ax=ax,
-                show=False,
-                **kwargs,
-            )
-            axs.append(ax)
-
-        ax = axs
-    else:
-        dens_values = adata.obs[key]
-        dot_sizes = np.ones(adata.n_obs) * fg_dotsize
-
-        adata.obs[density_col_name] = dens_values
-
-        # Ensure title is blank as default
-        if title is None:
-            title = group if group is not None else ""
-
-        # Plot the graph
-        fig_or_ax = embedding(
-            adata,
-            basis,
+    density_col_name = _tmp_density_col_name(adata)
+    plot = _EmbeddingDensityPlot(
+        adata=adata,
+        basis=basis,
+        key=key,
+        groupby=groupby,
+        bg_dotsize=bg_dotsize,
+        fg_dotsize=fg_dotsize,
+        embedding_kw=dict(
             dimensions=np.array(components) - 1,  # Saved with 1 based indexing
             color=density_col_name,
             color_map=color_map,
-            size=dot_sizes,
             vmax=vmax,
             vmin=vmin,
             vcenter=vcenter,
             norm=norm,
             save=False,
             show=False,
-            title=title,
-            ax=ax,
-            return_fig=return_fig,
-            **kwargs,
+        ),
+        kwargs=kwargs,
+    )
+    # if group is set, then plot it using multiple panels
+    # (even if only one group is set)
+    if group is not None:
+        if ax is not None:
+            msg = "Can only specify `ax` if no `group` sequence is given."
+            raise ValueError(msg)
+        fig, ax = plot.plot_groups(
+            group, title=title, hspace=hspace, wspace=wspace, ncols=ncols
         )
-        if return_fig:
-            fig = fig_or_ax
-        else:
-            ax = fig_or_ax
+    else:
+        fig_or_ax = plot.plot_all(title=title, ax=ax, return_fig=return_fig)
+        fig, ax = (fig_or_ax, ax) if return_fig else (None, fig_or_ax)
 
     # remove temporary column name
     adata.obs = adata.obs.drop(columns=[density_col_name])

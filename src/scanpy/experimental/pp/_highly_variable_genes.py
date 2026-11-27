@@ -133,7 +133,82 @@ def _calculate_res_dense(
     return residuals
 
 
-def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
+def _check_clip(clip: float | None, *, n_cells: int) -> float:
+    """Validate `clip` or derive its default from the number of cells."""
+    if clip is None:
+        return np.sqrt(n_cells)
+    if clip < 0:
+        msg = "Pearson residuals require `clip>=0` or `clip=None`."
+        raise ValueError(msg)
+    return clip
+
+
+def _batch_residual_gene_var(
+    adata_batch: AnnData,
+    use: LayerAcc | str | None,
+    *,
+    layer: str | None,
+    clip: float,
+    theta: float,
+) -> NDArray[np.float64]:
+    """Residual variance per gene of one batch (0 for genes without counts)."""
+    x_batch_prefilter = _get_arr(adata_batch, use, layer=layer)
+
+    # Filter out zero genes
+    with settings.override(verbosity=Verbosity.error):
+        nonzero_genes = np.ravel(x_batch_prefilter.sum(axis=0)) != 0
+    adata_subset = adata_batch[:, nonzero_genes]
+    x_batch = _get_arr(adata_subset, use, layer=layer)
+
+    if isinstance(x_batch, CSBase):
+        x_batch = x_batch.tocsc()
+        x_batch.eliminate_zeros()
+        calculate_res = partial(_calculate_res_sparse, x_batch.astype(np.float64))
+    else:
+        x_batch = np.array(x_batch, dtype=np.float64, order="F")
+        calculate_res = partial(_calculate_res_dense, x_batch)
+
+    sums_genes = np.array(x_batch.sum(axis=0)).ravel()
+    sums_cells = np.array(x_batch.sum(axis=1)).ravel()
+    sum_total = np.sum(sums_genes)
+
+    residual_gene_var = calculate_res(
+        sums_genes=sums_genes,
+        sums_cells=sums_cells,
+        sum_total=np.float64(sum_total),
+        clip=np.float64(clip),
+        theta=np.float64(theta),
+        n_genes=x_batch.shape[1],
+        n_cells=x_batch.shape[0],
+    )
+
+    # Add 0 values for genes that were filtered out
+    unmasked_residual_gene_var = np.zeros(len(nonzero_genes))
+    unmasked_residual_gene_var[nonzero_genes] = residual_gene_var
+    return unmasked_residual_gene_var
+
+
+def _rank_residual_vars(
+    residual_gene_vars: NDArray[np.float64], n_top_genes: int
+) -> tuple[NDArray[np.int_], NDArray[np.float32]]:
+    """Per gene, the number of batches it is among the top genes in, and its median rank over those."""
+    # Get rank per gene within each batch
+    # argsort twice gives ranks, small rank means most variable
+    ranks_residual_var = np.argsort(np.argsort(-residual_gene_vars, axis=1), axis=1)
+    ranks_residual_var = ranks_residual_var.astype(np.float32)
+    # count in how many batches a genes was among the n_top_genes
+    highly_variable_nbatches = np.sum(
+        (ranks_residual_var < n_top_genes).astype(int), axis=0
+    )
+    # set non-top genes within each batch to nan
+    ranks_residual_var[ranks_residual_var >= n_top_genes] = np.nan
+    ranks_masked_array = np.ma.masked_invalid(ranks_residual_var)
+    # Median rank across batches, ignoring batches in which gene was not selected
+    medianrank_residual_var = np.ma.median(ranks_masked_array, axis=0).filled(np.nan)
+    return highly_variable_nbatches, medianrank_residual_var
+
+
+def _highly_variable_pearson_residuals(
     adata: AnnData,
     *,
     theta: float,
@@ -161,76 +236,29 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
         # then only theta=0 were undefined..
         msg = "Pearson residuals require theta > 0"
         raise ValueError(msg)
-    # prepare clipping
 
     if batch_key is None:
         batch_info = np.zeros(adata.shape[0], dtype=int)
     else:
         batch_info = np.asarray(_get_vec(adata, batch_key, dim="obs", compat=True))
-    n_batches = len(np.unique(batch_info))
+    batches = np.unique(batch_info)
+    n_batches = len(batches)
+
+    # the default clip is derived from the first batch’s size and used for all batches
+    clip = _check_clip(clip, n_cells=np.sum(batch_info == batches[0]))
 
     # Get pearson residuals for each batch separately
     residual_gene_vars = []
-    for batch in np.unique(batch_info):
-        adata_subset_prefilter = adata[batch_info == batch]
-        x_batch_prefilter = _get_arr(adata_subset_prefilter, use, layer=layer)
-
-        # Filter out zero genes
-        with settings.override(verbosity=Verbosity.error):
-            nonzero_genes = np.ravel(x_batch_prefilter.sum(axis=0)) != 0
-        adata_subset = adata_subset_prefilter[:, nonzero_genes]
-        x_batch = _get_arr(adata_subset, use, layer=layer)
-
-        # Prepare clipping
-        if clip is None:
-            n = x_batch.shape[0]
-            clip = np.sqrt(n)
-        if clip < 0:
-            msg = "Pearson residuals require `clip>=0` or `clip=None`."
-            raise ValueError(msg)
-
-        if isinstance(x_batch, CSBase):
-            x_batch = x_batch.tocsc()
-            x_batch.eliminate_zeros()
-            calculate_res = partial(_calculate_res_sparse, x_batch.astype(np.float64))
-        else:
-            x_batch = np.array(x_batch, dtype=np.float64, order="F")
-            calculate_res = partial(_calculate_res_dense, x_batch)
-
-        sums_genes = np.array(x_batch.sum(axis=0)).ravel()
-        sums_cells = np.array(x_batch.sum(axis=1)).ravel()
-        sum_total = np.sum(sums_genes)
-
-        residual_gene_var = calculate_res(
-            sums_genes=sums_genes,
-            sums_cells=sums_cells,
-            sum_total=np.float64(sum_total),
-            clip=np.float64(clip),
-            theta=np.float64(theta),
-            n_genes=x_batch.shape[1],
-            n_cells=x_batch.shape[0],
+    for batch in batches:
+        residual_gene_var = _batch_residual_gene_var(
+            adata[batch_info == batch], use, layer=layer, clip=clip, theta=theta
         )
-
-        # Add 0 values for genes that were filtered out
-        unmasked_residual_gene_var = np.zeros(len(nonzero_genes))
-        unmasked_residual_gene_var[nonzero_genes] = residual_gene_var
-        residual_gene_vars.append(unmasked_residual_gene_var.reshape(1, -1))
+        residual_gene_vars.append(residual_gene_var.reshape(1, -1))
 
     residual_gene_vars = np.concatenate(residual_gene_vars, axis=0)
-
-    # Get rank per gene within each batch
-    # argsort twice gives ranks, small rank means most variable
-    ranks_residual_var = np.argsort(np.argsort(-residual_gene_vars, axis=1), axis=1)
-    ranks_residual_var = ranks_residual_var.astype(np.float32)
-    # count in how many batches a genes was among the n_top_genes
-    highly_variable_nbatches = np.sum(
-        (ranks_residual_var < n_top_genes).astype(int), axis=0
+    highly_variable_nbatches, medianrank_residual_var = _rank_residual_vars(
+        residual_gene_vars, n_top_genes
     )
-    # set non-top genes within each batch to nan
-    ranks_residual_var[ranks_residual_var >= n_top_genes] = np.nan
-    ranks_masked_array = np.ma.masked_invalid(ranks_residual_var)
-    # Median rank across batches, ignoring batches in which gene was not selected
-    medianrank_residual_var = np.ma.median(ranks_masked_array, axis=0).filled(np.nan)
 
     means, variances = materialize_as_ndarray(mean_var(x, axis=0, correction=1))
     df = pd.DataFrame.from_dict(

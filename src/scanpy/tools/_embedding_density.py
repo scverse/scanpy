@@ -55,6 +55,85 @@ def _calc_density(
     return np.full(xy.shape[1], np.nan)
 
 
+def _use_or_basis(
+    use: MultiAcc | str | Default, basis: MultiAcc | str | None
+) -> MultiAcc | str | Default:
+    if basis is not None:
+        if not isinstance(use, Default):
+            msg = "Pass either `use` or `basis`, not both."
+            raise TypeError(msg)
+        return basis  # deprecated, so its strings stay basis names under every preset
+    if isinstance(use, str):
+        return _resolve_ref(use, vec=False)
+    return use
+
+
+def _basis_key(
+    adata: AnnData, basis: MultiAcc | str | Default
+) -> tuple[str, str | None]:
+    """Get the basis name and the `.obsm` key it’s found in (if any)."""
+    if isinstance(basis, Default):
+        basis = "umap"  # found in `X_umap` or `umap`
+    if isinstance(basis, MultiAcc):
+        basis = _resolve_obs(basis)  # embeddings are in `.obsm`, not `.varm`
+        return basis.k.removeprefix("X_"), basis.k if basis.k in adata.obsm else None
+    basis = basis.lower()
+    if basis == "fa":
+        basis = "draw_graph_fa"
+    return basis, _get_basis_key(adata, basis)
+
+
+def _parse_components(components: str | Sequence[str] | None, basis: str) -> np.ndarray:
+    if components is None:
+        components = "1,2"
+    if isinstance(components, str):
+        components = components.split(",")
+    components = np.array(components).astype(int) - 1
+
+    if len(components) != 2:
+        msg = "Please specify exactly 2 components, or `None`."
+        raise ValueError(msg)
+
+    if basis == "diffmap":
+        components += 1
+    return components
+
+
+def _densities(
+    adata: AnnData,
+    embedding: np.ndarray,
+    components: np.ndarray,
+    groupby: str | None,
+    *,
+    coerce: bool,
+) -> np.ndarray:
+    """Calculate the densities (over each category in the groupby column)."""
+    if groupby is None:
+        # Calculate the density over the whole embedding without subsetting
+        embed_x = embedding[:, components[0]]
+        embed_y = embedding[:, components[1]]
+        return _calc_density(embed_x, embed_y)
+
+    if groupby not in adata.obs:
+        msg = f"Could not find {groupby!r} `.obs` column."
+        raise ValueError(msg)
+
+    groups = adata.obs[groupby]
+    if coerce and pd.api.types.is_string_dtype(groups):
+        groups = groups.astype("category")  # like `sanitize_anndata`, but local
+    if groups.dtype.name != "category":
+        msg = f"{groupby!r} column does not contain categorical data"
+        raise ValueError(msg)
+
+    density_values = np.zeros(adata.n_obs)
+    for cat in groups.cat.categories:
+        cat_mask = (groups == cat).to_numpy()
+        embed_x = embedding[cat_mask, components[0]]
+        embed_y = embedding[cat_mask, components[1]]
+        density_values[cat_mask] = _calc_density(embed_x, embed_y, group=(groupby, cat))
+    return density_values
+
+
 @_doc_params(
     out=doc_out_key(
         "the densities",
@@ -65,7 +144,7 @@ def _calc_density(
 )
 @deprecated_arg("key_added", DEPR_KEY_ADDED)
 @deprecated_arg("basis", Deprecation("1.13.0", "Use `use` instead."))
-def embedding_density(  # noqa: PLR0912, PLR0915
+def embedding_density(
     adata: AnnData,
     use: MultiAcc | str | Default = Default("'umap'"),
     *,
@@ -157,26 +236,9 @@ def embedding_density(  # noqa: PLR0912, PLR0915
     pl.embedding_density
 
     """
-    if basis is not None:
-        if not isinstance(use, Default):
-            msg = "Pass either `use` or `basis`, not both."
-            raise TypeError(msg)
-        use = basis  # deprecated, so its strings stay basis names under every preset
-    elif isinstance(use, str):
-        use = _resolve_ref(use, vec=False)
-    basis = use
+    use = _use_or_basis(use, basis)
     groupby = _obs_col(groupby, param="groupby")
-    if isinstance(basis, Default):
-        basis = "umap"  # found in `X_umap` or `umap`
-    if isinstance(basis, MultiAcc):
-        basis = _resolve_obs(basis)  # embeddings are in `.obsm`, not `.varm`
-        basis_key = basis.k if basis.k in adata.obsm else None
-        basis = basis.k.removeprefix("X_")
-    else:
-        basis = basis.lower()
-        if basis == "fa":
-            basis = "draw_graph_fa"
-        basis_key = _get_basis_key(adata, basis)
+    basis, basis_key = _basis_key(adata, use)
     default = f"{basis}_density" + ("" if groupby is None else f"_{groupby}")
     key = _out_key(out, key_added, kind="obs", default=default)
     # to ensure that newly created covariates are categorical
@@ -194,48 +256,10 @@ def embedding_density(  # noqa: PLR0912, PLR0915
         )
         raise ValueError(msg)
 
-    if components is None:
-        components = "1,2"
-    if isinstance(components, str):
-        components = components.split(",")
-    components = np.array(components).astype(int) - 1
-
-    if len(components) != 2:
-        msg = "Please specify exactly 2 components, or `None`."
-        raise ValueError(msg)
-
-    if basis == "diffmap":
-        components += 1
-
-    if groupby is not None:
-        if groupby not in adata.obs:
-            msg = f"Could not find {groupby!r} `.obs` column."
-            raise ValueError(msg)
-
-        groups = adata.obs[groupby]
-        if key is True and pd.api.types.is_string_dtype(groups):
-            groups = groups.astype("category")  # like `sanitize_anndata`, but local
-        if groups.dtype.name != "category":
-            msg = f"{groupby!r} column does not contain categorical data"
-            raise ValueError(msg)
-
-    # Calculate the densities over each category in the groupby column
-    if groupby is not None:
-        density_values = np.zeros(adata.n_obs)
-
-        for cat in groups.cat.categories:
-            cat_mask = (groups == cat).to_numpy()
-            embed_x = adata.obsm[basis_key][cat_mask, components[0]]
-            embed_y = adata.obsm[basis_key][cat_mask, components[1]]
-
-            dens_embed = _calc_density(embed_x, embed_y, group=(groupby, cat))
-            density_values[cat_mask] = dens_embed
-    else:  # if groupby is None
-        # Calculate the density over the whole embedding without subsetting
-        embed_x = adata.obsm[basis_key][:, components[0]]
-        embed_y = adata.obsm[basis_key][:, components[1]]
-
-        density_values = _calc_density(embed_x, embed_y)
+    components = _parse_components(components, basis)
+    density_values = _densities(
+        adata, adata.obsm[basis_key], components, groupby, coerce=key is True
+    )
     if key is True:
         return density_values
     adata.obs[key] = density_values
