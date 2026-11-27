@@ -58,6 +58,7 @@ if TYPE_CHECKING:
     from igraph import Graph
     from numpy.typing import NDArray
 
+    from .._utils import NeighborsView
     from .._utils.random import RNGLike, SeedLike
     from ..get._types import GraphAcc, MultiAcc, RepAcc
     from ._types import (
@@ -413,7 +414,7 @@ class Neighbors:
     """
 
     @deprecated_arg("neighbors_key", DEPR_NEIGHBORS_KEY)
-    def __init__(  # noqa: PLR0912
+    def __init__(
         self,
         adata: AnnData,
         *,
@@ -425,75 +426,80 @@ class Neighbors:
     ) -> None:
         self._adata = adata
         self._init_iroot()
-        # use the graph in adata
-        info_str = ""
         self.knn: bool | None = None
         self._distances: np.ndarray | CSRBase | None = None
         self._connectivities: np.ndarray | CSRBase | None = None
         self._transitions_sym: np.ndarray | CSRBase | None = None
         self._number_connected_components: int | None = None
         self._rp_forest: RPForestDict | None = None
-        if (neighbors := _neighbors_view(adata, use, neighbors_key)) is not None:
-            if "distances" in neighbors:
-                self.knn = isinstance(neighbors["distances"], CSBase)
-                self._distances = neighbors["distances"]
-            if "connectivities" in neighbors:
-                self.knn = isinstance(neighbors["connectivities"], CSBase)
-                self._connectivities = neighbors["connectivities"]
-            if "rp_forest" in neighbors:
-                self._rp_forest = neighbors["rp_forest"]
-            if "params" in neighbors:
-                self.n_neighbors = neighbors["params"]["n_neighbors"]
-            else:
+        # use the graph and diffusion map in adata
+        self._init_graph(_neighbors_view(adata, use, neighbors_key))
+        self._init_eigen(adata, diffmap, n_dcs=n_dcs)
 
-                def count_nonzero(a: np.ndarray | CSRBase) -> int:
-                    return (
-                        a.count_nonzero()
-                        if isinstance(a, CSRBase)
-                        else np.count_nonzero(a)
-                    )
-
-                # estimating n_neighbors
-                if self._connectivities is None:
-                    self.n_neighbors = int(
-                        count_nonzero(self._distances) / self._distances.shape[0]
-                    )
-                else:
-                    self.n_neighbors = int(
-                        count_nonzero(self._connectivities)
-                        / self._connectivities.shape[0]
-                        / 2
-                    )
-            info_str += "`.distances` `.connectivities` "
-            self._number_connected_components = 1
-            if isinstance(self._connectivities, CSBase):
-                from scipy.sparse.csgraph import connected_components
-
-                self._connected_components = connected_components(self._connectivities)
-                self._number_connected_components = self._connected_components[0]
-
-        if keys := _diffmap_keys(adata, diffmap):
-            # `tl.diffmap` stores the eigenvalues directly in V1 and as `evals` otherwise
-            evals = adata.uns[keys.uns]
-            self._eigen_values = evals["evals"] if isinstance(evals, Mapping) else evals
-            self._eigen_basis = adata.obsm[keys.obsm]
-            if n_dcs is not None:
-                if n_dcs > len(self._eigen_values):
-                    msg = (
-                        f"Cannot instantiate using `n_dcs`={n_dcs}. "
-                        "Compute diffmap/spectrum with more components first."
-                    )
-                    raise ValueError(msg)
-                self._eigen_values = self._eigen_values[:n_dcs]
-                self._eigen_basis = self._eigen_basis[:, :n_dcs]
-            self.n_dcs = len(self._eigen_values)
-            info_str += "`.eigen_values` `.eigen_basis` `.distances_dpt`"
+    def _init_graph(self, neighbors: NeighborsView | None) -> None:
+        """Initialize the neighborhood graph."""
+        if neighbors is None:
+            return
+        if "distances" in neighbors:
+            self.knn = isinstance(neighbors["distances"], CSBase)
+            self._distances = neighbors["distances"]
+        if "connectivities" in neighbors:
+            self.knn = isinstance(neighbors["connectivities"], CSBase)
+            self._connectivities = neighbors["connectivities"]
+        if "rp_forest" in neighbors:
+            self._rp_forest = neighbors["rp_forest"]
+        if "params" in neighbors:
+            self.n_neighbors = neighbors["params"]["n_neighbors"]
         else:
+
+            def count_nonzero(a: np.ndarray | CSRBase) -> int:
+                return (
+                    a.count_nonzero() if isinstance(a, CSRBase) else np.count_nonzero(a)
+                )
+
+            # estimating n_neighbors
+            if self._connectivities is None:
+                self.n_neighbors = int(
+                    count_nonzero(self._distances) / self._distances.shape[0]
+                )
+            else:
+                self.n_neighbors = int(
+                    count_nonzero(self._connectivities)
+                    / self._connectivities.shape[0]
+                    / 2
+                )
+        self._number_connected_components = 1
+        if isinstance(self._connectivities, CSBase):
+            from scipy.sparse.csgraph import connected_components
+
+            self._connected_components = connected_components(self._connectivities)
+            self._number_connected_components = self._connected_components[0]
+        logg.debug("    initialized `.distances` `.connectivities`")
+
+    def _init_eigen(
+        self, adata: AnnData, diffmap: MultiAcc | str | None, *, n_dcs: int | None
+    ) -> None:
+        """Initialize the diffusion map eigen decomposition."""
+        if not (keys := _diffmap_keys(adata, diffmap)):
             self._eigen_values = None
             self._eigen_basis = None
             self.n_dcs = None
-        if info_str != "":
-            logg.debug(f"    initialized {info_str}")
+            return
+        # `tl.diffmap` stores the eigenvalues directly in V1 and as `evals` otherwise
+        evals = adata.uns[keys.uns]
+        self._eigen_values = evals["evals"] if isinstance(evals, Mapping) else evals
+        self._eigen_basis = adata.obsm[keys.obsm]
+        if n_dcs is not None:
+            if n_dcs > len(self._eigen_values):
+                msg = (
+                    f"Cannot instantiate using `n_dcs`={n_dcs}. "
+                    "Compute diffmap/spectrum with more components first."
+                )
+                raise ValueError(msg)
+            self._eigen_values = self._eigen_values[:n_dcs]
+            self._eigen_basis = self._eigen_basis[:, :n_dcs]
+        self.n_dcs = len(self._eigen_values)
+        logg.debug("    initialized `.eigen_values` `.eigen_basis` `.distances_dpt`")
 
     @property
     def rp_forest(self) -> RPForestDict | None:

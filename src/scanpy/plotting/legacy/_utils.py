@@ -22,9 +22,10 @@ from ..._utils import NeighborsView, _get_basis_key
 from . import mpl_settings, palettes
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
+    from collections.abc import Collection, Iterable
 
     from anndata import AnnData
+    from matplotlib.collections import PathCollection
     from matplotlib.colors import Colormap, ListedColormap
     from matplotlib.figure import Figure
     from matplotlib.typing import MarkerType
@@ -152,7 +153,7 @@ def timeseries(X, **kwargs):  # noqa: N803
     timeseries_subplot(X, **kwargs)
 
 
-def timeseries_subplot(  # noqa: PLR0912, PLR0913
+def timeseries_subplot(  # noqa: PLR0913
     X: np.ndarray,  # noqa: N803
     *,
     time=None,
@@ -183,18 +184,9 @@ def timeseries_subplot(  # noqa: PLR0912, PLR0913
     use_color_map = color is not None and isinstance(color[0], float | np.floating)
     palette = default_palette(palette)
     x_range = np.arange(X.shape[0]) if time is None else time
-    if X.ndim == 1:
-        X = X[:, None]  # noqa: N806
-    if X.shape[1] > 1:
-        colors = islice(cycle(palette.by_key()["color"]), X.shape[1])
-        subsets = [(x_range, X[:, i]) for i in range(X.shape[1])]
-    elif use_color_map:
-        colors = [color]
-        subsets = [(x_range, X[:, 0])]
-    else:
-        levels, _ = np.unique(color, return_inverse=True)
-        colors = islice(cycle(palette.by_key()["color"]), len(levels))
-        subsets = [(x_range[color == level], X[color == level, :]) for level in levels]
+    colors, subsets = _timeseries_subsets(
+        X, x_range, color=color, palette=palette, use_color_map=use_color_map
+    )
 
     if isinstance(marker, str):
         marker = [marker]
@@ -231,6 +223,30 @@ def timeseries_subplot(  # noqa: PLR0912, PLR0913
         ax.set_yticks(yticks)
     if has_var_names and legend:
         ax.legend(frameon=False)
+
+
+def _timeseries_subsets(
+    X: np.ndarray,  # noqa: N803
+    x_range: np.ndarray,
+    *,
+    color,
+    palette: Cycler,
+    use_color_map: bool,
+) -> tuple[Iterable, list[tuple[np.ndarray, np.ndarray]]]:
+    """Get colors and (x, y) data for each subset to plot."""
+    if X.ndim == 1:
+        X = X[:, None]  # noqa: N806
+    if X.shape[1] > 1:
+        colors = islice(cycle(palette.by_key()["color"]), X.shape[1])
+        subsets = [(x_range, X[:, i]) for i in range(X.shape[1])]
+    elif use_color_map:
+        colors = [color]
+        subsets = [(x_range, X[:, 0])]
+    else:
+        levels, _ = np.unique(color, return_inverse=True)
+        colors = islice(cycle(palette.by_key()["color"]), len(levels))
+        subsets = [(x_range[color == level], X[color == level, :]) for level in levels]
+    return colors, subsets
 
 
 def timeseries_as_heatmap(
@@ -652,7 +668,7 @@ def scatter_group(
     return mask_obs
 
 
-def setup_axes(  # noqa: PLR0912
+def setup_axes(
     ax: Axes | Sequence[Axes] | None = None,
     *,
     panels="blue",
@@ -672,10 +688,11 @@ def setup_axes(  # noqa: PLR0912
     elif right_margin is None:
         right_margin = 1 - rcParams["figure.subplot.right"] + 0.06  # 0.10
     # make a list of right margins for each panel
-    if not isinstance(right_margin, list):
-        right_margin_list = [right_margin for i in range(len(panels))]
-    else:
-        right_margin_list = right_margin
+    right_margin_list = (
+        right_margin
+        if isinstance(right_margin, list)
+        else [right_margin for i in range(len(panels))]
+    )
 
     # make a figure with len(panels) panels in a row side by side
     top_offset = 1 - rcParams["figure.subplot.top"]
@@ -725,10 +742,8 @@ def setup_axes(  # noqa: PLR0912
             bottom = panel_pos[0][0]
             width = draw_region_width / figure_width
             height = panel_pos[1][0] - bottom
-            if projection == "2d":
-                ax = plt.axes([left, bottom, width, height])
-            elif projection == "3d":
-                ax = plt.axes([left, bottom, width, height], projection="3d")
+            projection_kw = dict(projection="3d") if projection == "3d" else {}
+            ax = plt.axes([left, bottom, width, height], **projection_kw)
             axs.append(ax)
     else:
         axs = ax if isinstance(ax, Sequence) else [ax]
@@ -736,7 +751,7 @@ def setup_axes(  # noqa: PLR0912
     return axs, panel_pos, draw_region_width, figure_width
 
 
-def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
+def scatter_base(  # noqa: PLR0913
     y: np.ndarray,
     /,
     *,
@@ -772,12 +787,7 @@ def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
     return a single axis or a list of axes.
 
     """
-    if isinstance(highlights, Mapping):
-        highlights_indices = sorted(highlights)
-        highlights_labels = [highlights[i] for i in highlights_indices]
-    else:
-        highlights_indices = map(int, highlights)
-        highlights_labels = map(str, highlights)
+    highlights_indices, highlights_labels = _highlights_indices_labels(highlights)
     # if we have a single array, transform it into a list with a single array
     if isinstance(colors, str):
         colors = [colors]
@@ -799,22 +809,9 @@ def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
     for icolor, color_spec in enumerate(colors):
         ax = axs[icolor]
         marker = markers[icolor]
-        bottom = panel_pos[0][0]
-        height = panel_pos[1][0] - bottom
-        y_sort = y
-        if not is_color_like(color_spec) and sort_order:
-            sort = np.argsort(color_spec)
-            color = color_spec[sort]
-            y_sort = y[sort]
-        else:
-            color = color_spec
-        if projection == "2d":
-            data = y_sort[:, 0], y_sort[:, 1]
-        elif projection == "3d":
-            data = y_sort[:, 0], y_sort[:, 1], y_sort[:, 2]
-        else:
-            msg = f"Unknown projection {projection!r} not in '2d', '3d'"
-            raise ValueError(msg)
+        color, data = _sorted_scatter_data(
+            y, color_spec, sort_order=sort_order, projection=projection
+        )
         if not isinstance(color, str) or color != "white":
             sct = ax.scatter(
                 *data,
@@ -827,43 +824,20 @@ def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
                 rasterized=mpl_settings.VECTOR_FRIENDLY,
             )
         if colorbars[icolor]:
-            width = 0.006 * draw_region_width / len(colors)
-            left = (
-                panel_pos[2][2 * icolor + 1]
-                + (1.2 if projection == "3d" else 0.2) * width
-            )
-            rectangle = [left, bottom, width, height]
-            fig = plt.gcf()
-            ax_cb = fig.add_axes(rectangle)
-            _ = plt.colorbar(
-                sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb
+            _add_panel_colorbar(
+                sct,
+                panel_pos,
+                icolor,
+                width=0.006 * draw_region_width / len(colors),
+                projection=projection,
             )
         # set the title
         if title is not None:
             ax.set_title(title[icolor])
         # output highlighted data points
-        for ihighlight, highlight_text in zip(
-            highlights_indices, highlights_labels, strict=True
-        ):
-            data = [y[ihighlight, 0]], [y[ihighlight, 1]]
-            if "3d" in projection:
-                data = [y[ihighlight, 0]], [y[ihighlight, 1]], [y[ihighlight, 2]]
-            ax.scatter(
-                *data,
-                c="black",
-                facecolors="black",
-                edgecolors="black",
-                marker="x",
-                s=10,
-                zorder=20,
-            )
-            # the following is a Python 2 compatibility hack
-            ax.text(
-                *([d[0] for d in data] + [highlight_text]),
-                zorder=20,
-                fontsize=10,
-                color="black",
-            )
+        _plot_highlights(
+            ax, y, highlights_indices, highlights_labels, projection=projection
+        )
         if not show_ticks:
             ax.set_xticks([])
             ax.set_yticks([])
@@ -871,22 +845,111 @@ def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
                 ax.set_zticks([])
     # set default axis_labels
     if axis_labels is None:
-        axis_labels = [
-            [component_name + str(i) for i in component_indexnames]
-            for _ in range(len(axs))
-        ]
-    else:
-        axis_labels = [axis_labels for _ in range(len(axs))]
-    for iax, ax in enumerate(axs):
-        ax.set_xlabel(axis_labels[iax][0])
-        ax.set_ylabel(axis_labels[iax][1])
-        if "3d" in projection:
-            # shift the label closer to the axis
-            ax.set_zlabel(axis_labels[iax][2], labelpad=-7)
+        axis_labels = [component_name + str(i) for i in component_indexnames]
+    _set_axis_labels(axs, axis_labels, projection=projection)
     for ax in axs:
         # scale limits to match data
         ax.autoscale_view()
     return axs
+
+
+def _add_panel_colorbar(
+    sct: PathCollection,
+    panel_pos: list[list[float]],
+    icolor: int,
+    *,
+    width: float,
+    projection: Literal["2d", "3d"],
+) -> None:
+    """Add a colorbar to the right of panel `icolor`."""
+    bottom = panel_pos[0][0]
+    height = panel_pos[1][0] - bottom
+    left = panel_pos[2][2 * icolor + 1] + (1.2 if projection == "3d" else 0.2) * width
+    ax_cb = plt.gcf().add_axes([left, bottom, width, height])
+    _ = plt.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb)
+
+
+def _highlights_indices_labels(
+    highlights: Mapping[int, str] | Iterable[int],
+) -> tuple[Iterable[int], Iterable[str]]:
+    if isinstance(highlights, Mapping):
+        highlights_indices = sorted(highlights)
+        highlights_labels = [highlights[i] for i in highlights_indices]
+    else:
+        highlights_indices = map(int, highlights)
+        highlights_labels = map(str, highlights)
+    return highlights_indices, highlights_labels
+
+
+def _set_axis_labels(
+    axs: Sequence[Axes],
+    axis_labels: Sequence[str],
+    *,
+    projection: Literal["2d", "3d"],
+) -> None:
+    for ax in axs:
+        ax.set_xlabel(axis_labels[0])
+        ax.set_ylabel(axis_labels[1])
+        if "3d" in projection:
+            # shift the label closer to the axis
+            ax.set_zlabel(axis_labels[2], labelpad=-7)
+
+
+def _sorted_scatter_data(
+    y: np.ndarray,
+    color_spec: ColorLike | np.ndarray,
+    *,
+    sort_order: bool,
+    projection: Literal["2d", "3d"],
+) -> tuple[ColorLike | np.ndarray, tuple[np.ndarray, ...]]:
+    """Get colors and coordinates, sorted by color values if applicable."""
+    y_sort = y
+    if not is_color_like(color_spec) and sort_order:
+        sort = np.argsort(color_spec)
+        color = color_spec[sort]
+        y_sort = y[sort]
+    else:
+        color = color_spec
+    if projection == "2d":
+        data = y_sort[:, 0], y_sort[:, 1]
+    elif projection == "3d":
+        data = y_sort[:, 0], y_sort[:, 1], y_sort[:, 2]
+    else:
+        msg = f"Unknown projection {projection!r} not in '2d', '3d'"
+        raise ValueError(msg)
+    return color, data
+
+
+def _plot_highlights(
+    ax: Axes,
+    y: np.ndarray,
+    highlights_indices: Iterable[int],
+    highlights_labels: Iterable[str],
+    *,
+    projection: Literal["2d", "3d"],
+) -> None:
+    for ihighlight, highlight_text in zip(
+        highlights_indices, highlights_labels, strict=True
+    ):
+        data = [y[ihighlight, 0]], [y[ihighlight, 1]]
+        if "3d" in projection:
+            data = [y[ihighlight, 0]], [y[ihighlight, 1]], [y[ihighlight, 2]]
+        ax.scatter(
+            *data,
+            c="black",
+            facecolors="black",
+            edgecolors="black",
+            marker="x",
+            s=10,
+            zorder=20,
+        )
+        # the following is a Python 2 compatibility hack
+        ax.text(
+            *([d[0] for d in data] + [highlight_text]),
+            zorder=20,
+            fontsize=10,
+            color="black",
+        )
 
 
 def ticks_formatter(x, pos) -> str:

@@ -4,10 +4,11 @@ import inspect
 import re
 import textwrap
 from collections.abc import Sequence
+from dataclasses import dataclass, field
 from functools import cache, partial
 from itertools import combinations, product
 from numbers import Integral
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -42,7 +43,8 @@ if TYPE_CHECKING:
     from cycler import Cycler
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap
-    from matplotlib.figure import Figure
+    from matplotlib.figure import Figure, SubFigure
+    from matplotlib.gridspec import GridSpec
     from numpy.typing import NDArray
 
     from ....tools._draw_graph import _Layout
@@ -55,7 +57,7 @@ if TYPE_CHECKING:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def embedding(  # noqa: PLR0912, PLR0913, PLR0915
+def embedding(  # noqa: PLR0913
     adata: AnnData,
     basis: str,
     *,
@@ -150,44 +152,9 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     dimensions = _components_to_dimensions(
         components, dimensions, projection=projection, total_dims=basis_values.shape[1]
     )
-    args_3d = dict(projection="3d") if projection == "3d" else {}
-
-    # Checking the mask format and if used together with groups
-    if groups is not None and mask_obs is not None:
-        msg = "Groups and mask arguments are incompatible."
-        raise ValueError(msg)
-    mask_obs = _check_mask(adata, mask_obs, "obs")
-
-    # Figure out if we're using raw
-    if use_raw is None:
-        # check if adata.raw is set
-        use_raw = layer is None and adata.raw is not None
-    if use_raw and layer is not None:
-        msg = (
-            "Cannot use both a layer and the raw representation. "
-            f"Was passed: {use_raw=!r}, {layer=!r}."
-        )
-        raise ValueError(msg)
-    if use_raw and adata.raw is None:
-        msg = (
-            "`use_raw` is set to True but AnnData object does not have raw. "
-            "Please check."
-        )
-        raise ValueError(msg)
-
-    if isinstance(groups, str):
-        groups = [groups]
-
-    # Color map
-    if color_map is not None:
-        if cmap is not None:
-            msg = "Cannot specify both `color_map` and `cmap`."
-            raise ValueError(msg)
-        else:
-            cmap = color_map
-    cmap = colormaps.get_cmap(cmap).with_extremes(bad=na_color)
-    # Prevents warnings during legend creation
-    na_color = colors.to_hex(na_color, keep_alpha=True)
+    groups, mask_obs = _check_groups_mask(adata, groups, mask_obs)
+    use_raw = _check_use_raw(adata, use_raw=use_raw, layer=layer)
+    cmap, na_color = _get_cmap(color_map, cmap, na_color=na_color)
 
     # by default turn off edge color. Otherwise, for
     # very small sizes the edge will not reduce its size
@@ -206,290 +173,514 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
         # turn title into a python list if not None
         title = [title] if isinstance(title, str) else list(title)
 
-    # turn vmax and vmin into a sequence
-    if isinstance(vmax, str) or not isinstance(vmax, Sequence):
-        vmax = [vmax]
-    if isinstance(vmin, str) or not isinstance(vmin, Sequence):
-        vmin = [vmin]
-    if isinstance(vcenter, str) or not isinstance(vcenter, Sequence):
-        vcenter = [vcenter]
-    if isinstance(norm, Normalize) or not isinstance(norm, Sequence):
-        norm = [norm]
-
-    # Size
-    if "s" in kwargs and size is None:
-        size = kwargs.pop("s")
-    if size is not None:
-        # check if size is any type of sequence, and if so
-        # set as ndarray
-        if (
-            size is not None
-            and isinstance(size, Sequence | pd.Series | np.ndarray)
-            and len(size) == adata.shape[0]
-        ):
-            size = np.array(size, dtype=float)
-    else:
-        # if the basis has NaNs, ignore the corresponding cells for size calcluation
-        size = 120000 / (~np.isnan(basis_values).any(axis=1)).sum()
-
-    ##########
-    # Layout #
-    ##########
-    # Most of the code is for the case when multiple plots are required
-
-    if wspace is None:
-        #  try to set a wspace that is not too large or too small given the
-        #  current figure size
-        wspace = 0.75 / rcParams["figure.figsize"][0] + 0.02
+    size = _get_size(adata, basis_values, size, kwargs)
 
     if components is not None:
         color, dimensions = list(zip(*product(color, dimensions), strict=True))
 
     color, dimensions, marker = _broadcast_args(color, dimensions, marker)
 
-    # 'color' is a list of names that want to be plotted.
-    # Eg. ['Gene1', 'louvain', 'Gene2'].
-    # component_list is a list of components [[0,1], [1,2]]
+    plot = _EmbeddingPlot(
+        adata=adata,
+        basis=basis,
+        basis_values=basis_values,
+        projection=projection,
+        layer=layer,
+        mask_obs=mask_obs,
+        use_raw=use_raw,
+        gene_symbols=gene_symbols,
+        groups=groups,
+        palette=palette,
+        na_color=na_color,
+        sort_order=sort_order,
+        size=size,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        vcenter=vcenter,
+        norm=norm,
+        scale_factor=scale_factor,
+        add_outline=add_outline,
+        outline_width=outline_width,
+        outline_color=outline_color,
+        kwargs=kwargs,
+        frameon=frameon,
+        title=title,
+        edges=edges,
+        edges_width=edges_width,
+        edges_color=edges_color,
+        neighbors_key=neighbors_key,
+        arrows=arrows,
+        arrows_kwds=arrows_kwds,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
+        legend_fontoutline=legend_fontoutline,
+        na_in_legend=na_in_legend,
+        colorbar_loc=colorbar_loc,
+    )
+    plot.make_layout(len(color), ax=ax, hspace=hspace, wspace=wspace, ncols=ncols)
+    # make a plot for each color and for each component
+    # For example if color=[gene1, gene2] and components=['1,2, '2,3'].
+    # The plots are: [
+    #     color=gene1, components=[1,2], color=gene1, components=[2,3],
+    #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
+    # ]
+    for index, panel in enumerate(zip(color, dimensions, marker, strict=True)):
+        plot.plot_panel(index, *panel)
+
+    if return_fig is True:
+        return plot.fig
+    _utils.savefig_or_show(basis, show=show, save=save)
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return plot.axs if plot.grid else plot.ax
+
+
+def _projection_kw(projection: Literal["2d", "3d"]) -> dict[str, str]:
+    return dict(projection="3d") if projection == "3d" else {}
+
+
+def _check_groups_mask(
+    adata: AnnData,
+    groups: str | Sequence[str] | None,
+    mask_obs: NDArray[np.bool] | str | None,
+) -> tuple[Sequence[str] | None, NDArray[np.bool] | None]:
+    """Check the mask format and if used together with groups."""
+    if groups is not None and mask_obs is not None:
+        msg = "Groups and mask arguments are incompatible."
+        raise ValueError(msg)
+    mask_obs = _check_mask(adata, mask_obs, "obs")
+    if isinstance(groups, str):
+        groups = [groups]
+    return groups, mask_obs
+
+
+def _check_use_raw(adata: AnnData, *, use_raw: bool | None, layer: str | None) -> bool:
+    """Figure out if we're using raw."""
+    if use_raw is None:
+        # check if adata.raw is set
+        use_raw = layer is None and adata.raw is not None
+    if use_raw and layer is not None:
+        msg = (
+            "Cannot use both a layer and the raw representation. "
+            f"Was passed: {use_raw=!r}, {layer=!r}."
+        )
+        raise ValueError(msg)
+    if use_raw and adata.raw is None:
+        msg = (
+            "`use_raw` is set to True but AnnData object does not have raw. "
+            "Please check."
+        )
+        raise ValueError(msg)
+    return use_raw
+
+
+def _get_cmap(
+    color_map: Colormap | str | None,
+    cmap: Colormap | str | None,
+    *,
+    na_color: ColorLike,
+) -> tuple[Colormap, str]:
+    if color_map is not None:
+        if cmap is not None:
+            msg = "Cannot specify both `color_map` and `cmap`."
+            raise ValueError(msg)
+        cmap = color_map
+    cmap = colormaps.get_cmap(cmap).with_extremes(bad=na_color)
+    # Prevents warnings during legend creation
+    na_color = colors.to_hex(na_color, keep_alpha=True)
+    return cmap, na_color
+
+
+def _as_sequence[T](v: T | Sequence[T], scalar_type: type) -> Sequence[T]:
+    """Wrap `v` in a list unless it is a (non-`scalar_type`) sequence."""
+    if isinstance(v, scalar_type) or not isinstance(v, Sequence):
+        return [v]
+    return v
+
+
+def _get_size(
+    adata: AnnData,
+    basis_values: np.ndarray,
+    size: float | Sequence[float] | None,
+    kwargs: dict[str, Any],
+) -> float | Sequence[float] | np.ndarray:
+    if "s" in kwargs and size is None:
+        size = kwargs.pop("s")
+    if size is None:
+        # if the basis has NaNs, ignore the corresponding cells for size calcluation
+        return 120000 / (~np.isnan(basis_values).any(axis=1)).sum()
+    # check if size is any type of sequence, and if so set as ndarray
     if (
-        not isinstance(color, str) and isinstance(color, Sequence) and len(color) > 1
-    ) or len(dimensions) > 1:
+        isinstance(size, Sequence | pd.Series | np.ndarray)
+        and len(size) == adata.shape[0]
+    ):
+        return np.array(size, dtype=float)
+    return size
+
+
+def _get_point_order(
+    value_to_plot: str | None,
+    color_source_vector: np.ndarray | pd.Categorical,
+    color_vector: np.ndarray,
+    *,
+    color_type: Literal["cat", "cont"],
+    sort_order: bool,
+) -> slice | np.ndarray:
+    if sort_order and value_to_plot is not None and color_type == "cont":
+        # Higher values plotted on top, null values on bottom
+        return np.argsort(-color_vector, kind="stable")[::-1]
+    if sort_order and color_type == "cat":
+        # Null points go on bottom
+        return np.argsort(~pd.isna(color_source_vector), kind="stable")
+    return slice(None)
+
+
+class _PanelData(NamedTuple):
+    """Data for one panel of :class:`_EmbeddingPlot`, ordered for plotting."""
+
+    color_source: np.ndarray | pd.Categorical
+    colors: np.ndarray
+    color_type: Literal["cat", "cont"]
+    size: float | Sequence[float] | np.ndarray
+    coords: np.ndarray
+
+
+@dataclass(kw_only=True)
+class _EmbeddingPlot:
+    """Figure layout and per-panel plotting for :func:`embedding`."""
+
+    adata: AnnData
+    basis: str
+    basis_values: np.ndarray
+    projection: Literal["2d", "3d"]
+    # color source
+    layer: str | None
+    mask_obs: NDArray[np.bool] | None
+    use_raw: bool
+    gene_symbols: str | None
+    groups: Sequence[str] | None
+    palette: str | Sequence[str] | Cycler | None
+    na_color: str
+    sort_order: bool
+    # scatter
+    size: float | Sequence[float] | np.ndarray
+    cmap: Colormap
+    vmin: VBound | Sequence[VBound] | None
+    vmax: VBound | Sequence[VBound] | None
+    vcenter: VBound | Sequence[VBound] | None
+    norm: Normalize | Sequence[Normalize] | None
+    scale_factor: float | None
+    add_outline: bool | None
+    outline_width: tuple[float, float]
+    outline_color: tuple[str, str]
+    kwargs: dict[str, Any]
+    # decorations
+    frameon: bool | None
+    title: list[str] | None
+    edges: bool
+    edges_width: float
+    edges_color: str | Sequence[float] | Sequence[str]
+    neighbors_key: str | None
+    arrows: bool
+    arrows_kwds: Mapping[str, Any] | None
+    legend_loc: _LegendLoc | None
+    legend_fontsize: float | _FontSize | None
+    legend_fontweight: int | _FontWeight
+    legend_fontoutline: int | None
+    na_in_legend: bool
+    colorbar_loc: Literal["right", "left", "top", "bottom"] | None
+    # layout, set in `make_layout`
+    fig: Figure | SubFigure | None = field(init=False, default=None)
+    grid: GridSpec | None = field(init=False, default=None)
+    ax: Axes | None = field(init=False, default=None)
+    axs: list[Axes] = field(init=False, default_factory=list)
+
+    def make_layout(
+        self,
+        n_panels: int,
+        *,
+        ax: Axes | None,
+        hspace: float,
+        wspace: float | None,
+        ncols: int,
+    ) -> None:
+        """Create figure and grid (multiple panels) or use/create a single axes."""
+        if n_panels == 1:
+            if ax is None:
+                self.fig = plt.figure()
+                ax = self.fig.add_subplot(111, **_projection_kw(self.projection))
+            else:
+                self.fig = ax.get_figure()
+            self.ax = ax
+            return
+
         if ax is not None:
             msg = (
                 "Cannot specify `ax` when plotting multiple panels "
                 "(each for a given value of 'color')."
             )
             raise ValueError(msg)
-
+        if wspace is None:
+            #  try to set a wspace that is not too large or too small given the
+            #  current figure size
+            wspace = 0.75 / rcParams["figure.figsize"][0] + 0.02
         # each plot needs to be its own panel
-        fig, grid = _panel_grid(hspace, wspace, ncols, len(color))
-    else:
-        grid = None
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111, **args_3d)
+        self.fig, self.grid = _panel_grid(hspace, wspace, ncols, n_panels)
 
-    ############
-    # Plotting #
-    ############
-    axs = []
+    def plot_panel(
+        self, index: int, value_to_plot: str | None, dims: Sequence[int], marker: str
+    ) -> None:
+        """Plot one panel, colored by `value_to_plot`."""
+        data = self._panel_data(value_to_plot, dims)
+        ax = self._panel_ax(index, value_to_plot)
+        kwargs_scatter = self.kwargs
+        if data.color_type == "cont":
+            kwargs_scatter = dict(
+                kwargs_scatter, norm=self._norm(index, data.colors), cmap=self.cmap
+            )
+        cax = self._scatter(ax, data, marker=marker, kwargs=kwargs_scatter)
+        self._label_axes(ax, dims)
+        if self.edges:
+            _utils.plot_edges(
+                ax,
+                self.adata,
+                self.basis,
+                self.edges_width,
+                self.edges_color,
+                neighbors_key=self.neighbors_key,
+            )
+        if self.arrows:
+            _utils.plot_arrows(ax, self.adata, self.basis, self.arrows_kwds)
+        if value_to_plot is None:
+            # if only dots were plotted without an associated value
+            # there is not need to plot a legend or a colorbar
+            return
+        self._add_legend(ax, cax, value_to_plot, data)
 
-    # use itertools.product to make a plot for each color and for each component
-    # For example if color=[gene1, gene2] and components=['1,2, '2,3'].
-    # The plots are: [
-    #     color=gene1, components=[1,2], color=gene1, components=[2,3],
-    #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
-    # ]
-    for count, (value_to_plot, dims) in enumerate(zip(color, dimensions, strict=True)):
-        kwargs_scatter = kwargs.copy()  # is potentially mutated for each plot
+    def _panel_data(self, value_to_plot: str | None, dims: Sequence[int]) -> _PanelData:
+        """Get color source, colors, color type, size, and coords, ordered for plotting."""
         # TODO: It might be worth not returning `NumpyExtensionArray` objects out of the dataframes via accessors because we have a lot of np.ndarray checks.
         # Setting np.array here prevents the  `NumpyExtensionArray` from propagating.
         color_source_vector = _get_color_source_vector(
-            adata,
+            self.adata,
             value_to_plot,
-            layer=layer,
-            mask_obs=mask_obs,
-            use_raw=use_raw,
-            gene_symbols=gene_symbols,
-            groups=groups,
+            layer=self.layer,
+            mask_obs=self.mask_obs,
+            use_raw=self.use_raw,
+            gene_symbols=self.gene_symbols,
+            groups=self.groups,
         )
         if isinstance(color_source_vector, pd.arrays.NumpyExtensionArray):
             color_source_vector = color_source_vector.to_numpy()
         color_vector, color_type = _color_vector(
-            adata,
+            self.adata,
             value_to_plot,
             values=color_source_vector,
-            palette=palette,
-            na_color=na_color,
+            palette=self.palette,
+            na_color=self.na_color,
         )
 
-        # Order points
-        order = slice(None)
-        if sort_order and value_to_plot is not None and color_type == "cont":
-            # Higher values plotted on top, null values on bottom
-            order = np.argsort(-color_vector, kind="stable")[::-1]
-        elif sort_order and color_type == "cat":
-            # Null points go on bottom
-            order = np.argsort(~pd.isna(color_source_vector), kind="stable")
+        order = _get_point_order(
+            value_to_plot,
+            color_source_vector,
+            color_vector,
+            color_type=color_type,
+            sort_order=self.sort_order,
+        )
         # Set orders — use a local to avoid cumulative reordering across
         # subplots when multiple color keys are given.
-        _size = np.array(size)[order] if isinstance(size, np.ndarray) else size
-        color_source_vector = color_source_vector[order]
-        color_vector = color_vector[order]
-        coords = basis_values[:, dims][order, :]
+        size = (
+            np.array(self.size)[order]
+            if isinstance(self.size, np.ndarray)
+            else self.size
+        )
+        return _PanelData(
+            color_source=color_source_vector[order],
+            colors=color_vector[order],
+            color_type=color_type,
+            size=size,
+            coords=self.basis_values[:, dims][order, :],
+        )
 
+    def _panel_ax(self, index: int, value_to_plot: str | None) -> Axes:
+        """Get the panel’s axes and set its frame and title."""
         # if plotting multiple panels, get the ax from the grid spec
         # else use the ax value (either user given or created previously)
-        if grid:
-            ax = plt.subplot(grid[count], **args_3d)
-            axs.append(ax)
-        if not (mpl_settings.FRAMEON if frameon is None else frameon):
-            ax.axis("off")
-        if title is None:
-            if value_to_plot is not None:
-                ax.set_title(value_to_plot)
-            else:
-                ax.set_title("")
+        if self.grid:
+            ax = plt.subplot(self.grid[index], **_projection_kw(self.projection))
+            self.axs.append(ax)
         else:
-            try:
-                ax.set_title(title[count])
-            except IndexError:
-                logg.warning(
-                    "The title list is shorter than the number of panels. "
-                    "Using 'color' value instead for some plots."
-                )
-                ax.set_title(value_to_plot)
+            ax = self.ax
+        if not (mpl_settings.FRAMEON if self.frameon is None else self.frameon):
+            ax.axis("off")
 
-        if color_type == "cont":
-            vmin_float, vmax_float, vcenter_float, norm_obj = _get_vboundnorm(
-                vmin, vmax, vcenter, norm=norm, index=count, colors=color_vector
+        if self.title is None:
+            ax.set_title(value_to_plot if value_to_plot is not None else "")
+            return ax
+        try:
+            ax.set_title(self.title[index])
+        except IndexError:
+            logg.warning(
+                "The title list is shorter than the number of panels. "
+                "Using 'color' value instead for some plots."
             )
-            kwargs_scatter["norm"] = check_colornorm(
-                vmin_float,
-                vmax_float,
-                vcenter_float,
-                norm_obj,
-            )
-            kwargs_scatter["cmap"] = cmap
+            ax.set_title(value_to_plot)
+        return ax
 
-        # make the scatter plot
-        if projection == "3d":
-            cax = ax.scatter(
+    def _norm(self, index: int, color_vector: np.ndarray) -> Normalize:
+        vmin_float, vmax_float, vcenter_float, norm_obj = _get_vboundnorm(
+            _as_sequence(self.vmin, str),
+            _as_sequence(self.vmax, str),
+            _as_sequence(self.vcenter, str),
+            norm=_as_sequence(self.norm, Normalize),
+            index=index,
+            colors=color_vector,
+        )
+        return check_colornorm(vmin_float, vmax_float, vcenter_float, norm_obj)
+
+    def _scatter(
+        self, ax: Axes, data: _PanelData, *, marker: str, kwargs: Mapping[str, Any]
+    ):
+        """Make the scatter plot for one panel, return the mappable."""
+        coords, size = data.coords, data.size
+        if self.projection == "3d":
+            return ax.scatter(
                 coords[:, 0],
                 coords[:, 1],
                 coords[:, 2],
-                c=color_vector,
+                c=data.colors,
                 rasterized=mpl_settings.VECTOR_FRIENDLY,
-                marker=marker[count],
-                **kwargs_scatter,
+                marker=marker,
+                **kwargs,
             )
-        else:
-            scatter = (
-                partial(ax.scatter, s=_size, plotnonfinite=True)
-                if scale_factor is None
-                else partial(
-                    circles, s=_size, ax=ax, scale_factor=scale_factor
-                )  # size in circles is radius
-            )
+        scatter = (
+            partial(ax.scatter, s=size, plotnonfinite=True)
+            if self.scale_factor is None
+            else partial(
+                circles, s=size, ax=ax, scale_factor=self.scale_factor
+            )  # size in circles is radius
+        )
+        if self.add_outline:
+            self._scatter_outline(ax, coords, size=size, marker=marker)
+            # the outline is the edge, and the dots on top get some transparency
+            kwargs = {"alpha": 0.7, **kwargs, "edgecolor": "none"}
 
-            if add_outline:
-                # the default outline is a black edge followed by a
-                # thin white edged added around connected clusters.
-                # To add an outline
-                # three overlapping scatter plots are drawn:
-                # First black dots with slightly larger size,
-                # then, white dots a bit smaller, but still larger
-                # than the final dots. Then the final dots are drawn
-                # with some transparency.
+        kwargs = dict(kwargs)
+        edgecolor = kwargs.pop("edgecolor", None)
+        if not MarkerStyle(marker).is_filled():
+            edgecolor = None
+        return scatter(
+            coords[:, 0],
+            coords[:, 1],
+            c=data.colors,
+            rasterized=mpl_settings.VECTOR_FRIENDLY,
+            marker=marker,
+            edgecolor=edgecolor,
+            **kwargs,
+        )
 
-                bg_width, gap_width = outline_width
-                point = np.sqrt(_size)
-                gap_size = (point + (point * gap_width) * 2) ** 2
-                bg_size = (np.sqrt(gap_size) + (point * bg_width) * 2) ** 2
-                # the default black and white colors can be changes using
-                # the contour_config parameter
-                bg_color, gap_color = outline_color
+    def _scatter_outline(
+        self,
+        ax: Axes,
+        coords: np.ndarray,
+        *,
+        size: float | np.ndarray,
+        marker: str,
+    ) -> None:
+        """Draw outline dots (to draw the actual dots on top of).
 
-                # remove edge from kwargs if present
-                # because edge needs to be set to None
-                kwargs_scatter["edgecolor"] = "none"
-                # For points, if user did not set alpha, set alpha to 0.7
-                kwargs_scatter.setdefault("alpha", 0.7)
+        The default outline is a black edge followed by a
+        thin white edged added around connected clusters.
+        To add an outline three overlapping scatter plots are drawn:
+        First black dots with slightly larger size,
+        then, white dots a bit smaller, but still larger
+        than the final dots. Then the final dots are drawn
+        with some transparency.
+        """
+        bg_width, gap_width = self.outline_width
+        point = np.sqrt(size)
+        gap_size = (point + (point * gap_width) * 2) ** 2
+        bg_size = (np.sqrt(gap_size) + (point * bg_width) * 2) ** 2
+        # the default black and white colors can be changes using
+        # the contour_config parameter
+        bg_color, gap_color = self.outline_color
 
-                # remove alpha and color mapping for outline
-                kwargs_outline = {
-                    k: v
-                    for k, v in kwargs.items()
-                    if k not in {"alpha", "cmap", "norm"}
-                }
+        # remove alpha and color mapping for outline
+        kwargs_outline = {
+            k: v for k, v in self.kwargs.items() if k not in {"alpha", "cmap", "norm"}
+        }
 
-                for s, c in [(bg_size, bg_color), (gap_size, gap_color)]:
-                    ax.scatter(
-                        coords[:, 0],
-                        coords[:, 1],
-                        s=s,
-                        c=c,
-                        rasterized=mpl_settings.VECTOR_FRIENDLY,
-                        marker=marker[count],
-                        **kwargs_outline,
-                    )
-
-            edgecolor = kwargs_scatter.pop("edgecolor", None)
-            if not MarkerStyle(marker[count]).is_filled():
-                edgecolor = None
-            cax = scatter(
+        for s, c in [(bg_size, bg_color), (gap_size, gap_color)]:
+            ax.scatter(
                 coords[:, 0],
                 coords[:, 1],
-                c=color_vector,
+                s=s,
+                c=c,
                 rasterized=mpl_settings.VECTOR_FRIENDLY,
-                marker=marker[count],
-                edgecolor=edgecolor,
-                **kwargs_scatter,
+                marker=marker,
+                **kwargs_outline,
             )
 
+    def _label_axes(self, ax: Axes, dims: Sequence[int]) -> None:
         # remove y and x ticks
         ax.set_yticks([])
         ax.set_xticks([])
-        if projection == "3d":
+        if self.projection == "3d":
             ax.set_zticks([])
 
         # set default axis_labels
-        name = _basis2name(basis)
+        name = _basis2name(self.basis)
         axis_labels = [name + str(d + 1) for d in dims]
 
         ax.set_xlabel(axis_labels[0])
         ax.set_ylabel(axis_labels[1])
-        if projection == "3d":
+        if self.projection == "3d":
             # shift the label closer to the axis
             ax.set_zlabel(axis_labels[2], labelpad=-7)
         ax.autoscale_view()
 
-        if edges:
-            _utils.plot_edges(
-                ax, adata, basis, edges_width, edges_color, neighbors_key=neighbors_key
-            )
-        if arrows:
-            _utils.plot_arrows(ax, adata, basis, arrows_kwds)
-
-        if value_to_plot is None:
-            # if only dots were plotted without an associated value
-            # there is not need to plot a legend or a colorbar
-            continue
-
-        if legend_fontoutline is not None:
-            path_effect = [
-                patheffects.withStroke(linewidth=legend_fontoutline, foreground="w")
-            ]
-        else:
-            path_effect = None
-
-        # Adding legends
-        if color_type == "cat":
+    def _add_legend(
+        self,
+        ax: Axes,
+        cax,
+        value_to_plot: str,
+        data: _PanelData,
+    ) -> None:
+        """Add a legend (categorical) or colorbar (continuous)."""
+        if data.color_type == "cat":
             _add_categorical_legend(
                 ax,
-                color_source_vector,
-                palette=_get_palette(adata, value_to_plot),
-                scatter_array=coords,
-                legend_loc=legend_loc,
-                legend_fontweight=legend_fontweight,
-                legend_fontsize=legend_fontsize,
-                legend_fontoutline=path_effect,
-                na_color=na_color,
-                na_in_legend=na_in_legend,
-                multi_panel=bool(grid),
+                data.color_source,
+                palette=_get_palette(self.adata, value_to_plot),
+                scatter_array=data.coords,
+                legend_loc=self.legend_loc,
+                legend_fontweight=self.legend_fontweight,
+                legend_fontsize=self.legend_fontsize,
+                legend_fontoutline=(
+                    None
+                    if self.legend_fontoutline is None
+                    else [
+                        patheffects.withStroke(
+                            linewidth=self.legend_fontoutline, foreground="w"
+                        )
+                    ]
+                ),
+                na_color=self.na_color,
+                na_in_legend=self.na_in_legend,
+                multi_panel=bool(self.grid),
             )
-        elif colorbar_loc is not None:
+        elif self.colorbar_loc is not None:
             plt.colorbar(
-                cax, ax=ax, pad=0.01, fraction=0.08, aspect=30, location=colorbar_loc
+                cax,
+                ax=ax,
+                pad=0.01,
+                fraction=0.08,
+                aspect=30,
+                location=self.colorbar_loc,
             )
-
-    if return_fig is True:
-        return fig
-    axs = axs if grid else ax
-    _utils.savefig_or_show(basis, show=show, save=save)
-    show = settings.autoshow if show is None else show
-    if show:
-        return None
-    return axs
 
 
 def _panel_grid(hspace, wspace, ncols, num_panels):

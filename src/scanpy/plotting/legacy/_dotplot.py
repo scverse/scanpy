@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import KW_ONLY, dataclass
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -22,7 +24,7 @@ from ._utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
-    from typing import Literal, Self
+    from typing import Any, Literal, Self
 
     import pandas as pd
     from anndata import AnnData
@@ -697,7 +699,7 @@ class DotPlot(BasePlot):
         return normalize
 
     @staticmethod
-    def _dotplot(  # noqa: PLR0912, PLR0913, PLR0915
+    def _dotplot(  # noqa: PLR0913
         dot_size: pd.DataFrame,
         dot_color: pd.DataFrame,
         dot_ax: Axes,
@@ -772,177 +774,263 @@ class DotPlot(BasePlot):
             "please check that the dot_size "
             "and dot_color dataframes have the same columns"
         )
-        match are_axes_swapped, standard_scale:
-            case True, "group":
-                group_axis = 1
-            case True, "var":
-                group_axis = 0
-            case _, "group":
-                group_axis = 0
-            case _, "var":
-                group_axis = 1
-        if standard_scale is not None:
-            dot_color = dot_color.sub(
-                dot_color.min(axis=1 - group_axis), axis=group_axis
-            )
-            dot_color = dot_color.div(
-                dot_color.max(axis=1 - group_axis), axis=group_axis
-            ).fillna(0)
+        dot_color = _standard_scale(
+            dot_color, standard_scale, are_axes_swapped=are_axes_swapped
+        )
         # make scatter plot in which
         # x = var_names
         # y = groupby category
         # size = fraction
         # color = mean expression
 
-        # +0.5 in y and x to set the dot center at 0.5 multiples
-        # this facilitates dendrogram and totals alignment for
-        # matrixplot, dotplot and stackec_violin using the same coordinates.
-        y, x = np.indices(dot_color.shape)
-        y = y.flatten() + 0.5
-        x = x.flatten() + 0.5
-        frac = dot_size.to_numpy().flatten()
-        mean_flat = dot_color.to_numpy().flatten()
         cmap = colormaps.get_cmap(cmap)
-        if dot_max is None:
-            dot_max = np.ceil(max(frac) * 10) / 10
-        elif dot_max < 0 or dot_max > 1:
-            msg = "`dot_max` value has to be between 0 and 1"
-            raise ValueError(msg)
-        if dot_min is None:
-            dot_min = 0
-        elif dot_min < 0 or dot_min > 1:
-            msg = "`dot_min` value has to be between 0 and 1"
-            raise ValueError(msg)
-
-        if dot_min != 0 or dot_max != 1:
-            # clip frac between dot_min and  dot_max
-            frac = np.clip(frac, dot_min, dot_max)
-            old_range = dot_max - dot_min
-            # re-scale frac between 0 and 1
-            frac = (frac - dot_min) / old_range
-
-        size = frac**size_exponent
-        # rescale size to match smallest_dot and largest_dot
-        size = size * (largest_dot - smallest_dot) + smallest_dot
+        size, dot_min, dot_max = _dot_sizes(
+            dot_size.to_numpy().flatten(),
+            dot_min=dot_min,
+            dot_max=dot_max,
+            smallest_dot=smallest_dot,
+            largest_dot=largest_dot,
+            size_exponent=size_exponent,
+        )
         normalize = check_colornorm(vmin, vmax, vcenter, norm)
-
+        dots = _DotGrid(dot_ax, dot_color, size=size, normalize=normalize, kwds=kwds)
         if group_cmaps is not None:
-            # Plotting logic for group-specific colormaps
-            groups_iter = dot_color.columns if are_axes_swapped else dot_color.index
-            n_vars = dot_color.shape[0] if are_axes_swapped else dot_color.shape[1]
-            n_groups = len(groups_iter)
-
-            # Here we loop through each group and plot it with its own cmap
-            for group_idx, group_name in enumerate(groups_iter):
-                group_cmap = group_cmaps[group_name]
-                # Handle fallback case where group_cmap might be a string
-                if isinstance(group_cmap, str):
-                    group_cmap = colormaps.get_cmap(group_cmap)
-
-                # Slice the flattened data arrays correctly depending on orientation
-                if not are_axes_swapped:
-                    # Slicing data for a whole row
-                    indices = slice(group_idx * n_vars, (group_idx + 1) * n_vars)
-                else:
-                    # Slicing data for a whole column
-                    indices = slice(group_idx, None, n_groups)
-
-                x_group = x[indices]
-                y_group = y[indices]
-                size_group = size[indices]
-                mean_group = mean_flat[indices]
-
-                color = group_cmap(normalize(mean_group))
-                kwds_scatter = fix_kwds(
-                    kwds,
-                    s=size_group,
-                    color=color,
-                    linewidth=edge_lw,
-                    edgecolor=edge_color,
-                )
-                dot_ax.scatter(x_group, y_group, **kwds_scatter)
+            dots.scatter_group_cmaps(
+                group_cmaps,
+                are_axes_swapped=are_axes_swapped,
+                edge_color=edge_color,
+                edge_lw=edge_lw,
+            )
         elif color_on == "square":
-            if edge_color is None:
-                from seaborn.utils import relative_luminance
-
-                # use either black or white for the edge color
-                # depending on the luminance of the background
-                # square color
-                edge_color = []
-                for color_value in cmap(normalize(mean_flat)):
-                    lum = relative_luminance(color_value)
-                    edge_color.append(".15" if lum > 0.408 else "w")
-
-            edge_lw = 1.5 if edge_lw is None else edge_lw
-
-            # first make a heatmap similar to `sc.pl.matrixplot`
-            # (squares with the asigned colormap). Circles will be plotted
-            # on top
-            dot_ax.pcolor(dot_color.values, cmap=cmap, norm=normalize)
-            for axis in ["top", "bottom", "left", "right"]:
-                dot_ax.spines[axis].set_linewidth(1.5)
-            # Create a temporary kwargs dict for this group's scatter call
-            # to avoid modifying the original kwds dictionary within the loop.
-            kwds_scatter = fix_kwds(
-                kwds,
-                s=size,
-                linewidth=edge_lw,
-                facecolor="none",
-                edgecolor=edge_color,
-            )
-            dot_ax.scatter(x, y, **kwds_scatter)
+            dots.scatter_squares(cmap, edge_color=edge_color, edge_lw=edge_lw)
         else:
-            edge_color = "none" if edge_color is None else edge_color
-            edge_lw = 0.0 if edge_lw is None else edge_lw
-            color = cmap(normalize(mean_flat))
-            kwds_scatter = fix_kwds(
-                kwds,
-                s=size,
-                color=color,
-                linewidth=edge_lw,
-                edgecolor=edge_color,
-            )
-            dot_ax.scatter(x, y, **kwds_scatter)
+            dots.scatter_dots(cmap, edge_color=edge_color, edge_lw=edge_lw)
 
-        y_ticks = np.arange(dot_color.shape[0]) + 0.5
-        dot_ax.set_yticks(y_ticks)
-        dot_ax.set_yticklabels(
-            [dot_color.index[idx] for idx, _ in enumerate(y_ticks)], minor=False
+        _format_dot_ax(
+            dot_ax,
+            dot_color,
+            color_on=color_on,
+            x_padding=x_padding,
+            y_padding=y_padding,
+            grid=grid,
         )
-
-        x_ticks = np.arange(dot_color.shape[1]) + 0.5
-        dot_ax.set_xticks(x_ticks)
-        dot_ax.set_xticklabels(
-            [dot_color.columns[idx] for idx, _ in enumerate(x_ticks)],
-            rotation=90,
-            ha="center",
-            minor=False,
-        )
-        dot_ax.tick_params(axis="both", labelsize="small")
-        dot_ax.grid(visible=False)
-
-        # to be consistent with the heatmap plot, is better to
-        # invert the order of the y-axis, such that the first group is on
-        # top
-        dot_ax.set_ylim(dot_color.shape[0], 0)
-        dot_ax.set_xlim(0, dot_color.shape[1])
-
-        if color_on == "dot":
-            # add padding to the x and y lims when the color is not in the square
-            # default y range goes from 0.5 to num cols + 0.5
-            # and default x range goes from 0.5 to num rows + 0.5, thus
-            # the padding needs to be corrected.
-            x_padding = x_padding - 0.5
-            y_padding = y_padding - 0.5
-            dot_ax.set_ylim(dot_color.shape[0] + y_padding, -y_padding)
-
-            dot_ax.set_xlim(-x_padding, dot_color.shape[1] + x_padding)
-
-        if grid:
-            dot_ax.grid(visible=True, color="gray", linewidth=0.1)
-            dot_ax.set_axisbelow(True)
 
         return normalize, dot_min, dot_max
+
+
+def _standard_scale(
+    dot_color: pd.DataFrame,
+    standard_scale: Literal["var", "group"] | None,
+    *,
+    are_axes_swapped: bool | None,
+) -> pd.DataFrame:
+    match are_axes_swapped, standard_scale:
+        case _, None:
+            return dot_color
+        case True, "group":
+            group_axis = 1
+        case True, "var":
+            group_axis = 0
+        case _, "group":
+            group_axis = 0
+        case _, "var":
+            group_axis = 1
+    dot_color = dot_color.sub(dot_color.min(axis=1 - group_axis), axis=group_axis)
+    return dot_color.div(dot_color.max(axis=1 - group_axis), axis=group_axis).fillna(0)
+
+
+def _dot_sizes(
+    frac: np.ndarray,
+    *,
+    dot_min: float | None,
+    dot_max: float | None,
+    smallest_dot: float,
+    largest_dot: float,
+    size_exponent: float,
+) -> tuple[np.ndarray, float, float]:
+    """Validate `dot_min` and `dot_max`, and calculate dot sizes from fractions."""
+    if dot_max is None:
+        dot_max = np.ceil(max(frac) * 10) / 10
+    elif dot_max < 0 or dot_max > 1:
+        msg = "`dot_max` value has to be between 0 and 1"
+        raise ValueError(msg)
+    if dot_min is None:
+        dot_min = 0
+    elif dot_min < 0 or dot_min > 1:
+        msg = "`dot_min` value has to be between 0 and 1"
+        raise ValueError(msg)
+
+    if dot_min != 0 or dot_max != 1:
+        # clip frac between dot_min and  dot_max
+        frac = np.clip(frac, dot_min, dot_max)
+        old_range = dot_max - dot_min
+        # re-scale frac between 0 and 1
+        frac = (frac - dot_min) / old_range
+
+    size = frac**size_exponent
+    # rescale size to match smallest_dot and largest_dot
+    size = size * (largest_dot - smallest_dot) + smallest_dot
+    return size, dot_min, dot_max
+
+
+@dataclass
+class _DotGrid:
+    """Dots (sized by fraction, colored by value) on a grid of groups x variables.
+
+    The dot centers are at 0.5 multiples, which facilitates dendrogram and totals alignment
+    for matrixplot, dotplot and stacked_violin using the same coordinates.
+    """
+
+    ax: Axes
+    dot_color: pd.DataFrame
+    """Values to color by, one row per y position."""
+    _: KW_ONLY
+    size: np.ndarray
+    """Flattened dot sizes."""
+    normalize: Normalize
+    kwds: Mapping[str, Any]
+
+    @cached_property
+    def _yx(self) -> tuple[np.ndarray, np.ndarray]:
+        y, x = np.indices(self.dot_color.shape)
+        return y.flatten() + 0.5, x.flatten() + 0.5
+
+    @property
+    def x(self) -> np.ndarray:
+        return self._yx[1]
+
+    @property
+    def y(self) -> np.ndarray:
+        return self._yx[0]
+
+    @property
+    def values(self) -> np.ndarray:
+        return self.dot_color.to_numpy().flatten()
+
+    def scatter_dots(
+        self, cmap: Colormap, *, edge_color: ColorLike | None, edge_lw: float | None
+    ) -> None:
+        """Plot dots colored by `cmap`."""
+        self.ax.scatter(
+            self.x,
+            self.y,
+            **fix_kwds(
+                self.kwds,
+                s=self.size,
+                color=cmap(self.normalize(self.values)),
+                linewidth=0.0 if edge_lw is None else edge_lw,
+                edgecolor="none" if edge_color is None else edge_color,
+            ),
+        )
+
+    def scatter_group_cmaps(
+        self,
+        group_cmaps: Mapping[str, Colormap | str],
+        *,
+        are_axes_swapped: bool | None,
+        edge_color: ColorLike | None,
+        edge_lw: float | None,
+    ) -> None:
+        """Plot each group with its own colormap."""
+        groups = self.dot_color.columns if are_axes_swapped else self.dot_color.index
+        n_vars = self.dot_color.shape[0 if are_axes_swapped else 1]
+        kwds = fix_kwds(self.kwds, linewidth=edge_lw, edgecolor=edge_color)
+        for group_idx, group_name in enumerate(groups):
+            group_cmap = group_cmaps[group_name]
+            # Handle fallback case where group_cmap might be a string
+            if isinstance(group_cmap, str):
+                group_cmap = colormaps.get_cmap(group_cmap)
+
+            # Slice the flattened data arrays correctly depending on orientation
+            if not are_axes_swapped:
+                # Slicing data for a whole row
+                indices = slice(group_idx * n_vars, (group_idx + 1) * n_vars)
+            else:
+                # Slicing data for a whole column
+                indices = slice(group_idx, None, len(groups))
+
+            color = group_cmap(self.normalize(self.values[indices]))
+            kwds_scatter = fix_kwds(kwds, s=self.size[indices], color=color)
+            self.ax.scatter(self.x[indices], self.y[indices], **kwds_scatter)
+
+    def scatter_squares(
+        self, cmap: Colormap, *, edge_color: ColorLike | None, edge_lw: float | None
+    ) -> None:
+        """Plot squares colored by `cmap` with uncolored dots on top."""
+        if edge_color is None:
+            from seaborn.utils import relative_luminance
+
+            # use either black or white for the edge color
+            # depending on the luminance of the background
+            # square color
+            edge_color = []
+            for color_value in cmap(self.normalize(self.values)):
+                lum = relative_luminance(color_value)
+                edge_color.append(".15" if lum > 0.408 else "w")
+
+        # first make a heatmap similar to `sc.pl.matrixplot`
+        # (squares with the asigned colormap). Circles will be plotted
+        # on top
+        self.ax.pcolor(self.dot_color.values, cmap=cmap, norm=self.normalize)
+        for axis in ["top", "bottom", "left", "right"]:
+            self.ax.spines[axis].set_linewidth(1.5)
+        kwds_scatter = fix_kwds(
+            self.kwds,
+            s=self.size,
+            linewidth=1.5 if edge_lw is None else edge_lw,
+            facecolor="none",
+            edgecolor=edge_color,
+        )
+        self.ax.scatter(self.x, self.y, **kwds_scatter)
+
+
+def _format_dot_ax(
+    dot_ax: Axes,
+    dot_color: pd.DataFrame,
+    *,
+    color_on: Literal["dot", "square"],
+    x_padding: float,
+    y_padding: float,
+    grid: bool,
+) -> None:
+    """Set ticks, tick labels, limits, and grid."""
+    y_ticks = np.arange(dot_color.shape[0]) + 0.5
+    dot_ax.set_yticks(y_ticks)
+    dot_ax.set_yticklabels(
+        [dot_color.index[idx] for idx, _ in enumerate(y_ticks)], minor=False
+    )
+
+    x_ticks = np.arange(dot_color.shape[1]) + 0.5
+    dot_ax.set_xticks(x_ticks)
+    dot_ax.set_xticklabels(
+        [dot_color.columns[idx] for idx, _ in enumerate(x_ticks)],
+        rotation=90,
+        ha="center",
+        minor=False,
+    )
+    dot_ax.tick_params(axis="both", labelsize="small")
+    dot_ax.grid(visible=False)
+
+    # to be consistent with the heatmap plot, is better to
+    # invert the order of the y-axis, such that the first group is on
+    # top
+    dot_ax.set_ylim(dot_color.shape[0], 0)
+    dot_ax.set_xlim(0, dot_color.shape[1])
+
+    if color_on == "dot":
+        # add padding to the x and y lims when the color is not in the square
+        # default y range goes from 0.5 to num cols + 0.5
+        # and default x range goes from 0.5 to num rows + 0.5, thus
+        # the padding needs to be corrected.
+        x_padding = x_padding - 0.5
+        y_padding = y_padding - 0.5
+        dot_ax.set_ylim(dot_color.shape[0] + y_padding, -y_padding)
+
+        dot_ax.set_xlim(-x_padding, dot_color.shape[1] + x_padding)
+
+    if grid:
+        dot_ax.grid(visible=True, color="gray", linewidth=0.1)
+        dot_ax.set_axisbelow(True)
 
 
 @_doc_params(

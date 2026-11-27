@@ -92,10 +92,32 @@ def test_paga_ncols(pbmc, ncols, expected_shape) -> None:
     plt.close(axs[0].figure)
 
 
-@pytest.mark.parametrize("ncols", [0, -1, True, 1.5])
-def test_paga_ncols_rejects_invalid(ncols) -> None:
-    with pytest.raises(ValueError, match=r"ncols.*positive integer"):
-        sc.pl.paga(None, ncols=ncols)
+@pytest.mark.parametrize(
+    ("kwargs", "exc_cls", "match"),
+    [
+        *(
+            pytest.param(
+                dict(ncols=ncols),
+                ValueError,
+                r"ncols.*positive integer",
+                id=f"ncols={ncols}",
+            )
+            for ncols in [0, -1, True, 1.5]
+        ),
+        pytest.param(
+            dict(color="degree_dashed"),
+            NotImplementedError,
+            r"degree_dashed.*dashed_edges",
+            id="degree_dashed-no-dashed_edges",
+        ),
+    ],
+)
+def test_paga_rejects_invalid(
+    pbmc_session, kwargs, exc_cls: type[Exception], match: str
+) -> None:
+    with pytest.raises(exc_cls, match=match):
+        sc.pl.paga(pbmc_session, add_pos=False, show=False, **kwargs)
+    plt.close("all")
 
 
 def test_paga_ncols_rejects_ax() -> None:

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from functools import partial
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -20,6 +21,11 @@ import threadpoolctl
 
 import scanpy as sc
 from testing.scanpy._pytest.marks import needs
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from anndata import AnnData
 
 HERE = Path(__file__).parent
 
@@ -32,15 +38,24 @@ def image_dir() -> Path:
 @needs.leidenalg
 # https://github.com/pandas-dev/pandas/issues/61928
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
-def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
+def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:
     # ensure violin plots and other non-determinstic plots have deterministic behavior
     # TODO: rework this test for scanpy 2.0 so this is no longer necessary
     np.random.seed(0)  # noqa: NPY002
     plot_cmp = partial(plot_cmp, tol=20)
     adata = sc.datasets.pbmc3k()
 
-    # Preprocessing
+    adata = _preprocess(adata, subtests, plot_cmp)
+    _pca(adata, subtests, plot_cmp)
+    _cluster(adata, subtests, plot_cmp)
+    _find_marker_genes(adata, subtests, plot_cmp)
+    _annotate_clusters(adata, subtests, plot_cmp)
 
+
+def _preprocess(
+    adata: AnnData, subtests: pytest.Subtests, plot_cmp: Callable[[str], None]
+) -> AnnData:
+    """Filter cells and genes, normalize, and select highly variable genes."""
     sc.pl.highest_expr_genes(adata, n_top=20, show=False)
     plot_cmp("highest_expr_genes")
 
@@ -94,9 +109,13 @@ def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
     adata = adata[:, filter_result["highly_variable"]].copy()
     sc.pp.regress_out(adata, ["n_counts", "percent_mito"])
     sc.pp.scale(adata, max_value=10)
+    return adata
 
-    # PCA
 
+def _pca(
+    adata: AnnData, subtests: pytest.Subtests, plot_cmp: Callable[[str], None]
+) -> None:
+    """Run PCA and plot its results."""
     # ARPACK's SVD solver is sensitive to BLAS thread count
     with threadpoolctl.threadpool_limits(limits=1):
         sc.pp.pca(adata, svd_solver="arpack")
@@ -108,11 +127,12 @@ def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
         sc.pl.pca_variance_ratio(adata, log=True, show=False)
         plot_cmp("pca_variance_ratio")
 
-    # Neighbors
 
+def _cluster(
+    adata: AnnData, subtests: pytest.Subtests, plot_cmp: Callable[[str], None]
+) -> None:
+    """Compute neighbors and cluster them with Leiden."""
     sc.pp.neighbors(adata, n_neighbors=10, n_pcs=40)
-
-    # Clustering the graph
 
     sc.tl.leiden(
         adata,
@@ -127,7 +147,9 @@ def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
         sc.pl.scatter(adata, "CST3", "NKG7", color="leiden", show=False)
         plot_cmp("scatter_3")
 
-    # Finding marker genes
+
+def _relabel_leiden(adata: AnnData, subtests: pytest.Subtests) -> None:
+    """Relabel leiden clusters consistently by their marker genes."""
     # Due to incosistency with our test runner vs local, these clusters need to
     # be pre-annotated as the numbers for each cluster are not consistent.
     marker_genes = [
@@ -152,6 +174,13 @@ def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
     adata.obs["leiden"] = adata.obs["leiden"].cat.reorder_categories(
         list(map(str, range(len(adata.obs["leiden"].cat.categories)))), ordered=True
     )
+
+
+def _find_marker_genes(
+    adata: AnnData, subtests: pytest.Subtests, plot_cmp: Callable[[str], None]
+) -> None:
+    """Find and plot marker genes for the (relabeled) Leiden clusters."""
+    _relabel_leiden(adata, subtests)
 
     sc.tl.rank_genes_groups(adata, "leiden")
     with subtests.test("rank_genes_groups_1"):
@@ -185,6 +214,11 @@ def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
             adata.uns["rank_genes_groups"]["names"]["0"][:8]
         )
 
+
+def _annotate_clusters(
+    adata: AnnData, subtests: pytest.Subtests, plot_cmp: Callable[[str], None]
+) -> None:
+    """Name the clusters by cell type and plot markers."""
     new_cluster_names = [
         *["CD4 T cells", "CD8 T cells", "B cells", "NK cells"],
         *["FCGR3A+ Monocytes", "CD14+ Monocytes", "Dendritic cells", "Megakaryocytes"],

@@ -14,7 +14,7 @@ from ._utils import savefig_or_show
 # --------------------------------------------------------------------------------
 
 
-def highly_variable_genes(  # noqa: PLR0912
+def highly_variable_genes(
     adata_or_result: AnnData | pd.DataFrame | np.recarray,
     *,
     log: bool = False,
@@ -65,12 +65,12 @@ def highly_variable_genes(  # noqa: PLR0912
     if isinstance(adata_or_result, AnnData):
         result = adata_or_result.var
         seurat_v3_flavor = adata_or_result.uns["hvg"]["flavor"] == "seurat_v3"
+    elif isinstance(adata_or_result, pd.DataFrame):
+        result = adata_or_result
+        seurat_v3_flavor = "variances_norm" in result.columns
     else:
         result = adata_or_result
-        if isinstance(result, pd.DataFrame):
-            seurat_v3_flavor = "variances_norm" in result.columns
-        else:
-            seurat_v3_flavor = False
+        seurat_v3_flavor = False
     if highly_variable_genes:
         gene_subset = result["highly_variable"]
     else:
@@ -94,29 +94,26 @@ def highly_variable_genes(  # noqa: PLR0912
             [gene_subset, ~gene_subset],
             strict=True,
         ):
-            if False:
-                means_, var_or_disps_ = np.log10(means[mask]), np.log10(d[mask])
-            else:
-                means_, var_or_disps_ = means[mask], d[mask]
-            plt.scatter(means_, var_or_disps_, label=label, c=color, s=1)
+            plt.scatter(means[mask], d[mask], label=label, c=color, s=1)
         if log:  # there's a bug in autoscale
-            plt.xscale("log")
-            plt.yscale("log")
-            y_min = np.min(var_or_disp)
-            y_min = 0.95 * y_min if y_min > 0 else 1e-1
-            plt.xlim(0.95 * np.min(means), 1.05 * np.max(means))
-            plt.ylim(y_min, 1.05 * np.max(var_or_disp))
+            _set_log_scale(means, var_or_disp)
         if idx == 0:
             plt.legend()
-        plt.xlabel(f"{'$log_{10}$ ' if False else ''}mean expressions of genes")
+        plt.xlabel("mean expressions of genes")
         data_type = "dispersions" if not seurat_v3_flavor else "variances"
-        plt.ylabel(
-            f"{'$log_{10}$ ' if False else ''}{data_type} "
-            f"of genes ({'' if idx == 0 else 'not '}normalized)"
-        )
+        plt.ylabel(f"{data_type} of genes ({'' if idx == 0 else 'not '}normalized)")
 
     show = settings.autoshow if show is None else show
     savefig_or_show("highly_variable_genes", show=show, save=save)
     if show:
         return None
     return plt.gca()
+
+
+def _set_log_scale(means: pd.Series, var_or_disp: pd.Series) -> None:
+    plt.xscale("log")
+    plt.yscale("log")
+    y_min = np.min(var_or_disp)
+    y_min = 0.95 * y_min if y_min > 0 else 1e-1
+    plt.xlim(0.95 * np.min(means), 1.05 * np.max(means))
+    plt.ylim(y_min, 1.05 * np.max(var_or_disp))
